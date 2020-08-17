@@ -1,0 +1,74 @@
+{
+  "env": {
+    "browser": true,
+    "es6": true
+  },
+  "extends": [
+    "react-app",
+    "plugin:import/errors",
+    "plugin:import/warnings",
+    "prettier",
+    "prettier/react",
+    "prettier/@typescript-eslint",
+    "plugin:@typescript-eslint/recommended"
+  ],
+  "parser": "@typescript-eslint/parser",
+  "parserOptions": {
+    "ecmaFeatures": {
+      "jsx": true
+    },
+    "ecmaVersion": 2018,
+    "sourceType": "module"
+  },
+  "plugins": ["react", "@typescript-eslint", "react-hooks", "import"],
+  "rules": {
+    "react-hooks/rules-of-hooks": "error",
+    "react-hooks/exhaustive-deps": "warn",
+    "quotes": [2, "single", { "avoidEscape": true }],
+    "object-curly-spacing": ["error", "always"],
+    "curly": ["error", "multi-line"],
+    "newline-before-return": "error",
+    "comma-dangle": ["error", "only-multiline"],
+    "max-classes-per-file": ["error", 1],
+    "max-len": ["warn", { "code": 130 }],
+    "prefer-const": [
+      "error",
+      {
+        "destructuring": "all"
+      }
+    ],
+    "@typescript-eslint/no-this-alias": [
+      "error",
+      {
+        "allowDestructuring": true,
+        "allowedNames": ["self", "context", "that"]
+      }
+    ],
+    "@typescript-eslint/interface-name-prefix": ["error", { "prefixWithI": "always" }],
+    "prefer-template": ["error"],
+    "no-trailing-spaces": [
+      "error",
+      {
+        "skipBlankLines": true,
+        "ignoreComments": true
+      }
+    ],
+    "no-multiple-empty-lines": ["error", { "max": 2, "maxEOF": 1 }],
+    "no-duplicate-imports": ["error", { "includeExports": false }],
+    "require-await": ["error"],
+    "@typescript-eslint/no-non-null-assertion": ["error"],
+    "@typescript-eslint/no-empty-interface": ["off"],
+    "no-duplicate-case": ["error"],
+    "no-redeclare": ["error"],
+    "no-empty": ["error", { "allowEmptyCatch": true }],
+    "import/no-unresolved": ["off"],
+    "import/order": [
+      "error",
+      {
+        "groups": [["internal", "external", "builtin", "index"], "parent", "sibling"],
+        "newlines-between": "always-and-inside-groups"
+      }
+    ],
+    "semi": ["error", "always", { "omitLastInOneLineBlock": true }]
+  }
+}
