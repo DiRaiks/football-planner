@@ -36,7 +36,7 @@ export const useLoginForm: TUseLoginForm = () => {
       event.preventDefault();
 
       UserStore.login({
-        username: userNameProps.value,
+        email: userNameProps.value,
         password: passwordProps.value,
       });
     },

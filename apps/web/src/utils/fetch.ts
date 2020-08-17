@@ -11,7 +11,7 @@ export const fetch: TFetch = (url, options) => {
   const { queryParams = {}, ...rest } = options || {};
   const params = new URLSearchParams(queryParams).toString();
 
-  let comboUrl = `${process.env.REACT_APP_API_URL}${url}`;
+  let comboUrl = `${process.env.REACT_APP_FETCH_URL}${url}`;
   if (params) comboUrl += `?${params}`;
 
   return window.fetch(comboUrl, {

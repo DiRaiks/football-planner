@@ -31,7 +31,7 @@ class UserStore {
   }
 
   @computed get username(): string {
-    return this.user?.fullName || '';
+    return this.user?.name || '';
   }
 
   // pending
@@ -89,7 +89,7 @@ class UserStore {
   // user
 
   @action setUser(user: TUser): void {
-    saveTokenToLS(user?.session.token || null);
+    saveTokenToLS(user?.token || null);
     this.user = user;
   }
 
@@ -121,7 +121,7 @@ class UserStore {
     }
   }
 
-  async login({ username, password }: IUserLoginData): Promise<void> {
+  async login({ email, password }: IUserLoginData): Promise<void> {
     this.setLoginPending(true);
     this.setUser(null);
     this.resetLoginErrors();
@@ -129,12 +129,12 @@ class UserStore {
     try {
       const response = await fetch(LOGIN_URL, {
         method: 'post',
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ email, password }),
       });
 
       const { status, ok } = response;
 
-      if (ok && status === 200) {
+      if (ok && status === 201) {
         const user: TUser = await response.json();
         this.setUser(user);
 

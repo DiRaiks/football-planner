@@ -3,7 +3,7 @@ export interface IUserStore {
 }
 
 export interface IUserLoginData {
-  username: string;
+  email: string;
   password: string;
 }
 
@@ -25,25 +25,9 @@ export interface ISignupCompanyModel {
   user?: ISignupPersonModel;
 }
 
-export type TUserSession = {
-  language: string;
-  timeZoneOffset: number;
-  audioPlaybackVolume: number;
-  audioPlaybackSpeed: number;
-  shortDatePattern: string;
-  firstDayOfWeek: string;
-  tenantId: string;
-  token: string;
-};
-
 export type TUser = {
-  id: string;
-  fullName: string;
-  phone: string;
+  _id: string;
   email: string;
-  userName: string;
-  currencyId: string;
-  token?: string;
-  session: TUserSession;
-  accountId: string;
+  name: string;
+  token: string;
 } | null;

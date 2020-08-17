@@ -8,6 +8,7 @@ export { default as Input } from './Input';
 export { default as Loader } from './Loader';
 export { default as ServiceForm } from './ServiceForm';
 export { default as ServicePage } from './ServicePage';
+export { default as CenterLoader } from './CenterLoader';
 
 export * from './Button';
 export * from './FormField';
@@ -19,3 +20,4 @@ export * from './Input';
 export * from './Loader';
 export * from './ServiceForm';
 export * from './ServicePage';
+export * from './CenterLoader';
