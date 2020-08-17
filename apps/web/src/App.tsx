@@ -13,7 +13,7 @@ export const App: React.FC = () => {
   const isLoading = useObserver(() => UserStore.isInitialUserPending);
   const isAuthenticated = useObserver(() => UserStore.isAuthenticated);
 
-  if (isLoading) return <CenterLoader />;
+  if (isLoading) return <CenterLoader size="l" />;
 
   return (
     <Router>

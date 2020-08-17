@@ -1,8 +1,8 @@
 .loader {
-  $border: 5px;
+  $border: 2px;
 
-  width: 105px;
-  height: 105px;
+  width: 24px;
+  height: 24px;
   box-sizing: border-box;
   border-radius: 50%;
   border: $border solid transparent;
@@ -36,20 +36,20 @@
 /* sizes */
 
 .size-s {
-  width: 86px;
-  height: 86px;
+  width: 16px;
+  height: 16px;
 }
 
 .size-m {
-  width: 106px;
-  height: 106px;
+  width: 22px;
+  height: 22px;
 }
 
 .size-l {
-  $border: 3px;
+  $border: 5px;
 
-  width: 32px;
-  height: 32px;
+  width: 106px;
+  height: 106px;
 
   &,
   &:before {
