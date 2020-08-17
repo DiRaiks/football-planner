@@ -1,0 +1,44 @@
+.header {
+  display: flex;
+  align-items: center;
+}
+
+.noAccountWr {
+  font-size: 14px;
+  color: var(--color-primary-lighten-40);
+  margin-right: 16px;
+}
+
+.signUpButton {
+  padding: 4px 16px;
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--color-ShadesOfGrey2);
+  border-radius: 4px;
+  font-size: 14px;
+  color: var(--color-Blue2);
+  cursor: pointer;
+}
+
+.signUpButton:hover {
+  background-color: var(--color-ShadesOfGrey4);
+}
+
+.footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.signInButton {
+  font-size: 18px;
+}
+
+.forgotPassword {
+  font-size: 14px;
+}
+
+.forgotPassword {
+  text-decoration: none;
+  color: var(--color-Blue2);
+}

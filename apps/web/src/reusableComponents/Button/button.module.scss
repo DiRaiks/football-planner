@@ -74,29 +74,29 @@
 
 .accent {
   --main-color: var(--color-accent);
-  --hover-color: var(--color-accent-lighten-20);
+  --hover-color: var(--color-accent-hover);
 }
 
 .gray {
-  --main-color: var(--color-primary-lighten-40);
-  --hover-color: var(--color-primary-lighten-60);
+  --main-color: var(--color-primary);
+  --hover-color: var(--color-primary-hover);
 }
 
 .warning {
   --main-color: var(--color-warning);
-  --hover-color: var(--color-warning-lighten-20);
+  --hover-color: var(--color-warning-hover);
 }
 
 .highlight {
   --main-color: var(--color-highlight);
-  --hover-color: var(--color-highlight-lighten-20);
+  --hover-color: var(--color-highlight-hover);
 }
 
 /* contained */
 
 .contained {
   transition: background-color 0.1s ease-out;
-  color: var(--color-foreground);
+  color: var(--color-white);
   background: var(--main-color);
 }
 
@@ -109,7 +109,7 @@
 /* outlined */
 
 .outlined {
-  background: var(--color-foreground);
+  background: var(--color-white);
   transition: border-color 0.1s ease-out;
   color: var(--main-color);
 
@@ -157,8 +157,8 @@
 
 .disabled,
 .disabled:hover {
-  color: var(--color-shadow-lighten-60);
-  background: var(--color-shadow-alpha-10);
+  color: var(--color-shadow-l);
+  background: var(--color-shadow-d);
   cursor: default;
 
   &:before {
@@ -182,6 +182,6 @@
 [data-using-keyboard] .selected:focus {
   cursor: default;
   border-color: transparent;
-  background: var(--color-primary-lighten-40);
-  color: var(--color-foreground);
+  background: var(--color-black-60);
+  color: var(--color-white);
 }

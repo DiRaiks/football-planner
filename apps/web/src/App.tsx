@@ -1,11 +1,13 @@
 import { hot } from 'react-hot-loader/root';
 import React, { Suspense } from 'react';
-import { BrowserRouter as Router, Switch } from 'react-router-dom';
+import { BrowserRouter as Router, Switch, Route } from 'react-router-dom';
+
+import Login from 'components/Login';
 
 import './App.scss';
 
 export const App: React.FC = () => {
-  const isAuthenticated = true;
+  const isAuthenticated = false;
 
   return (
     <Router>
@@ -14,7 +16,9 @@ export const App: React.FC = () => {
           <Suspense fallback={<div />}></Suspense>
         </>
       ) : (
-        <Switch></Switch>
+        <Switch>
+          <Route path="*" component={Login} />
+        </Switch>
       )}
     </Router>
   );

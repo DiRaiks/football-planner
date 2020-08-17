@@ -44,17 +44,7 @@
         "allowedNames": ["self", "context", "that"]
       }
     ],
-    "@typescript-eslint/naming-convention": [
-      "error",
-      {
-        "selector": "interface",
-        "format": ["PascalCase"],
-        "custom": {
-          "regex": "^I[A-Z]",
-          "match": true
-        }
-      }
-    ],
+    "@typescript-eslint/interface-name-prefix": ["error", { "prefixWithI": "always" }],
     "prefer-template": ["error"],
     "no-trailing-spaces": [
       "error",
