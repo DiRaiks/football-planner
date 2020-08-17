@@ -1,0 +1,130 @@
+$label-state: translateY(-30px) scale(0.667);
+$placeholder-state: scale(1) translateY(0);
+
+$label-state-width: 149.9%;
+$placeholder-state-width: 100%;
+
+.wrapper {
+  padding-top: 2px;
+  position: relative;
+  font-family: var(--font-family);
+  color: var(--color-primary);
+  display: inline-flex;
+}
+
+.labeled {
+  padding-top: 22px;
+}
+
+.input {
+  font-family: var(--font-family);
+  box-sizing: border-box;
+  padding: 5px 0;
+  border: none;
+  border-bottom: 2px solid var(--color-shadow-lighten-80);
+  background: transparent;
+  font-size: 18px;
+  line-height: 24px;
+  outline: none;
+  color: var(--color-primary);
+  flex-grow: 1;
+  transition: border-color 0.1s ease-out;
+}
+
+.input:focus,
+.active .input {
+  border-color: var(--color-accent);
+}
+
+.title {
+  font-size: 18px;
+  line-height: 24px;
+  position: absolute;
+  left: 0;
+  top: 27px;
+  color: var(--color-primary-lighten-40);
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.input {
+  & + .title {
+    transform: $label-state;
+    transform-origin: 0% 100%;
+    transition: transform 0.1s ease-out, max-width 0.1s ease-out;
+    max-width: $label-state-width;
+  }
+
+  &:not(:focus):placeholder-shown + .title {
+    transform: $placeholder-state;
+    max-width: $placeholder-state-width;
+  }
+
+  &:focus,
+  &:-webkit-autofill {
+    & + .title {
+      transform: $label-state;
+      max-width: $label-state-width;
+    }
+  }
+
+  &:-webkit-autofill + .title {
+    transition: none;
+  }
+}
+
+input::placeholder {
+  color: var(--color-primary-lighten-40);
+}
+
+input:disabled {
+  border-color: var(--color-shadow-lighten-80);
+  color: var(--color-primary-lighten-40);
+}
+
+.error .input {
+  &,
+  &:placeholder-shown {
+    border-color: var(--color-warning);
+
+    & + .title {
+      transform: $label-state;
+      max-width: $label-state-width;
+      color: var(--color-warning);
+    }
+  }
+}
+
+textarea.input {
+  resize: vertical;
+  min-height: 3.6em;
+}
+
+.with-left-decorator {
+  .input {
+    padding-left: 32px;
+  }
+
+  .title {
+    margin-left: 32px;
+  }
+}
+
+.with-right-decorator {
+  .input {
+    padding-right: 32px;
+  }
+
+  .title {
+    margin-right: 32px;
+  }
+}
+
+.with-left-decorator,
+.with-right-decorator {
+  .input:not(:focus):placeholder-shown + .title {
+    max-width: calc(100% - 32px);
+  }
+}

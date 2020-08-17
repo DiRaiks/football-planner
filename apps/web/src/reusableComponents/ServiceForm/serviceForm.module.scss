@@ -1,0 +1,12 @@
+.body {
+  background: var(--color-background);
+}
+
+.wrapper {
+  background: var(--color-foreground);
+  width: 400px;
+  border-radius: 8px;
+  box-shadow: var(--shadow-s);
+  padding: 48px 48px 56px 48px;
+  margin: 40px 0;
+}

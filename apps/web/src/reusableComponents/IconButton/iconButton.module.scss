@@ -1,0 +1,42 @@
+.icon {
+  margin: -10px 8px -8px -8px;
+  vertical-align: middle;
+  fill: currentColor;
+  opacity: 0.9;
+}
+
+.size-xs .icon {
+  margin-right: 4px;
+}
+
+/* rounded */
+
+.rounded {
+  line-height: 0;
+  width: 24px;
+  height: 24px;
+  box-sizing: content-box;
+}
+
+.rounded,
+[data-using-keyboard] .rounded:focus {
+  &,
+  &:before,
+  &:after {
+    border-radius: 100px;
+  }
+}
+
+.rounded .icon {
+  margin: 0;
+}
+
+.rounded.size-xs,
+.rounded.size-s,
+.rounded.size-m {
+  padding: 6px;
+}
+
+.rounded.size-l {
+  padding: 8px;
+}
