@@ -18,7 +18,7 @@ export const useLoginForm: TUseLoginForm = () => {
     ...userName,
     localError: null,
     serverError: usernameError,
-    label: 'Логин или электронная почта',
+    label: 'Электронная почта',
   });
 
   const password = useTextField();

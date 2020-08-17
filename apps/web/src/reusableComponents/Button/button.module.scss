@@ -9,17 +9,6 @@
   cursor: pointer;
   outline: none;
   font-family: var(--font-family);
-
-  &:before {
-    content: '';
-    position: absolute;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    left: 0;
-    border-radius: inherit;
-    pointer-events: none;
-  }
 }
 
 /* sizes */
@@ -28,31 +17,47 @@
   font-size: 14px;
   line-height: 16px;
   padding: 8px 16px;
+
+  &.outlined {
+    padding: 7px 15px;
+  }
 }
 
 .size-s {
   font-size: 14px;
   line-height: 16px;
   padding: 10px 16px;
+
+  &.outlined {
+    padding: 9px 15px;
+  }
 }
 
 .size-m {
   font-size: 16px;
   line-height: 20px;
   padding: 10px 20px;
+
+  &.outlined {
+    padding: 9px 19px;
+  }
 }
 
 .size-l {
   font-size: 20px;
   line-height: 22px;
   padding: 16px 32px;
+
+  &.outlined {
+    padding: 15px 31px;
+  }
 }
 
 /* loading */
 
 .loading,
 .loading:hover {
-  background: var(--color-accent);
+  background: var(--color-bondi-blue-dark);
 }
 
 .loading .content {
@@ -70,107 +75,102 @@
   position: absolute;
 }
 
-/* colors */
-
-.accent {
-  --main-color: var(--color-accent);
-  --hover-color: var(--color-accent-hover);
-}
-
-.gray {
-  --main-color: var(--color-primary);
-  --hover-color: var(--color-primary-hover);
-}
-
-.warning {
-  --main-color: var(--color-warning);
-  --hover-color: var(--color-warning-hover);
-}
-
-.highlight {
-  --main-color: var(--color-highlight);
-  --hover-color: var(--color-highlight-hover);
-}
-
 /* contained */
 
 .contained {
   transition: background-color 0.1s ease-out;
-  color: var(--color-white);
-  background: var(--main-color);
+  background: var(--color-accent);
+  color: var(--color-black);
+}
+
+[data-using-keyboard] .contained:focus {
+  box-shadow: 0 0 0 2px var(--color-cold-gray-light);
 }
 
 .contained:hover,
-.contained.active,
-[data-using-keyboard] .contained:focus {
-  background: var(--hover-color);
+.contained.active {
+  background: var(--color-accent-hover);
+}
+
+.contained.disabled,
+.contained.disabled:hover,
+.contained.loading,
+.contained.loading:hover {
+  background: var(--color-cold-gray-dark);
+  cursor: default;
 }
 
 /* outlined */
 
 .outlined {
-  background: var(--color-white);
+  background: transparent;
   transition: border-color 0.1s ease-out;
-  color: var(--main-color);
+  border: 1px solid var(--color-cold-gray-light);
+  color: var(--color-black-60);
+}
 
-  &:before {
-    border: 1px solid var(--color-shadow);
-    opacity: 0.2;
-    transition: opacity 0.15s ease-out;
-  }
+.outlined.disabled,
+.outlined.disabled:hover {
+  border-color: transparent;
+  background: var(--color-cold-gray-ultralight);
+}
+
+[data-using-keyboard] .outlined:focus {
+  background: var(--color-cold-gray-ultralight);
+  border-color: var(--color-cold-gray-dark);
 }
 
 .outlined:hover,
-.outlined.active,
-[data-using-keyboard] .outlined:focus {
-  &:before {
-    opacity: 0.4;
-  }
+.outlined.active {
+  background: transparent;
+  border-color: var(--color-cold-gray-dark);
+}
+
+.outlined.disabled,
+.outlined.disabled:hover,
+.outlined.loading,
+.outlined.loading:hover {
+  color: var(--color-cold-gray-dark);
+  border-color: transparent;
+  background: var(--color-cold-gray-ultralight);
+  cursor: default;
+}
+
+.outlined.loading,
+.outlined.loading:hover {
+  color: var(--color-blue-steel);
 }
 
 /* ghost */
 
 .ghost {
-  color: var(--main-color);
+  transition: background-color 0.1s ease-out, color 0.1s ease-out;
+  background: transparent;
+  color: var(--color-blue-steel);
+}
 
-  &:before {
-    background: var(--color-shadow);
-    opacity: 0;
-    transition: opacity 0.15s ease-out;
-  }
+[data-using-keyboard] .ghost:focus {
+  background: var(--color-cold-gray-ultralight);
 }
 
 .ghost:hover,
-.ghost.active,
-[data-using-keyboard] .ghost:focus {
-  &:before {
-    opacity: 0.1;
-  }
+.ghost.active {
+  background: var(--color-cold-gray-ultralight);
+  color: var(--color-black);
 }
 
 .ghost.disabled,
-.ghost.disabled:hover {
+.ghost.disabled:hover,
+.ghost.loading,
+.ghost.loading:hover {
+  color: var(--color-cold-gray-light);
   background: transparent;
-}
-
-/* disabled */
-
-.disabled,
-.disabled:hover {
-  color: var(--color-shadow-l);
-  background: var(--color-shadow-d);
   cursor: default;
-
-  &:before {
-    display: none;
-  }
 }
 
-/* loading */
-
-.loading,
-.loading:hover {
-  color: var(--main-color);
+.ghost.loading,
+.ghost.loading:hover {
+  color: var(--color-blue-steel);
 }
 
 /* selected */

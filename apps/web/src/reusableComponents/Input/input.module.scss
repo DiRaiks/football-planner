@@ -8,7 +8,7 @@ $placeholder-state-width: 100%;
   padding-top: 2px;
   position: relative;
   font-family: var(--font-family);
-  color: var(--color-primary);
+  color: var(--color-black);
   display: inline-flex;
 }
 
@@ -21,19 +21,19 @@ $placeholder-state-width: 100%;
   box-sizing: border-box;
   padding: 5px 0;
   border: none;
-  border-bottom: 2px solid var(--color-shadow-lighten-80);
+  border-bottom: 2px solid var(--color-cold-gray-light);
   background: transparent;
   font-size: 18px;
   line-height: 24px;
   outline: none;
-  color: var(--color-primary);
+  color: var(--color-black);
   flex-grow: 1;
   transition: border-color 0.1s ease-out;
 }
 
 .input:focus,
 .active .input {
-  border-color: var(--color-accent);
+  border-color: var(--color-accent-dark);
 }
 
 .title {
@@ -42,7 +42,7 @@ $placeholder-state-width: 100%;
   position: absolute;
   left: 0;
   top: 27px;
-  color: var(--color-primary-lighten-40);
+  color: var(--color-black-60);
   white-space: nowrap;
   max-width: 100%;
   overflow: hidden;
@@ -76,23 +76,23 @@ $placeholder-state-width: 100%;
 }
 
 input::placeholder {
-  color: var(--color-primary-lighten-40);
+  color: var(--color-black-60);
 }
 
 input:disabled {
-  border-color: var(--color-shadow-lighten-80);
-  color: var(--color-primary-lighten-40);
+  border-color: var(--color-cold-gray-light);
+  color: var(--color-black-60);
 }
 
 .error .input {
   &,
   &:placeholder-shown {
-    border-color: var(--color-warning);
+    border-color: var(--color-cold-amaranth);
 
     & + .title {
       transform: $label-state;
       max-width: $label-state-width;
-      color: var(--color-warning);
+      color: var(--color-cold-amaranth);
     }
   }
 }

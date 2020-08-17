@@ -1,11 +1,17 @@
 // colors
 
 :root {
+  --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans',
+    'Droid Sans', 'Helvetica Neue', sans-serif;
+
   --color-primary: #002a42;
   --color-primary-hover: #193f55;
 
-  --color-accent: #7fffd4;
-  --color-accent-hover: #5dbea3;
+  --color-background: #f2f8fe;
+
+  --color-accent: #7cf0bd;
+  --color-accent-hover: #6dd2a5;
+  --color-accent-dark: #00b161;
 
   --color-warning: #ff536a;
   --color-warning-hover: #ff7588;
@@ -15,13 +21,16 @@
 
   --color-white: #fff;
 
+  --color-green: #7cf0bd;
+  --color-green-ultralight: #f2fff9;
+
   --color-black-60: #667f8e;
   --color-black: #002a42;
 
   --color-blue: #528cc7;
   --color-blue-steel: #5892b6;
 
-  --color-bondi-blue-normal: #7fc30e;
+  --color-bondi-blue-normal: #0eb9c3;
   --color-bondi-blue-dark: #009aa6;
 
   --color-cold-gray-ultralight: #f2f8fe;
