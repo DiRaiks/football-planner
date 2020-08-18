@@ -12,9 +12,13 @@ const Event: FC<IEventProps> = props => {
     <Box variant="flat-gray" className={styles.eventBox} disabled={isDisabled}>
       <BoxMain>
         <BoxHeader>{eventName}</BoxHeader>
-        <div>Место: {place}</div>
         <div>
-          Время: {date}, {time}
+          <span className={styles.fieldName}>Место: </span>
+          {place}
+        </div>
+        <div>
+          <span className={styles.fieldName}>Время: </span>
+          {date}, {time}
         </div>
       </BoxMain>
       <BoxFooter>
