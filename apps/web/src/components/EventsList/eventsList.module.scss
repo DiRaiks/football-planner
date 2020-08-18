@@ -1,0 +1,15 @@
+.wrapper {
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-around;
+  max-width: 1100px;
+  padding: 16px 24px;
+}
+
+.leftColumn {
+  width: 500px;
+}
+
+.rightColumn {
+  width: 500px;
+}
