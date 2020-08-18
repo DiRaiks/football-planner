@@ -4,6 +4,9 @@ import { configure } from 'mobx';
 configure({ enforceActions: 'always' });
 
 // constructors
+export { default as Action } from './action';
+
+export * from './action';
 
 // stores
 export { default as UserStore } from './user';

@@ -1,6 +1,6 @@
 import { observable, action, computed } from 'mobx';
 import { fetch, getTokenFromLS, saveTokenToLS, removeTokenToLS } from 'utils';
-import { ErrorsStore, IExtractedFlatErrors } from 'store';
+import { ErrorsStore, IExtractedFlatErrors, Action } from 'store';
 import { EMPTY_ERRORS } from 'store/errors';
 
 import { IUserLoginData, TUser, IUserRegistrationModel } from './types.d';
@@ -18,7 +18,6 @@ class UserStore {
   @observable checkTokenErrors = EMPTY_ERRORS;
   @observable changePasswordErrors = EMPTY_ERRORS;
   @observable isLoginPending = false;
-  @observable isUserPending = false;
   @observable isCheckTokenPending = false;
   @observable isRegistrationPending = false;
 
@@ -27,7 +26,7 @@ class UserStore {
   }
 
   @computed get isInitialUserPending(): boolean {
-    return this.isUserPending && !this.isAuthenticated;
+    return this.updateUserAction.isPending && !this.isAuthenticated;
   }
 
   @computed get username(): string {
@@ -42,10 +41,6 @@ class UserStore {
 
   @action setCheckTokenPending(state: boolean): void {
     this.isCheckTokenPending = state;
-  }
-
-  @action setUserPending(state: boolean): void {
-    this.isUserPending = state;
   }
 
   @action setRegistrationPending(state: boolean): void {
@@ -98,27 +93,14 @@ class UserStore {
     removeTokenToLS();
   }
 
+  updateUserAction = new Action<{}, TUser>();
+
   async updateUser(): Promise<void | boolean> {
     if (!getTokenFromLS()) return;
 
-    this.setUserPending(true);
+    const result = await this.updateUserAction.callAction(USER_URL, 'get');
 
-    try {
-      const response = await fetch(USER_URL);
-
-      if (response.ok) {
-        const user: TUser = await response.json();
-        this.setUser(user);
-
-        return true;
-      }
-
-      ErrorsStore.processGetErrors(response);
-    } catch (error) {
-      ErrorsStore.showTempError(error);
-    } finally {
-      this.setUserPending(false);
-    }
+    if (result && typeof result === 'object') this.setUser(result);
   }
 
   async login({ email, password }: IUserLoginData): Promise<void> {
