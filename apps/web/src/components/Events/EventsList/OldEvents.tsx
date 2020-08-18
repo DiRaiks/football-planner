@@ -5,9 +5,11 @@ import { EventsStore } from 'store';
 
 import Event from './Event';
 import styles from './events.module.scss';
+import { useEventActions } from './useEventActions';
 
 export const OldEvents: FC = () => {
   const oldEvents = useObserver(() => EventsStore.oldEvents);
+  const { openEventHandler, deleteEventHandler } = useEventActions();
 
   return (
     <div className={styles.wrapper}>
@@ -22,6 +24,8 @@ export const OldEvents: FC = () => {
             date={event.date}
             playersAmount={event.playersAmount}
             playersMinimum={event.minimum}
+            onClick={(): void => openEventHandler(event._id)}
+            onRemove={(): void => deleteEventHandler(event._id)}
             isDisabled
           />
         );

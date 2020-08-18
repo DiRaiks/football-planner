@@ -6,7 +6,7 @@ import { IBox } from './types';
 import styles from './box.module.scss';
 
 const Box: IBox = (props, ref) => {
-  const { className, variant = 'flat', disabled = false, children, ...rest } = props;
+  const { className, variant = 'flat', disabled = false, onClick, children, ...rest } = props;
   const classes = cn(
     {
       [styles.wrapper]: true,
@@ -15,12 +15,13 @@ const Box: IBox = (props, ref) => {
       [styles.bordered]: variant === 'bordered',
       [styles.shaded]: variant === 'shaded',
       [styles.disabled]: disabled,
+      [styles.interactive]: !!onClick,
     },
     className,
   );
 
   return (
-    <div ref={ref} className={classes} {...rest}>
+    <div ref={ref} className={classes} onClick={onClick} {...rest}>
       {children}
     </div>
   );

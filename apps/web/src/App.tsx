@@ -9,7 +9,7 @@ import { CenterLoader, Tooltip } from 'reusableComponents';
 import Login from 'components/Login';
 import Registration from 'components/Registration';
 import Main from 'components/Main';
-import EventsList from 'components/EventsList';
+import Events from 'components/Events';
 
 import './App.scss';
 
@@ -32,7 +32,7 @@ export const App: React.FC = () => {
           >
             <Main>
               <Switch>
-                <Route path={`${ROUTE_EVENTS}`} component={EventsList} />
+                <Route path={`${ROUTE_EVENTS}`} component={Events} />
                 <Redirect to={ROUTE_EVENTS} />
               </Switch>
             </Main>

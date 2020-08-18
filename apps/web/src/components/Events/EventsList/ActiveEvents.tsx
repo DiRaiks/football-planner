@@ -4,9 +4,11 @@ import { useObserver } from 'mobx-react';
 import { EventsStore } from 'store';
 
 import Event from './Event';
+import { useEventActions } from './useEventActions';
 
-export const ActiveEvents: FC = () => {
+const ActiveEvents: FC = () => {
   const activeEvents = useObserver(() => EventsStore.activeEvents);
+  const { openEventHandler, deleteEventHandler } = useEventActions();
 
   return (
     <div>
@@ -21,6 +23,8 @@ export const ActiveEvents: FC = () => {
             date={event.date}
             playersAmount={event.playersAmount}
             playersMinimum={event.minimum}
+            onClick={(): void => openEventHandler(event._id)}
+            onRemove={(): void => deleteEventHandler(event._id)}
           />
         );
       })}

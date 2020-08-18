@@ -1,6 +1,7 @@
 export interface IBoxProps extends React.HTMLAttributes<HTMLDivElement> {
   variant?: 'flat' | 'flat-gray' | 'shaded' | 'bordered';
   disabled?: boolean;
+  onClick?: () => void;
 }
 export interface IBox extends React.ForwardRefRenderFunction<HTMLDivElement, IBoxProps> {}
 

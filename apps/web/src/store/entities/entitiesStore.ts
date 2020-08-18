@@ -165,7 +165,6 @@ class EntitiesStore<T extends { id: string }, FS extends { all: string }, SC = k
 
     if (result) {
       const { counters, entities } = result;
-      console.log('---->>>>result', result);
 
       this.setEntitiesCounters(counters);
       this.setEntities(entities);

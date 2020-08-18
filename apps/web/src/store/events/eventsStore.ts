@@ -35,10 +35,19 @@ class EventsStore extends EntitiesStore<IEventModel, typeof EventFilterStatus> {
   }
 
   createEventAction = new Action();
+  deleteEventAction = new Action();
 
   async createEvent(data: TEventData): Promise<boolean> {
     // TODO: fix create event on server
     const result = await this.createEventAction.callAction('/events/save', 'post', { ...data, playersAmount: 0 });
+
+    if (result) this.updateEntities();
+
+    return !!result;
+  }
+
+  async deleteEvent(id: string): Promise<boolean> {
+    const result = await this.createEventAction.callAction('/events/delete', 'delete', undefined, { eventID: id });
 
     if (result) this.updateEntities();
 

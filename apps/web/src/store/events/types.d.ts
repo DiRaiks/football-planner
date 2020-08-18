@@ -4,7 +4,7 @@ export interface IEventsStore extends IEntitiesColumnsState<TEventsColumn> {}
 export type TEventsColumn = keyof IEventModel;
 
 export interface IEventModel {
-  _id?: string;
+  _id: string;
   id: string;
   place: string;
   time: string;
