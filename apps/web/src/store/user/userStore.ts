@@ -3,7 +3,7 @@ import { fetch, getTokenFromLS, saveTokenToLS, removeTokenToLS } from 'utils';
 import { ErrorsStore, IExtractedFlatErrors } from 'store';
 import { EMPTY_ERRORS } from 'store/errors';
 
-import { IUserLoginData, TUser, ISignupCompanyModel, ISignupPersonModel } from './types.d';
+import { IUserLoginData, TUser, IUserRegistrationModel } from './types.d';
 import { DEFAULT_STATE, LOGIN_URL, LOGOUT_URL, USER_URL, REGISTRATION_URL, CHECK_TOKEN_URL } from './constants';
 
 class UserStore {
@@ -14,7 +14,7 @@ class UserStore {
 
   @observable user = DEFAULT_STATE.user;
   @observable loginErrors = EMPTY_ERRORS;
-  @observable signUpErrors = EMPTY_ERRORS;
+  @observable registrationErrors = EMPTY_ERRORS;
   @observable checkTokenErrors = EMPTY_ERRORS;
   @observable changePasswordErrors = EMPTY_ERRORS;
   @observable isLoginPending = false;
@@ -63,11 +63,11 @@ class UserStore {
   }
 
   @action setSignUpErrors(errors: IExtractedFlatErrors): void {
-    this.signUpErrors = errors;
+    this.registrationErrors = errors;
   }
 
-  @action resetSignUpErrors(): void {
-    this.signUpErrors = EMPTY_ERRORS;
+  @action resetRegistrationErrors(): void {
+    this.registrationErrors = EMPTY_ERRORS;
   }
 
   @action setCheckTokenErrors(errors: IExtractedFlatErrors): void {
@@ -167,10 +167,10 @@ class UserStore {
     }
   }
 
-  async registration(data: ISignupPersonModel | ISignupCompanyModel): Promise<void | boolean> {
+  async registration(data: IUserRegistrationModel): Promise<void | boolean> {
     this.setRegistrationPending(true);
     this.setUser(null);
-    this.resetSignUpErrors();
+    this.resetRegistrationErrors();
 
     try {
       const response = await fetch(REGISTRATION_URL, {

@@ -5,7 +5,7 @@ import { ServicePage, ServiceForm, FormTextField, FormPasswordField, Button } fr
 
 import { ROUTE_REGISTRATION } from 'constantsVars';
 
-import { useLoginForm } from './useSignInForm';
+import { useLoginForm } from './useLoginForm';
 import styles from './login.module.scss';
 
 export const SignInForm: React.FC = () => {

@@ -3,9 +3,11 @@ import React, { Suspense } from 'react';
 import { BrowserRouter as Router, Switch, Route } from 'react-router-dom';
 import { useObserver } from 'mobx-react';
 
+import { ROUTE_REGISTRATION } from 'constantsVars';
 import { UserStore } from 'store';
 import { CenterLoader } from 'reusableComponents';
 import Login from 'components/Login';
+import Registration from 'components/Registration';
 
 import './App.scss';
 
@@ -29,6 +31,7 @@ export const App: React.FC = () => {
         </>
       ) : (
         <Switch>
+          <Route path={ROUTE_REGISTRATION} component={Registration} />
           <Route path="*" component={Login} />
         </Switch>
       )}

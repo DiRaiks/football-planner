@@ -7,22 +7,10 @@ export interface IUserLoginData {
   password: string;
 }
 
-export interface ISignupPersonModel {
-  fullName: string;
+export interface IUserRegistrationModel {
+  username: string;
   email: string;
-  phone?: string;
-  currencyId: string;
-}
-
-export interface ISignupCompanyModel {
-  countryId?: string;
-  currencyId?: string;
-  companyName?: string;
-  inn?: string;
-  kpp?: string;
-  ogrn?: string;
-  phone?: string;
-  user?: ISignupPersonModel;
+  password: string;
 }
 
 export type TUser = {
