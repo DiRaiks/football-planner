@@ -1,4 +1,4 @@
-export type TType = 'text' | 'password' | 'number' | 'email' | 'search' | 'tel' | 'url';
+export type TType = 'text' | 'password' | 'number' | 'email' | 'search' | 'tel' | 'url' | 'date' | 'time';
 
 interface IInputCommonProps {
   label?: string;

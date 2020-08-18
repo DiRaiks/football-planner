@@ -3,6 +3,7 @@ import { ContainerContent } from 'reusableComponents';
 
 import { usePageEntitiesUpdate, useEntitiesPagination } from 'hooks';
 import { EventsStore } from 'store';
+import EventForm from 'components/EventForm';
 
 import ActiveEvents from './ActiveEvents';
 import OldEvents from './OldEvents';
@@ -22,8 +23,8 @@ export const EventsList: React.FC = () => {
           <OldEvents />
         </div>
         <div className={styles.rightColumn}>
-          <ActiveEvents />
-          <OldEvents />
+          <h3>Новый матч</h3>
+          <EventForm />
         </div>
       </div>
     </ContainerContent>

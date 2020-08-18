@@ -7,9 +7,23 @@
 }
 
 .leftColumn {
-  width: 500px;
+  flex-basis: 500px;
 }
 
 .rightColumn {
-  width: 500px;
+  flex-basis: 500px;
+}
+
+@media (max-width: 1250px) {
+  .wrapper {
+    flex-direction: column;
+
+    .leftColumn {
+      flex-basis: 100%;
+    }
+
+    .rightColumn {
+      flex-basis: 100%;
+    }
+  }
 }

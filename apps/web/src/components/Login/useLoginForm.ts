@@ -29,7 +29,7 @@ export const useLoginForm: TUseLoginForm = () => {
     label: 'Пароль',
   });
 
-  const isDisabled = !userNameProps.value || !password;
+  const isDisabled = !userNameProps.value || !passwordProps.value;
 
   const handleSubmit: TFormSubmit = useCallback(
     event => {
