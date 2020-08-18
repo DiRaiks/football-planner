@@ -5,7 +5,7 @@ type TUsePasswordValidation = (
   error: string | null;
 };
 
-const MIN_LENGTH = 8;
+const MIN_LENGTH = 6;
 
 export const usePasswordValidation: TUsePasswordValidation = value => {
   if (value.length < MIN_LENGTH) {

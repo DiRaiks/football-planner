@@ -56,14 +56,14 @@ export const useRegistrationForm: TUseRegistrationForm = () => {
 
   const registration = useCallback(async () => {
     const user: IUserRegistrationModel = {
-      username: userNameProps.value,
+      name: userNameProps.value,
       email: emailProps.value,
-      password: '',
+      password: passwordProps.value,
     };
 
     const result = await UserStore.registration(user);
     if (result) setIsShowSuccessMessage(true);
-  }, [emailProps.value, userNameProps.value]);
+  }, [emailProps.value, passwordProps.value, userNameProps.value]);
 
   const handleSubmit: THandleSubmit = useCallback(
     event => {

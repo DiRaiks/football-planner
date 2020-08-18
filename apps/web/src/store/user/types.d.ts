@@ -8,7 +8,7 @@ export interface IUserLoginData {
 }
 
 export interface IUserRegistrationModel {
-  username: string;
+  name: string;
   email: string;
   password: string;
 }

@@ -4,7 +4,7 @@ import { ErrorsStore, IExtractedFlatErrors } from 'store';
 import { EMPTY_ERRORS } from 'store/errors';
 
 import { IUserLoginData, TUser, IUserRegistrationModel } from './types.d';
-import { DEFAULT_STATE, LOGIN_URL, LOGOUT_URL, USER_URL, REGISTRATION_URL, CHECK_TOKEN_URL } from './constants';
+import { DEFAULT_STATE, LOGIN_URL, LOGOUT_URL, USER_URL, REGISTRATION_URL } from './constants';
 
 class UserStore {
   constructor() {
@@ -181,6 +181,9 @@ class UserStore {
       const { status, ok } = response;
 
       if (ok && status === 200) {
+        const user: TUser = await response.json();
+        this.setUser(user);
+
         return true;
       }
 
@@ -193,41 +196,6 @@ class UserStore {
       ErrorsStore.showTempError(error);
     } finally {
       this.setRegistrationPending(false);
-    }
-  }
-
-  async checkToken(email: string, token: string): Promise<void | boolean> {
-    this.setCheckTokenPending(true);
-    this.resetCheckTokenErrors();
-
-    try {
-      const response = await fetch(CHECK_TOKEN_URL, {
-        method: 'get',
-        queryParams: { email, token },
-      });
-
-      if (response.ok) {
-        const result: string = await response.json();
-
-        if (result === 'Success') return true;
-
-        return this.setCheckTokenErrors(
-          ErrorsStore.translateErrors(
-            {
-              global: result,
-              fields: null,
-            },
-            'auth.errors.token',
-          ),
-        );
-      }
-
-      const errors = await ErrorsStore.extractError(response, 'auth.errors.token');
-      this.setCheckTokenErrors(errors);
-    } catch (error) {
-      ErrorsStore.showTempError(error);
-    } finally {
-      this.setCheckTokenPending(false);
     }
   }
 
