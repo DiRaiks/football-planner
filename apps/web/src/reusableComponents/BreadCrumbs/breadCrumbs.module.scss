@@ -1,0 +1,29 @@
+.group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.item {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  overflow: hidden;
+  & .icon {
+    flex-shrink: 0;
+  }
+}
+
+.icon {
+  margin: 0 4px;
+  vertical-align: middle;
+  fill: var(--color-cold-gray-dark);
+  width: 18px;
+  height: 18px;
+}
+
+.item:last-child {
+  & .icon {
+    display: none;
+  }
+}

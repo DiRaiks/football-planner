@@ -1,0 +1,19 @@
+.breadCrumbCont {
+  font-size: 14px;
+  line-height: 20px;
+  display: flex;
+  align-items: center;
+  color: var(--color-black-60);
+}
+
+.breadCrumbIcon {
+  fill: var(--color-cold-gray-dark);
+  margin-right: 10px;
+}
+
+.separator {
+  fill: var(--color-cold-gray-dark);
+  width: 18px;
+  height: 18px;
+  margin: 0 4px;
+}

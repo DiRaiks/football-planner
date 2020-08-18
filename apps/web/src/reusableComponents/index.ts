@@ -10,6 +10,8 @@ export { default as ServiceForm } from './ServiceForm';
 export { default as ServicePage } from './ServicePage';
 export { default as CenterLoader } from './CenterLoader';
 export { default as Tooltip } from './Tooltip';
+export { default as MainContainer } from './MainContainer';
+export { default as Crumb } from './BreadCrumbs';
 
 export * from './Button';
 export * from './FormField';
@@ -23,3 +25,5 @@ export * from './ServiceForm';
 export * from './ServicePage';
 export * from './CenterLoader';
 export * from './Tooltip';
+export * from './MainContainer';
+export * from './BreadCrumbs';

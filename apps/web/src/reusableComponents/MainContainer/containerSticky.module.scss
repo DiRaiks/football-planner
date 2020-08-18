@@ -1,0 +1,9 @@
+.sticky {
+  position: sticky;
+  left: var(--nav-size);
+  max-width: calc(100vw - var(--nav-size));
+  padding: 0 var(--page-offset);
+  box-sizing: border-box;
+  transition: left var(--nav-transition-duration) var(--nav-transition-timing-function);
+  transition-property: left, max-width;
+}

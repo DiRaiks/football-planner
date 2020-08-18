@@ -8,6 +8,7 @@ import { UserStore } from 'store';
 import { CenterLoader } from 'reusableComponents';
 import Login from 'components/Login';
 import Registration from 'components/Registration';
+import Main from 'components/Main';
 
 import './App.scss';
 
@@ -27,7 +28,9 @@ export const App: React.FC = () => {
                 <h2>Loading...</h2>
               </div>
             }
-          ></Suspense>
+          >
+            <Main></Main>
+          </Suspense>
         </>
       ) : (
         <Switch>

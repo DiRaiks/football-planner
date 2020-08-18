@@ -1,0 +1,17 @@
+.crumb {
+  font-size: 14px;
+  line-height: 20px;
+  display: inline;
+  max-width: 100%;
+  box-sizing: border-box;
+  white-space: nowrap;
+  flex-shrink: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-decoration: none;
+  outline: none;
+  color: var(--color-black-60);
+  &:hover {
+    color: var(--color-black);
+  }
+}

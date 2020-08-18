@@ -1,0 +1,18 @@
+.wrapper {
+  margin-left: var(--nav-size);
+  transition: margin-left var(--nav-transition-duration) var(--nav-transition-timing-function);
+  display: flex;
+}
+
+.content {
+  flex-basis: 100%;
+  min-height: 100vh;
+  background: var(--color-white);
+  box-shadow: var(--shadow-s);
+}
+
+@media (min-width: 1450px) {
+  .content {
+    flex-basis: 1000px;
+  }
+}

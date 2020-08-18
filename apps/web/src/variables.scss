@@ -19,7 +19,7 @@
   --color-highlight: #ed9661;
   --color-highlight-hover: #f1ab81;
 
-  --color-white: #fff;
+  --color-white: #ffffff;
 
   --color-green: #7cf0bd;
   --color-green-ultralight: #f2fff9;
@@ -67,4 +67,12 @@
   --shadow-modal: 0 8px 16px 0 var(--color-shadow-d);
   --shadow-table-header: 0 1px 0 0 var(--color-shadow-l);
   --shadow-range-thumb: 0 0 0 6px var(--color-shadow-l);
+
+  --z-index-RelativeModal: 1;
+  --z-index-tableHeader: 2;
+  --z-index-modal: 3;
+  --z-index-modal-root: 4;
+  --z-index-Header: 6;
+
+  --height-Header: 56px;
 }

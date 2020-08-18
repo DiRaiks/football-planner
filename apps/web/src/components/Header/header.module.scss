@@ -1,0 +1,21 @@
+.header {
+  z-index: var(--z-index-Header);
+  display: flex;
+  flex-direction: row;
+  padding: 0 24px;
+  min-height: 56px;
+  align-items: center;
+  background: var(--color-accent);
+  height: var(--height-Header);
+}
+
+.container {
+  padding: 0;
+  z-index: var(--z-index-Header);
+}
+
+.tenantContainer {
+  display: flex;
+  align-items: center;
+  margin-right: 8px;
+}
