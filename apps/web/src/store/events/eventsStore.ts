@@ -1,9 +1,9 @@
 import { computed } from 'mobx';
 
-import { EntitiesStore } from 'store';
+import { EntitiesStore, Action } from 'store';
 
 import { DEFAULT_STATE } from './constants';
-import { IEventModel, EventFilterStatus } from './types';
+import { IEventModel, EventFilterStatus, TEventData } from './types';
 
 class EventsStore extends EntitiesStore<IEventModel, typeof EventFilterStatus> {
   constructor() {
@@ -32,6 +32,17 @@ class EventsStore extends EntitiesStore<IEventModel, typeof EventFilterStatus> {
     return this.entities.filter(event => {
       return new Date(event.date) < new Date(nowYear, nowMonth, nowDay);
     });
+  }
+
+  createEventAction = new Action();
+
+  async createEvent(data: TEventData): Promise<boolean> {
+    // TODO: fix create event on server
+    const result = await this.createEventAction.callAction('/events/save', 'post', { ...data, playersAmount: 0 });
+
+    if (result) this.updateEntities();
+
+    return !!result;
   }
 }
 

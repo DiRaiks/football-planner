@@ -18,3 +18,12 @@ export interface IEventModel {
 export enum EventFilterStatus {
   all = 'all',
 }
+
+export type TEventData = {
+  time: string;
+  place: string;
+  date: string;
+  minimum: string;
+  eventName: string;
+  playersAmount?: string;
+};

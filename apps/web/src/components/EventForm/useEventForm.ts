@@ -1,5 +1,5 @@
-import { useCallback, useEffect } from 'react';
-import { UserStore } from 'store';
+import { useCallback } from 'react';
+import { EventsStore } from 'store';
 import { useObserver } from 'mobx-react';
 
 import { useTextField, useInputProps } from 'hooks';
@@ -7,20 +7,13 @@ import { useTextField, useInputProps } from 'hooks';
 import { TEventForm, TEventFormSubmit } from './types';
 
 export const useEventForm: TEventForm = () => {
-  const isLoading = useObserver(() => UserStore.isLoginPending);
-  const errors = useObserver(() => UserStore.loginErrors);
-
-  const eventNameError = errors.fields?.UserName || errors.global;
-  const placeError = errors.fields?.Place || null;
-  const dateError = errors.fields?.Date || null;
-  const timeError = errors.fields?.Time || null;
-  const minimumError = errors.fields?.Minimum || null;
+  const isLoading = useObserver(() => EventsStore.createEventAction.isPending);
 
   const eventName = useTextField();
   const eventNameProps = useInputProps({
     ...eventName,
     localError: null,
-    serverError: eventNameError,
+    serverError: null,
     label: 'Название',
   });
 
@@ -28,7 +21,7 @@ export const useEventForm: TEventForm = () => {
   const placeProps = useInputProps({
     ...place,
     localError: null,
-    serverError: placeError,
+    serverError: null,
     label: 'Место',
   });
 
@@ -36,7 +29,7 @@ export const useEventForm: TEventForm = () => {
   const dateProps = useInputProps({
     ...date,
     localError: null,
-    serverError: dateError,
+    serverError: null,
     label: 'Дата',
   });
 
@@ -44,7 +37,7 @@ export const useEventForm: TEventForm = () => {
   const timeProps = useInputProps({
     ...time,
     localError: null,
-    serverError: timeError,
+    serverError: null,
     label: 'Время',
   });
 
@@ -52,19 +45,28 @@ export const useEventForm: TEventForm = () => {
   const minimumProps = useInputProps({
     ...minimum,
     localError: null,
-    serverError: minimumError,
+    serverError: null,
     label: 'Количество игроков',
   });
 
   const isDisabled = !eventNameProps.value || !placeProps.value;
 
-  const handleSubmit: TEventFormSubmit = useCallback(event => {
-    event.preventDefault();
-  }, []);
+  const handleSubmit: TEventFormSubmit = useCallback(
+    event => {
+      event.preventDefault();
 
-  useEffect(() => {
-    return (): void => UserStore.resetLoginErrors();
-  }, []);
+      const data = {
+        eventName: eventNameProps.value,
+        place: placeProps.value,
+        date: dateProps.value,
+        time: timeProps.value,
+        minimum: minimumProps.value,
+      };
+
+      EventsStore.createEvent(data);
+    },
+    [dateProps.value, eventNameProps.value, minimumProps.value, placeProps.value, timeProps.value],
+  );
 
   return {
     isLoading,
