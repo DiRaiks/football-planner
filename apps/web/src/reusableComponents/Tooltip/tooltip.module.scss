@@ -1,0 +1,103 @@
+.tooltip {
+  pointer-events: none;
+  position: fixed;
+  z-index: 1200;
+  top: var(--top, auto);
+  right: var(--right, auto);
+  bottom: var(--bottom, auto);
+  left: var(--left, auto);
+  opacity: var(--opacity, 0);
+  transition-property: opacity, transform;
+  transition-timing-function: ease-out;
+  transition-duration: 0.1s;
+}
+
+.content {
+  background: var(--color-primary);
+  color: var(--color-shadow-lighten-80);
+  border-radius: 4px;
+  font-size: 14px;
+  line-height: 20px;
+  padding: 6px 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  overflow-wrap: break-word;
+  max-width: 320px;
+}
+
+.arrow {
+  position: absolute;
+  display: flex;
+  justify-content: center;
+}
+
+.arrow:before {
+  content: '';
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  border-color: transparent;
+  border-width: 4px;
+  border-style: solid;
+}
+
+[data-direction='top'] .arrow {
+  top: 100%;
+
+  &:before {
+    border-top-color: var(--color-primary);
+  }
+}
+
+[data-direction='right'] .arrow {
+  right: 100%;
+
+  &:before {
+    border-right-color: var(--color-primary);
+  }
+}
+
+[data-direction='bottom'] .arrow {
+  bottom: 100%;
+
+  &:before {
+    border-bottom-color: var(--color-primary);
+  }
+}
+
+[data-direction='left'] .arrow {
+  left: 100%;
+
+  &:before {
+    border-left-color: var(--color-primary);
+  }
+}
+
+[data-direction='top'] .arrow,
+[data-direction='bottom'] .arrow {
+  left: 0;
+  min-width: 20px;
+  max-width: 100%;
+  width: var(--arrow, 100%);
+}
+
+[data-direction='top'][data-inverse] .arrow,
+[data-direction='bottom'][data-inverse] .arrow {
+  left: auto;
+  right: 0;
+}
+
+[data-direction='left'] .arrow,
+[data-direction='right'] .arrow {
+  flex-direction: column;
+  top: 0;
+  min-height: 20px;
+  max-height: 100%;
+  height: var(--arrow, 100%);
+}
+
+[data-direction='left'][data-inverse] .arrow,
+[data-direction='right'][data-inverse] .arrow {
+  top: auto;
+  bottom: 0;
+}
