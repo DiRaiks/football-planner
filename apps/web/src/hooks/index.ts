@@ -6,3 +6,4 @@ export * from './usePassword';
 export * from './usePasswordEquals';
 export * from './usePasswordValidation';
 export * from './useRouter';
+export * from './useEntitiesUpdate';

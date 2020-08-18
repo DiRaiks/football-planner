@@ -1,14 +1,15 @@
 import { hot } from 'react-hot-loader/root';
 import React, { Suspense } from 'react';
-import { BrowserRouter as Router, Switch, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Switch, Route, Redirect } from 'react-router-dom';
 import { useObserver } from 'mobx-react';
 
-import { ROUTE_REGISTRATION } from 'constantsVars';
+import { ROUTE_REGISTRATION, ROUTE_EVENTS } from 'constantsVars';
 import { UserStore } from 'store';
-import { CenterLoader } from 'reusableComponents';
+import { CenterLoader, Tooltip } from 'reusableComponents';
 import Login from 'components/Login';
 import Registration from 'components/Registration';
 import Main from 'components/Main';
+import EventsList from 'components/EventsList';
 
 import './App.scss';
 
@@ -29,7 +30,12 @@ export const App: React.FC = () => {
               </div>
             }
           >
-            <Main></Main>
+            <Main>
+              <Switch>
+                <Route path={`${ROUTE_EVENTS}`} component={EventsList} />
+                <Redirect to={ROUTE_EVENTS} />
+              </Switch>
+            </Main>
           </Suspense>
         </>
       ) : (
@@ -38,6 +44,7 @@ export const App: React.FC = () => {
           <Route path="*" component={Login} />
         </Switch>
       )}
+      <Tooltip />
     </Router>
   );
 };

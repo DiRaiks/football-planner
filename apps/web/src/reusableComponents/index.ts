@@ -12,6 +12,7 @@ export { default as CenterLoader } from './CenterLoader';
 export { default as Tooltip } from './Tooltip';
 export { default as MainContainer } from './MainContainer';
 export { default as Crumb } from './BreadCrumbs';
+export { default as Box } from './Box';
 
 export * from './Button';
 export * from './FormField';
@@ -27,3 +28,4 @@ export * from './CenterLoader';
 export * from './Tooltip';
 export * from './MainContainer';
 export * from './BreadCrumbs';
+export * from './Box';
