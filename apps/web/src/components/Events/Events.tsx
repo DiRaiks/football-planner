@@ -4,12 +4,13 @@ import { NoMatch } from 'components/NoMatch';
 import { ROUTE_EVENTS } from 'constantsVars';
 
 import EventsList from './EventsList';
+import EventPlayers from './EventPlayers';
 
 const Events: FC = () => (
   <>
     <Switch>
       <Route path={`${ROUTE_EVENTS}/:status(all|active|blocked|deleted)?`} exact component={EventsList} />
-      <Route path={`${ROUTE_EVENTS}/:eventId`} component={EventsList} />
+      <Route path={`${ROUTE_EVENTS}/:eventId`} component={EventPlayers} />
       <Route component={NoMatch} />
     </Switch>
   </>

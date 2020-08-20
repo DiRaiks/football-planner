@@ -1,0 +1,67 @@
+.wrapper {
+  padding: 5px 10px;
+}
+
+.countLine {
+  display: flex;
+}
+
+.chunk {
+  height: 6px;
+  background-color: #eee;
+  border-radius: 5px;
+  margin-right: 3px;
+
+  &.true {
+    background-color: var(--color-accent);
+  }
+
+  &.maybe {
+    background-color: var(--color-orange);
+  }
+
+  &:last-child {
+    margin: 0;
+  }
+}
+
+.optionsWr {
+  display: flex;
+  text-align: center;
+
+  &.notEnough {
+    div:nth-child(1) {
+      opacity: 1;
+    }
+  }
+
+  &.miniField {
+    div:nth-child(2) {
+      opacity: 1;
+    }
+  }
+
+  &.normalFiled {
+    div:nth-child(3) {
+      opacity: 1;
+    }
+  }
+
+  .option {
+    opacity: 0.1;
+
+    &:nth-of-type(1) {
+      width: 45.5%;
+    }
+
+    &:nth-of-type(2) {
+      width: 27%;
+      border-left: 1px solid black;
+      border-right: 1px solid black;
+    }
+
+    &:nth-of-type(3) {
+      width: 27%;
+    }
+  }
+}

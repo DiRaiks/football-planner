@@ -13,6 +13,9 @@ export { default as Tooltip } from './Tooltip';
 export { default as MainContainer } from './MainContainer';
 export { default as Crumb } from './BreadCrumbs';
 export { default as Box } from './Box';
+export { default as PopupMenu } from './PopupMenu';
+export { default as ModalRoot } from './ModalRoot';
+export { default as SearchField } from './SearchField';
 
 export * from './Button';
 export * from './FormField';
@@ -29,3 +32,5 @@ export * from './Tooltip';
 export * from './MainContainer';
 export * from './BreadCrumbs';
 export * from './Box';
+export * from './PopupMenu';
+export * from './ModalRoot';

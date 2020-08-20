@@ -1,0 +1,53 @@
+.item {
+  padding: 6px 16px;
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--color-primary);
+  outline: none;
+}
+
+.interactive {
+  cursor: pointer;
+}
+
+.interactive:hover,
+.interactive:focus {
+  background: var(--color-background);
+}
+
+.active,
+.active:focus,
+.active:hover {
+  background: var(--color-shadow-lighten-80);
+}
+
+.disabled,
+.disabled:focus,
+.disabled:hover {
+  color: var(--color-shadow-lighten-70);
+  background: transparent;
+  cursor: default;
+
+  .icon {
+    fill: var(--color-shadow-lighten-70);
+  }
+}
+
+.title {
+  padding: 2px 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 600px;
+}
+
+.icon {
+  fill: var(--color-primary-lighten-40);
+  margin-right: 12px;
+}
+
+.rightDecorator {
+  padding-left: 12px;
+  margin-left: auto;
+}

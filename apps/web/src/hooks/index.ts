@@ -7,3 +7,6 @@ export * from './usePasswordEquals';
 export * from './usePasswordValidation';
 export * from './useRouter';
 export * from './useEntitiesUpdate';
+export * from './useEscape';
+export * from './useWindowSize';
+export * from './useInterceptFocus';

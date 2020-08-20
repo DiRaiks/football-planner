@@ -1,0 +1,15 @@
+.table {
+  background-color: var(--color-cold-gray-light);
+  border-radius: 10px;
+  text-align: center;
+  border-spacing: 20px 10px;
+  width: 100%;
+
+  td {
+    padding: 0 10px;
+  }
+
+  .name {
+    text-align: left;
+  }
+}

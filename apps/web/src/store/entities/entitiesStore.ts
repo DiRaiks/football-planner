@@ -97,13 +97,14 @@ class EntitiesStore<T extends { id: string }, FS extends { all: string }, SC = k
     this.updateEntitiesErrors = EMPTY_ERRORS;
   }
 
-  getQueryParams(offset: number): Record<string, string> {
+  getQueryParams(offset: number, query?: Record<string, string>): Record<string, string> {
     return {
       offset: String(offset),
       limit: String(this.perPage),
       searchTerm: String(this.searchString),
       sortField: String(this.sortColumn),
       sortDirection: String(this.sortDir),
+      ...query,
     };
   }
 

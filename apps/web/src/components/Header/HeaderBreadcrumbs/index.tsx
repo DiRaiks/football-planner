@@ -27,16 +27,17 @@ const HeaderBreadcrumbs: FC = () => {
 
   const breadCrumb: TCrumb[] = useMemo(() => {
     const sectionDisplayName = camelCase(sectionPath);
+    // TODO: delete sectionPath from array
 
     return pathArray.length
-      ? pathArray.reduce((array, item, index) => {
+      ? [sectionPath, ...pathArray].reduce((array, item, index) => {
           const displayName = camelCase(item);
 
           if (item.length && displayName) {
             return [
               ...array,
               {
-                path: `/${sectionPath}/${pathArray.slice(0, index + 1).join('/')}`,
+                path: `/${pathArray.slice(0, index + 1).join('/')}`,
                 displayName,
               },
             ];
