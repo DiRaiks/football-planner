@@ -10,7 +10,7 @@ class PlayersStore extends EntitiesStore<IPlayerModel, typeof PlayerFilterStatus
     super(DEFAULT_STATE);
   }
 
-  @observable eventId: string | null = '5f3c38d94798fb4015fd24a1';
+  @observable eventId: string | null = null;
 
   @action setEventId(eventId: string): void {
     this.eventId = eventId;

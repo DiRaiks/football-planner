@@ -1,0 +1,20 @@
+.group {
+  flex-wrap: wrap;
+  display: flex;
+}
+
+.size-m {
+  margin: -4px -2px;
+
+  .item {
+    margin: 4px 2px;
+  }
+}
+
+.size-s {
+  margin: -2px -1px;
+
+  .item {
+    margin: 2px 1px;
+  }
+}

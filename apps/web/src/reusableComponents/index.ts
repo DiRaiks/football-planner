@@ -16,6 +16,7 @@ export { default as Box } from './Box';
 export { default as PopupMenu } from './PopupMenu';
 export { default as ModalRoot } from './ModalRoot';
 export { default as SearchField } from './SearchField';
+export { default as Chip } from './Chip';
 
 export * from './Button';
 export * from './FormField';
@@ -34,3 +35,4 @@ export * from './BreadCrumbs';
 export * from './Box';
 export * from './PopupMenu';
 export * from './ModalRoot';
+export * from './Chip';

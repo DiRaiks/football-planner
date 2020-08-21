@@ -65,3 +65,19 @@
     }
   }
 }
+
+.totalInfo {
+  text-align: right;
+  display: block;
+
+  .currentValue {
+    display: inline-block;
+    font-size: 24px;
+    font-weight: 500;
+    color: var(--color-warning);
+  }
+
+  .satisfied {
+    color: var(--color-accent);
+  }
+}

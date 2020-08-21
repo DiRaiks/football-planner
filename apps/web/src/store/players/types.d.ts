@@ -7,7 +7,7 @@ export type TPlayersColumnList = TPlayersColumn[];
 export interface IPlayerModel {
   _id: string;
   id: string;
-  friends: FriendItem[];
+  friends: IFriendModel[];
   name: string;
   date: string;
   status: boolean;

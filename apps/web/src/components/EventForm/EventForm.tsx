@@ -21,8 +21,10 @@ export const EventForm: FC = () => {
     <ServiceForm method="post" onSubmit={handleSubmit} className={styles.form}>
       <Input className={styles.input} autoFocus autoComplete="eventName" {...eventNameProps} />
       <Input className={styles.input} autoComplete="place" {...placeProps} />
-      <Input className={styles.input} autoComplete="date" {...dateProps} type="date" />
-      <Input className={styles.input} autoComplete="time" {...timeProps} type="time" />
+      <div className={styles.dateTime}>
+        <Input className={styles.date} autoComplete="date" {...dateProps} type="date" />
+        <Input className={styles.time} autoComplete="time" {...timeProps} type="time" />
+      </div>
       <Input className={styles.input} autoComplete="minimum" {...minimumProps} type="number" min="0" max="20" />
       <Button type="submit" disabled={isDisabled} loading={isLoading} size="l" className={styles.createButton}>
         Создать матч

@@ -17,10 +17,14 @@ export { default as UserStore } from './user';
 export { default as ErrorsStore } from './errors';
 export { default as AlertsStore } from './alerts';
 export { default as EventsStore } from './events';
+export { default as EventStore } from './event';
 export { default as PlayersStore } from './players';
+export { default as PlayerStore } from './player';
 
 export * from './user';
 export * from './errors';
 export * from './alerts';
 export * from './events';
+export * from './event';
 export * from './players';
+export * from './player';

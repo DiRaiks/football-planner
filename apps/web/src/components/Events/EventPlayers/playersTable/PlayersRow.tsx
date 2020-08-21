@@ -20,8 +20,8 @@ const PlayersRow: FC<IPlayersRowProps> = props => {
       <td className={statusClasses}>{statusText}</td>
       <td className={styles.name}>{player.name}</td>
       <td data-tooltip="Friends">
-        {player.friends.map(({ name }) => (
-          <Icon type="account" data-tooltip={name} />
+        {player.friends.map(({ name }, index) => (
+          <Icon key={index} type="account" data-tooltip={name} />
         ))}
       </td>
     </tr>

@@ -38,11 +38,24 @@ const CountInfo: FC<ICountInfoProps> = props => {
     };
   }, [activeFiled, minimum, playersAmount]);
 
+  const getTotalPlayersClasses = useCallback(() => {
+    return {
+      [styles.currentValue]: true,
+      [styles.satisfied]: playersAmount >= minimum,
+    };
+  }, [minimum, playersAmount]);
+
   return (
     <div ref={wrapperRef} className={styles.wrapper}>
       <div className={styles.countLine}>
         {currentProgress.map((item, index) => {
-          return <div key={index} style={{ flexGrow: 100 / chunkWidth }} className={cn(getChunkClasses(item)) || ''} />;
+          return (
+            <div
+              key={index}
+              style={{ flexGrow: chunkWidth ? 100 / chunkWidth : 0 }}
+              className={cn(getChunkClasses(item)) || ''}
+            />
+          );
         })}
       </div>
       <div className={cn(getOptionClasses())}>
@@ -58,6 +71,12 @@ const CountInfo: FC<ICountInfoProps> = props => {
         <div className={styles.option}>
           Большое
           <br /> поле
+        </div>
+      </div>
+      <div className={styles.totalInfo}>
+        <div>Минимум: {minimum}</div>
+        <div>
+          Всего: <span className={cn(getTotalPlayersClasses())}>{playersAmount}</span>
         </div>
       </div>
     </div>

@@ -5,6 +5,7 @@ type TUseTextField = (
 ) => {
   value: string;
   changeValue: TChangeValue;
+  resetValue: () => void;
 };
 
 type TChangeValue = (event: React.ChangeEvent<HTMLInputElement>) => void;
@@ -20,5 +21,9 @@ export const useTextField: TUseTextField = (defaultValue = '') => {
     setValue(event.currentTarget.value);
   }, []);
 
-  return { value, changeValue };
+  const resetValue = useCallback(() => {
+    setValue('');
+  }, []);
+
+  return { value, changeValue, resetValue };
 };

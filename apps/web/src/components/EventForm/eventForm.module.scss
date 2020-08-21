@@ -8,6 +8,19 @@
   width: 100%;
 }
 
+.dateTime {
+  display: flex;
+
+  & .date {
+    flex: 3;
+    margin-right: 10px;
+  }
+
+  & .time {
+    flex: 1;
+  }
+}
+
 .createButton {
   margin-top: 24px;
 }
