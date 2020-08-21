@@ -80,7 +80,6 @@ class PlayerStore extends EntityStore<IPlayerModel> {
 
   async deletePlayer(playerId: string): Promise<boolean> {
     const result = await this.deletePlayerAction.callAction(`/players/delete/${playerId}`, 'delete');
-    if (result) this.updatePlayer(this.eventId || '');
 
     return !!result;
   }
