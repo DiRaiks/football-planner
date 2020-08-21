@@ -1,6 +1,7 @@
-import { observable, action } from 'mobx';
+import { observable, action, computed } from 'mobx';
 
 import { EntitiesStore } from 'store';
+import { countAllPLayers } from 'utils';
 
 import { DEFAULT_STATE, PLAYERS_URL } from './constants';
 import { IPlayerModel, PlayerFilterStatus } from './types';
@@ -14,6 +15,12 @@ class PlayersStore extends EntitiesStore<IPlayerModel, typeof PlayerFilterStatus
 
   @action setEventId(eventId: string): void {
     this.eventId = eventId;
+  }
+
+  @computed get allPlayers(): Record<string, boolean>[] {
+    if (!this.entities) return [];
+
+    return countAllPLayers(this.entities);
   }
 
   get entitiesUrl(): string {

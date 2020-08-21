@@ -31,7 +31,7 @@ const EventPlayers: FC<RouteComponentProps<IEventPlayersParams>> = props => {
     <div className={styles.wrapper}>
       <div className={styles.leftColumn}>
         <Players players={players} />
-        <CountInfo players={players} playersAmount={event?.playersAmount || 0} minimum={event?.minimum || 0} />
+        <CountInfo playersAmount={event?.playersAmount || 0} minimum={event?.minimum || 0} />
       </div>
       <div className={styles.rightColumn}>
         <PlayerForm eventId={eventId} />

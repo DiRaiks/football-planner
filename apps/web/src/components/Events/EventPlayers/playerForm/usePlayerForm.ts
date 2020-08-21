@@ -9,7 +9,9 @@ import { TEventForm, TEventFormSubmit } from './types';
 export const usePlayerForm: TEventForm = props => {
   const { eventId } = props;
   const [friends, setFriends] = useState<IFriendModel[]>([]);
-  const isLoading = useObserver(() => PlayerStore.changePlayerAction.isPending);
+  const [isShowForm, setIsShowForm] = useState(false);
+  const isChangePlayerPending = useObserver(() => PlayerStore.changePlayerAction.isPending);
+  const isDeletePlayerPending = useObserver(() => PlayerStore.deletePlayerAction.isPending);
   const player = useObserver(() => PlayerStore.entity);
 
   useEffect(() => {
@@ -52,6 +54,7 @@ export const usePlayerForm: TEventForm = props => {
       if (result) {
         PlayersStore.updateEntities();
         EventStore.updateEvent(eventId);
+        setIsShowForm(false);
       }
     },
     [eventId, friends, nameProps.value, player],
@@ -70,6 +73,15 @@ export const usePlayerForm: TEventForm = props => {
     friend.resetValue();
   }, [friend, friendProps.value]);
 
+  const deletePlayer = useCallback(async () => {
+    const result = await PlayerStore.deletePlayer(player?._id || '');
+    if (result) {
+      PlayersStore.updateEntities();
+      EventStore.updateEvent(eventId);
+      PlayerStore.resetEntity();
+    }
+  }, [eventId, player]);
+
   useEffect(() => {
     return (): void => {
       setFriends([]);
@@ -77,15 +89,22 @@ export const usePlayerForm: TEventForm = props => {
     };
   }, []);
 
+  const isLoading = isChangePlayerPending;
+
   return {
     isLoading,
     isDisabled,
     isFriendDisabled,
+    isDeletePlayerPending,
     nameProps,
     friendProps,
     handleSubmit,
     deleteFriend,
     addFriend,
     friends,
+    isShowForm,
+    setIsShowForm,
+    player,
+    deletePlayer,
   };
 };

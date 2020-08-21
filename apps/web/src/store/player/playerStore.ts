@@ -15,6 +15,7 @@ class PlayerStore extends EntityStore<IPlayerModel> {
   }
 
   changePlayerAction = new Action();
+  deletePlayerAction = new Action();
 
   async updatePlayer(eventId: string): Promise<void | boolean> {
     this.setEventId(eventId);
@@ -72,13 +73,13 @@ class PlayerStore extends EntityStore<IPlayerModel> {
       userId: UserStore.user._id,
     };
     const result = await this.changePlayerAction.callAction('/players/save', 'post', newPlayer);
-    if (result) this.updatePlayer(this.eventId || '');
+    if (result) await this.updatePlayer(this.eventId || '');
 
     return !!result;
   }
 
   async deletePlayer(playerId: string): Promise<boolean> {
-    const result = await this.changePlayerAction.callAction(`/players/delete/${playerId}`, 'delete');
+    const result = await this.deletePlayerAction.callAction(`/players/delete/${playerId}`, 'delete');
     if (result) this.updatePlayer(this.eventId || '');
 
     return !!result;

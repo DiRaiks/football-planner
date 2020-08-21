@@ -11,13 +11,31 @@ export const PlayerForm: FC<IPlayerFormProps> = props => {
     isLoading,
     isDisabled,
     isFriendDisabled,
+    isDeletePlayerPending,
     handleSubmit,
     deleteFriend,
     addFriend,
     nameProps,
     friendProps,
     friends,
+    isShowForm,
+    setIsShowForm,
+    player,
+    deletePlayer,
   } = usePlayerForm(props);
+
+  if (!isShowForm) {
+    return (
+      <div className={styles.settingsWr}>
+        <Button onClick={(): void => setIsShowForm(true)}>{player ? 'Изменить решение' : 'Принять участие'}</Button>
+        {player && (
+          <Button onClick={deletePlayer} loading={isDeletePlayerPending}>
+            Удалить запись
+          </Button>
+        )}
+      </div>
+    );
+  }
 
   return (
     <ServiceForm method="post" onSubmit={handleSubmit} className={styles.form}>
@@ -35,6 +53,9 @@ export const PlayerForm: FC<IPlayerFormProps> = props => {
       </Button>
       <Button type="submit" disabled={isDisabled} loading={isLoading} size="m" className={styles.createButton}>
         Применить
+      </Button>
+      <Button size="m" className={styles.createButton} onClick={(): void => setIsShowForm(false)}>
+        Отменить
       </Button>
     </ServiceForm>
   );

@@ -37,7 +37,7 @@ const HeaderBreadcrumbs: FC = () => {
             return [
               ...array,
               {
-                path: `/${pathArray.slice(0, index + 1).join('/')}`,
+                path: `/${[sectionPath, ...pathArray].slice(0, index + 1).join('/')}`,
                 displayName,
               },
             ];

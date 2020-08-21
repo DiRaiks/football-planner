@@ -1,4 +1,4 @@
-import { IFriendModel } from 'store';
+import { IFriendModel, IPlayerModel } from 'store';
 
 export type TEventFormSubmit = (event: React.FormEvent<HTMLFormElement>) => void;
 export type TChangeInput = (event: React.ChangeEvent<HTMLInputElement>) => void;
@@ -20,10 +20,15 @@ export type TEventForm = (
   isLoading: boolean;
   isDisabled: boolean;
   isFriendDisabled: boolean;
+  isDeletePlayerPending: boolean;
   nameProps: TInputProps;
   friendProps: TInputProps;
   handleSubmit: TEventFormSubmit;
   deleteFriend: (friendName: string) => void;
   addFriend: () => void;
   friends?: IFriendModel[];
+  isShowForm: boolean;
+  setIsShowForm: (state: boolean) => void;
+  player: IPlayerModel | null;
+  deletePlayer: () => void;
 };

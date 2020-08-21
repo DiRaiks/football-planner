@@ -1,6 +1,7 @@
 import React, { FC, useCallback, useEffect, useState, useRef } from 'react';
 import cn from 'classnames';
-import { IPlayerModel } from 'store';
+import { PlayersStore } from 'store';
+import { useObserver } from 'mobx-react';
 
 import { ICountInfoProps } from './types';
 import styles from './countInfo.module.scss';
@@ -8,8 +9,9 @@ import styles from './countInfo.module.scss';
 const MAX_PLAYERS = 22;
 
 const CountInfo: FC<ICountInfoProps> = props => {
-  const { playersAmount, players, minimum } = props;
+  const { playersAmount, minimum } = props;
   const [chunkWidth, setChunkWidth] = useState(0);
+  const allPlayers = useObserver(() => PlayersStore.allPlayers);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -17,10 +19,10 @@ const CountInfo: FC<ICountInfoProps> = props => {
     setChunkWidth(width?.width || 0 / MAX_PLAYERS);
   }, []);
 
-  const currentProgress = players.concat(new Array(MAX_PLAYERS - playersAmount).fill(0));
+  const currentProgress = allPlayers.concat(new Array(MAX_PLAYERS - playersAmount).fill(0));
   const activeFiled = playersAmount >= minimum ? (playersAmount < MAX_PLAYERS ? 'miniField' : 'normalField') : '';
 
-  const getChunkClasses = useCallback((item: IPlayerModel) => {
+  const getChunkClasses = useCallback((item: Record<string, boolean>) => {
     if (!item) return { [styles.chunk]: true };
 
     return {
