@@ -6,18 +6,24 @@ import { IIcon } from './types';
 
 import styles from './icon.module.scss';
 
-// polyfill: https://github.com/jonathantneal/svg4everybody
-// use it if you need IE support
+const getContainer = (): HTMLElement => {
+  let container = document.getElementById('icons-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'icons-container';
+    document.body.prepend(container);
+  }
 
-let container = document.getElementById('icons-container');
-if (!container) {
-  container = document.createElement('div');
-  container.id = 'icons-container';
-  document.body.prepend(container);
-}
+  return container;
+};
 
-container.style.display = 'none';
-container.innerHTML = svgContent;
+fetch(svgContent)
+  .then(response => response.text())
+  .then(data => {
+    const container = getContainer();
+    container.style.display = 'none';
+    container.innerHTML = data;
+  });
 
 const ICON_PREFIX = 'ui-icon-';
 

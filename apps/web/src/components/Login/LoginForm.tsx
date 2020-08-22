@@ -23,9 +23,6 @@ export const SignInForm: React.FC = () => {
           <Button type="submit" disabled={isDisabled} loading={isLoading} size="l" className={styles.signInButton}>
             Войти
           </Button>
-          <div className={styles.header}>
-            <div className={styles.noAccountWr}>Ещё нет аккаунта?</div>
-          </div>
           <div className={styles.signUpButton} onClick={(): void => history.push(ROUTE_REGISTRATION)}>
             <div>Регистрация</div>
           </div>

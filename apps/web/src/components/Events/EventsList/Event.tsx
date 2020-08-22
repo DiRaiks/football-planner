@@ -27,7 +27,7 @@ const Event: FC<IEventProps> = props => {
             type="button"
             color="gray"
             variant="ghost"
-            icon="remove"
+            icon="delete"
             onClick={onRemoveHandler}
           />
         </BoxHeader>

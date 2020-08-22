@@ -11,7 +11,7 @@ const ActiveEvents: FC = () => {
   const { openEventHandler, deleteEventHandler } = useEventActions();
 
   return (
-    <div>
+    <>
       {activeEvents.length !== 0 && <h3>Активные матчи</h3>}
       {activeEvents.map(event => {
         return (
@@ -28,7 +28,7 @@ const ActiveEvents: FC = () => {
           />
         );
       })}
-    </div>
+    </>
   );
 };
 
