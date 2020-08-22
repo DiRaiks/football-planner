@@ -13,6 +13,7 @@ export const usePlayerForm: TEventForm = props => {
   const isChangePlayerPending = useObserver(() => PlayerStore.changePlayerAction.isPending);
   const isDeletePlayerPending = useObserver(() => PlayerStore.deletePlayerAction.isPending);
   const player = useObserver(() => PlayerStore.entity);
+  const isPlayerLoading = useObserver(() => PlayerStore.isPending);
 
   useEffect(() => {
     PlayerStore.updatePlayer(eventId);
@@ -79,6 +80,7 @@ export const usePlayerForm: TEventForm = props => {
       PlayersStore.updateEntities();
       EventStore.updateEvent(eventId);
       PlayerStore.resetEntity();
+      setFriends([]);
     }
   }, [eventId, player]);
 
@@ -96,6 +98,7 @@ export const usePlayerForm: TEventForm = props => {
     isDisabled,
     isFriendDisabled,
     isDeletePlayerPending,
+    isPlayerLoading,
     nameProps,
     friendProps,
     handleSubmit,

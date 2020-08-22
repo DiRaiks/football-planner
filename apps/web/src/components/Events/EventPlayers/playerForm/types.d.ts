@@ -21,6 +21,7 @@ export type TEventForm = (
   isDisabled: boolean;
   isFriendDisabled: boolean;
   isDeletePlayerPending: boolean;
+  isPlayerLoading: boolean;
   nameProps: TInputProps;
   friendProps: TInputProps;
   handleSubmit: TEventFormSubmit;

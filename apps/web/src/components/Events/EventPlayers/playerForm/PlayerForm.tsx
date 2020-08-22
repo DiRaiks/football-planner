@@ -12,6 +12,7 @@ export const PlayerForm: FC<IPlayerFormProps> = props => {
     isDisabled,
     isFriendDisabled,
     isDeletePlayerPending,
+    isPlayerLoading,
     handleSubmit,
     deleteFriend,
     addFriend,
@@ -23,6 +24,8 @@ export const PlayerForm: FC<IPlayerFormProps> = props => {
     player,
     deletePlayer,
   } = usePlayerForm(props);
+
+  if (isPlayerLoading) return null;
 
   if (!isShowForm) {
     return (
