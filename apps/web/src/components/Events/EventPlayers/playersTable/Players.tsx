@@ -1,11 +1,13 @@
 import React, { FC } from 'react';
 
+import { StickyLoader } from 'components/Loaders';
+
 import PlayersRow from './PlayersRow';
 import { IPlayersProps } from './types';
 import styles from './players.module.scss';
 
 const Players: FC<IPlayersProps> = props => {
-  const { players } = props;
+  const { players, isLoading = false } = props;
 
   return (
     <table className={styles.table}>
@@ -18,6 +20,7 @@ const Players: FC<IPlayersProps> = props => {
         </tr>
       </thead>
       <tbody>
+        {isLoading && <StickyLoader />}
         {players.map((player, index) => (
           <PlayersRow key={player._id} index={index} player={player} />
         ))}

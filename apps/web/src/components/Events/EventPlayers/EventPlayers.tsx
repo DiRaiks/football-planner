@@ -14,6 +14,7 @@ const EventPlayers: FC<RouteComponentProps<IEventPlayersParams>> = props => {
   const { match } = props;
   const { eventId } = match.params;
   const players = useObserver(() => PlayersStore.entities);
+  const isPlayersPending = useObserver(() => PlayersStore.isPending);
   const event = useObserver(() => EventStore.entity);
   const isCanModifyEvent = useObserver(() => EventStore.isCanModify);
   const eventPending = useObserver(() => EventStore.isPending);
@@ -32,7 +33,7 @@ const EventPlayers: FC<RouteComponentProps<IEventPlayersParams>> = props => {
   return (
     <div className={styles.wrapper}>
       <div className={styles.leftColumn}>
-        <Players players={players} />
+        <Players players={players} isLoading={isPlayersPending} />
         {!eventPending && <CountInfo playersAmount={event?.playersAmount || 0} minimum={event?.minimum || 0} />}
       </div>
       {isCanModifyEvent && (
