@@ -8,6 +8,16 @@ class EventStore extends EntityStore<IEventModel> {
     return `/events/get/${this.eventId}`;
   }
 
+  @computed get isCanModify(): boolean {
+    if (!this.entity) return false;
+
+    const nowMonth = new Date().getMonth();
+    const nowDay = new Date().getDate();
+    const nowYear = new Date().getFullYear();
+
+    return new Date(this.entity.date) > new Date(nowYear, nowMonth, nowDay);
+  }
+
   @action setEventId(id: string | null): void {
     this.eventId = id;
   }

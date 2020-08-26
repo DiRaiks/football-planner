@@ -15,6 +15,7 @@ const EventPlayers: FC<RouteComponentProps<IEventPlayersParams>> = props => {
   const { eventId } = match.params;
   const players = useObserver(() => PlayersStore.entities);
   const event = useObserver(() => EventStore.entity);
+  const isCanModifyEvent = useObserver(() => EventStore.isCanModify);
   const eventPending = useObserver(() => EventStore.isPending);
 
   useEffect(() => {
@@ -34,9 +35,11 @@ const EventPlayers: FC<RouteComponentProps<IEventPlayersParams>> = props => {
         <Players players={players} />
         {!eventPending && <CountInfo playersAmount={event?.playersAmount || 0} minimum={event?.minimum || 0} />}
       </div>
-      <div className={styles.rightColumn}>
-        <PlayerForm eventId={eventId} />
-      </div>
+      {isCanModifyEvent && (
+        <div className={styles.rightColumn}>
+          <PlayerForm eventId={eventId} />
+        </div>
+      )}
     </div>
   );
 };
