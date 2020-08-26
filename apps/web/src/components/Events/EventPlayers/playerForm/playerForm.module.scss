@@ -12,6 +12,13 @@
   margin-top: 16px;
   max-width: 400px;
   box-shadow: var(--shadow-l);
+  position: relative;
+}
+
+.closeIcon {
+  position: absolute;
+  right: 10px;
+  top: 10px;
 }
 
 .input {
@@ -20,6 +27,14 @@
 
 .friends {
   margin-top: 16px;
+
+  .friendMaybe {
+    background-color: var(--color-orange-light);
+  }
+
+  .friendTrue {
+    background-color: var(--color-accent);
+  }
 }
 
 .addFriendButton {

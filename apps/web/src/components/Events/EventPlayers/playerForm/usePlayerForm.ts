@@ -4,11 +4,13 @@ import { useObserver } from 'mobx-react';
 import { UserStore, PlayerStore, IFriendModel, PlayersStore, EventStore } from 'store';
 import { useTextField, useInputProps } from 'hooks';
 
-import { TEventForm, TEventFormSubmit } from './types';
+import { TPlayerForm, TEventFormSubmit } from './types';
 
-export const usePlayerForm: TEventForm = props => {
+export const usePlayerForm: TPlayerForm = props => {
   const { eventId } = props;
   const [friends, setFriends] = useState<IFriendModel[]>([]);
+  const [playerStatus, setPlayerStatus] = useState<boolean>(false);
+  const [friendStatus, setFriendStatus] = useState<boolean>(false);
   const [isShowForm, setIsShowForm] = useState(false);
   const isChangePlayerPending = useObserver(() => PlayerStore.changePlayerAction.isPending);
   const isDeletePlayerPending = useObserver(() => PlayerStore.deletePlayerAction.isPending);
@@ -20,7 +22,10 @@ export const usePlayerForm: TEventForm = props => {
   }, [eventId]);
 
   useEffect(() => {
-    if (player?.friends) setFriends(player.friends);
+    if (player) {
+      setFriends(player.friends);
+      setPlayerStatus(player.status);
+    }
   }, [player]);
 
   const { value: nameValue, changeValue: changeNameValue } = useTextField();
@@ -46,7 +51,7 @@ export const usePlayerForm: TEventForm = props => {
   const handleSubmit: TEventFormSubmit = useCallback(
     async event => {
       event.preventDefault();
-      const newPlayer = { name: nameProps.value, friends, status: true };
+      const newPlayer = { name: nameProps.value, friends, status: playerStatus };
       let action = PlayerStore.changePlayer.bind(PlayerStore);
 
       if (!player) action = PlayerStore.addPlayer.bind(PlayerStore);
@@ -58,7 +63,7 @@ export const usePlayerForm: TEventForm = props => {
         setIsShowForm(false);
       }
     },
-    [eventId, friends, nameProps.value, player],
+    [eventId, friends, nameProps.value, player, playerStatus],
   );
 
   const deleteFriend = useCallback((friendName: string) => {
@@ -69,10 +74,11 @@ export const usePlayerForm: TEventForm = props => {
 
   const addFriend = useCallback(() => {
     setFriends(friends => {
-      return [...friends, { name: friendProps.value, status: true }];
+      return [...friends, { name: friendProps.value, status: friendStatus }];
     });
     friend.resetValue();
-  }, [friend, friendProps.value]);
+    setFriendStatus(false);
+  }, [friend, friendProps.value, friendStatus]);
 
   const deletePlayer = useCallback(async () => {
     const result = await PlayerStore.deletePlayer(player?._id || '');
@@ -83,6 +89,14 @@ export const usePlayerForm: TEventForm = props => {
       setFriends([]);
     }
   }, [eventId, player]);
+
+  const changePlayerStatus = useCallback((status: boolean) => {
+    setPlayerStatus(status);
+  }, []);
+
+  const changeFriendStatus = useCallback((status: boolean) => {
+    setFriendStatus(status);
+  }, []);
 
   useEffect(() => {
     return (): void => {
@@ -99,6 +113,8 @@ export const usePlayerForm: TEventForm = props => {
     isFriendDisabled,
     isDeletePlayerPending,
     isPlayerLoading,
+    playerStatus,
+    friendStatus,
     nameProps,
     friendProps,
     handleSubmit,
@@ -109,5 +125,7 @@ export const usePlayerForm: TEventForm = props => {
     setIsShowForm,
     player,
     deletePlayer,
+    changePlayerStatus,
+    changeFriendStatus,
   };
 };

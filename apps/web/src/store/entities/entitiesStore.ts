@@ -20,7 +20,7 @@ import {
 class EntitiesStore<T extends { id: string }, FS extends { all: string }, SC = keyof T> {
   constructor(state: IEntitiesColumnsState<SC>) {
     this.urlMatch = state.urlMatch;
-    this.entitiesUrl = state.entitiesUrl;
+    this._entitiesUrl = state.entitiesUrl;
     this.entitiesField = state.entitiesField;
     this.subField = state.subField;
     this.counters = state.counters;
@@ -59,7 +59,7 @@ class EntitiesStore<T extends { id: string }, FS extends { all: string }, SC = k
   @observable.struct counters: TEntitiesCounters;
 
   urlMatch: string;
-  entitiesUrl: string;
+  private _entitiesUrl: string;
   entitiesField: string;
   subField?: SC;
   translationPrefix: string | undefined;
@@ -68,6 +68,14 @@ class EntitiesStore<T extends { id: string }, FS extends { all: string }, SC = k
   defaultCounters: TEntitiesCounters;
   defaultSortColumn: SC;
   defaultSortDir: TSortDir;
+
+  public get entitiesUrl(): string {
+    return this._entitiesUrl;
+  }
+
+  public set entitiesUrl(value: string) {
+    this._entitiesUrl = value;
+  }
 
   /*
    * data fetching

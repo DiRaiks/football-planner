@@ -1,6 +1,7 @@
 import React, { FC } from 'react';
 
-import { ServiceForm, Button, Input, Chip, ChipGroup } from 'reusableComponents';
+import { ServiceForm, Button, Chip, ChipGroup, IconButton } from 'reusableComponents';
+import PlayerInput from 'components/PlayerInput';
 
 import { usePlayerForm } from './usePlayerForm';
 import { IPlayerFormProps } from './types';
@@ -13,6 +14,8 @@ export const PlayerForm: FC<IPlayerFormProps> = props => {
     isFriendDisabled,
     isDeletePlayerPending,
     isPlayerLoading,
+    playerStatus,
+    friendStatus,
     handleSubmit,
     deleteFriend,
     addFriend,
@@ -23,6 +26,8 @@ export const PlayerForm: FC<IPlayerFormProps> = props => {
     setIsShowForm,
     player,
     deletePlayer,
+    changePlayerStatus,
+    changeFriendStatus,
   } = usePlayerForm(props);
 
   if (isPlayerLoading) return null;
@@ -42,23 +47,37 @@ export const PlayerForm: FC<IPlayerFormProps> = props => {
 
   return (
     <ServiceForm method="post" onSubmit={handleSubmit} className={styles.form}>
-      <Input className={styles.input} autoFocus autoComplete="name" {...nameProps} />
+      <IconButton
+        data-tooltip="Отмена"
+        className={styles.closeIcon}
+        variant="ghost"
+        icon="close"
+        onClick={(): void => setIsShowForm(false)}
+      />
+      <PlayerInput
+        autoFocus
+        autoComplete="name"
+        status={playerStatus}
+        onStatusChange={changePlayerStatus}
+        {...nameProps}
+      />
       <ChipGroup className={styles.friends}>
         {friends?.map((friend, index) => (
-          <Chip key={index} onDelete={(): void => deleteFriend(friend.name)}>
+          <Chip
+            className={friend.status ? styles.friendTrue : styles.friendMaybe}
+            key={index}
+            onDelete={(): void => deleteFriend(friend.name)}
+          >
             {friend.name}
           </Chip>
         ))}
       </ChipGroup>
-      <Input className={styles.input} autoComplete="friend" {...friendProps} />
+      <PlayerInput autoComplete="friend" status={friendStatus} onStatusChange={changeFriendStatus} {...friendProps} />
       <Button disabled={isFriendDisabled} size="m" className={styles.addFriendButton} onClick={addFriend}>
         Добавить друга
       </Button>
       <Button type="submit" disabled={isDisabled} loading={isLoading} size="m" className={styles.createButton}>
         Применить
-      </Button>
-      <Button size="m" className={styles.createButton} onClick={(): void => setIsShowForm(false)}>
-        Отменить
       </Button>
     </ServiceForm>
   );

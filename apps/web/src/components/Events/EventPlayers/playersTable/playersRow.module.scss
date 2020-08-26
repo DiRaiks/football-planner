@@ -13,14 +13,13 @@ td {
   border: 1px solid var(--color-accent-hover);
 
   &.maybe {
-    color: #856404;
-    background-color: var(--color-orange);
-    border: 1px solid var(--color-orange-light);
+    background-color: var(--color-orange-light);
+    border: 1px solid var(--color-orange);
   }
 }
 
 .maybeIcon {
-  fill: var(--color-orange);
+  fill: var(--color-orange-light);
 }
 
 .trueIcon {

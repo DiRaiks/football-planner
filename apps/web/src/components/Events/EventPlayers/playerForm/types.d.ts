@@ -14,7 +14,7 @@ export type TInputProps = {
   label: string;
 };
 
-export type TEventForm = (
+export type TPlayerForm = (
   props: IPlayerFormProps,
 ) => {
   isLoading: boolean;
@@ -22,6 +22,8 @@ export type TEventForm = (
   isFriendDisabled: boolean;
   isDeletePlayerPending: boolean;
   isPlayerLoading: boolean;
+  playerStatus: boolean;
+  friendStatus: boolean;
   nameProps: TInputProps;
   friendProps: TInputProps;
   handleSubmit: TEventFormSubmit;
@@ -32,4 +34,6 @@ export type TEventForm = (
   setIsShowForm: (state: boolean) => void;
   player: IPlayerModel | null;
   deletePlayer: () => void;
+  changePlayerStatus: (status: boolean) => void;
+  changeFriendStatus: (status: boolean) => void;
 };
