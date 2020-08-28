@@ -1,49 +1,55 @@
 import { useCallback } from 'react';
-import { EventsStore } from 'store';
+import { EventsStore, EventStore } from 'store';
 import { useObserver } from 'mobx-react';
 
 import { useTextField, useInputProps } from 'hooks';
 
-import { TEventForm, TEventFormSubmit } from './types';
+import { TUseEventForm, TEventFormSubmit } from './types';
 
-export const useEventForm: TEventForm = () => {
+export const useEventForm: TUseEventForm = () => {
   const isLoading = useObserver(() => EventsStore.createEventAction.isPending);
+  const event = useObserver(() => EventStore.entity);
 
-  const eventName = useTextField();
+  const { value: eventNameValue, changeValue: changeEventNameValue } = useTextField('');
   const eventNameProps = useInputProps({
-    ...eventName,
+    value: event ? event.eventName ?? '' : eventNameValue,
+    changeValue: changeEventNameValue,
     localError: null,
     serverError: null,
     label: 'Название',
   });
 
-  const place = useTextField();
+  const { value: placeValue, changeValue: changePlaceValue } = useTextField();
   const placeProps = useInputProps({
-    ...place,
+    value: event ? event.place ?? '' : placeValue,
+    changeValue: changePlaceValue,
     localError: null,
     serverError: null,
     label: 'Место',
   });
 
-  const date = useTextField();
+  const { value: dateValue, changeValue: changeDateValue } = useTextField();
   const dateProps = useInputProps({
-    ...date,
+    value: event ? event.date ?? '' : dateValue,
+    changeValue: changeDateValue,
     localError: null,
     serverError: null,
     label: 'Дата',
   });
 
-  const time = useTextField();
+  const { value: timeValue, changeValue: changeTimeValue } = useTextField();
   const timeProps = useInputProps({
-    ...time,
+    value: event ? event.time ?? '' : timeValue,
+    changeValue: changeTimeValue,
     localError: null,
     serverError: null,
     label: 'Время',
   });
 
-  const minimum = useTextField();
+  const { value: minimumValue, changeValue: changeMinimumValue } = useTextField('0');
   const minimumProps = useInputProps({
-    ...minimum,
+    value: event ? String(event.minimum) ?? '' : minimumValue,
+    changeValue: changeMinimumValue,
     localError: null,
     serverError: null,
     label: 'Количество игроков',

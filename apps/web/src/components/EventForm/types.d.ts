@@ -8,7 +8,14 @@ export type TInputProps = {
   label: string;
 };
 
-export type TEventForm = () => {
+export interface IEventFormProps {
+  eventId?: string;
+  onCancel?: () => void;
+}
+
+export type TUseEventForm = (
+  props: IEventFormProps,
+) => {
   isLoading: boolean;
   isDisabled: boolean;
   eventNameProps: TInputProps;

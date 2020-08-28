@@ -1,5 +1,6 @@
 import React from 'react';
-import { ContainerContent } from 'reusableComponents';
+import { ContainerContent, CenterLoader } from 'reusableComponents';
+import { useObserver } from 'mobx-react';
 
 import { usePageEntitiesUpdate, useEntitiesPagination } from 'hooks';
 import { EventsStore } from 'store';
@@ -12,6 +13,7 @@ import styles from './eventsList.module.scss';
 export const EventsList: React.FC = () => {
   const search = usePageEntitiesUpdate(EventsStore, 'all');
   const pagination = useEntitiesPagination(EventsStore);
+  const isEventsPending = useObserver(() => EventsStore.isPending);
 
   console.log('search, pagination', search, pagination);
 
@@ -19,8 +21,14 @@ export const EventsList: React.FC = () => {
     <ContainerContent>
       <div className={styles.wrapper}>
         <div className={styles.leftColumn}>
-          <ActiveEvents />
-          <OldEvents />
+          {isEventsPending ? (
+            <CenterLoader size="l" />
+          ) : (
+            <>
+              <ActiveEvents />
+              <OldEvents />
+            </>
+          )}
         </div>
         <div className={styles.rightColumn}>
           <h3>Новый матч</h3>
