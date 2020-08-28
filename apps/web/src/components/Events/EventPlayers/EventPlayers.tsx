@@ -49,7 +49,13 @@ const EventPlayers: FC<RouteComponentProps<IEventPlayersParams>> = props => {
               Изменить событие
             </Button>
           )}
-          {isEditEvent && <EventForm eventId={eventId} onCancel={(): void => setIsEditEvent(false)} />}
+          {isEditEvent && (
+            <EventForm
+              eventId={eventId}
+              onCancel={(): void => setIsEditEvent(false)}
+              applyCallback={(): void => setIsEditEvent(false)}
+            />
+          )}
           <PlayerForm eventId={eventId} />
         </div>
       )}

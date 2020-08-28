@@ -1,4 +1,4 @@
-import { EntityStore, IEventModel, Action } from 'store';
+import { EntityStore, IEventModel, Action, TEventData } from 'store';
 import { action, computed, observable } from 'mobx';
 
 class EventStore extends EntityStore<IEventModel> {
@@ -30,7 +30,7 @@ class EventStore extends EntityStore<IEventModel> {
     return await this.updateEntity(this.currentEventUrl);
   }
 
-  async changeEvent(changedEvent: IEventModel): Promise<boolean> {
+  async changeEvent(changedEvent: TEventData): Promise<boolean> {
     const result = await this.changeEventAction.callAction(`/events/change/${this.eventId}`, 'put', changedEvent);
     if (result) this.updateEvent(this.eventId || '');
 

@@ -11,6 +11,7 @@ export type TInputProps = {
 export interface IEventFormProps {
   eventId?: string;
   onCancel?: () => void;
+  applyCallback?: () => void;
 }
 
 export type TUseEventForm = (

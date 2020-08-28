@@ -6,50 +6,47 @@ import { useTextField, useInputProps } from 'hooks';
 
 import { TUseEventForm, TEventFormSubmit } from './types';
 
-export const useEventForm: TUseEventForm = () => {
-  const isLoading = useObserver(() => EventsStore.createEventAction.isPending);
+export const useEventForm: TUseEventForm = props => {
+  const { applyCallback } = props;
+  const isCreatePending = useObserver(() => EventsStore.createEventAction.isPending);
+  const isСhangePending = useObserver(() => EventStore.changeEventAction.isPending);
   const event = useObserver(() => EventStore.entity);
 
-  const { value: eventNameValue, changeValue: changeEventNameValue } = useTextField('');
+  const eventName = useTextField(event?.eventName ?? '');
   const eventNameProps = useInputProps({
-    value: event ? event.eventName ?? '' : eventNameValue,
-    changeValue: changeEventNameValue,
+    ...eventName,
     localError: null,
     serverError: null,
     label: 'Название',
   });
 
-  const { value: placeValue, changeValue: changePlaceValue } = useTextField();
+  const place = useTextField(event?.place ?? '');
   const placeProps = useInputProps({
-    value: event ? event.place ?? '' : placeValue,
-    changeValue: changePlaceValue,
+    ...place,
     localError: null,
     serverError: null,
     label: 'Место',
   });
 
-  const { value: dateValue, changeValue: changeDateValue } = useTextField();
+  const date = useTextField(event?.date ?? '');
   const dateProps = useInputProps({
-    value: event ? event.date ?? '' : dateValue,
-    changeValue: changeDateValue,
+    ...date,
     localError: null,
     serverError: null,
     label: 'Дата',
   });
 
-  const { value: timeValue, changeValue: changeTimeValue } = useTextField();
+  const time = useTextField(event?.time ?? '');
   const timeProps = useInputProps({
-    value: event ? event.time ?? '' : timeValue,
-    changeValue: changeTimeValue,
+    ...time,
     localError: null,
     serverError: null,
     label: 'Время',
   });
 
-  const { value: minimumValue, changeValue: changeMinimumValue } = useTextField('0');
+  const minimum = useTextField(String(event?.minimum) ?? '');
   const minimumProps = useInputProps({
-    value: event ? String(event.minimum) ?? '' : minimumValue,
-    changeValue: changeMinimumValue,
+    ...minimum,
     localError: null,
     serverError: null,
     label: 'Количество игроков',
@@ -58,7 +55,7 @@ export const useEventForm: TUseEventForm = () => {
   const isDisabled = !eventNameProps.value || !placeProps.value;
 
   const handleSubmit: TEventFormSubmit = useCallback(
-    event => {
+    async event => {
       event.preventDefault();
 
       const data = {
@@ -69,10 +66,13 @@ export const useEventForm: TUseEventForm = () => {
         minimum: minimumProps.value,
       };
 
-      EventsStore.createEvent(data);
+      const result = event ? await EventStore.changeEvent(data) : await EventsStore.createEvent(data);
+      if (result) applyCallback && applyCallback();
     },
-    [dateProps.value, eventNameProps.value, minimumProps.value, placeProps.value, timeProps.value],
+    [applyCallback, dateProps.value, eventNameProps.value, minimumProps.value, placeProps.value, timeProps.value],
   );
+
+  const isLoading = isCreatePending || isСhangePending;
 
   return {
     isLoading,
