@@ -4,6 +4,7 @@ import { useObserver } from 'mobx-react';
 
 import { PlayersStore, EventStore, UserStore } from 'store';
 import EventForm from 'components/EventForm';
+import EventInfo from 'components/EventInfo';
 import { Button } from 'reusableComponents';
 
 import Players from './playersTable/Players';
@@ -39,6 +40,7 @@ const EventPlayers: FC<RouteComponentProps<IEventPlayersParams>> = props => {
   return (
     <div className={styles.wrapper}>
       <div className={styles.leftColumn}>
+        <EventInfo />
         <Players players={players} isLoading={isPlayersPending} />
         {!eventPending && <CountInfo playersAmount={event?.playersAmount || 0} minimum={event?.minimum || 0} />}
       </div>
