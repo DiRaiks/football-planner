@@ -29,7 +29,7 @@ $placeholder-state-width: 100%;
   color: var(--color-black);
   flex-grow: 1;
   transition: border-color 0.1s ease-out;
-  width: auto;
+  width: 100%;
 }
 
 .input:focus,

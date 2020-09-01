@@ -35,7 +35,9 @@ export const PlayerForm: FC<IPlayerFormProps> = props => {
   if (!isShowForm) {
     return (
       <div className={styles.settingsWr}>
-        <Button onClick={(): void => setIsShowForm(true)}>{player ? 'Изменить решение' : 'Принять участие'}</Button>
+        <Button className={styles.assignButton} onClick={(): void => setIsShowForm(true)}>
+          {player ? 'Изменить решение' : 'Принять участие'}
+        </Button>
         {player && (
           <Button onClick={deletePlayer} loading={isDeletePlayerPending}>
             Удалить запись
