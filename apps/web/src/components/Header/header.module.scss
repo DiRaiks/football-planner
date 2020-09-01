@@ -14,8 +14,18 @@
   z-index: var(--z-index-Header);
 }
 
-.tenantContainer {
-  display: flex;
-  align-items: center;
-  margin-right: 8px;
+.userInfo {
+  font-size: 12px;
+  margin-left: auto;
+  text-align: right;
+  color: var(--color-black-60);
+  line-height: normal;
+
+  .name {
+    font-weight: bold;
+  }
+
+  .count {
+    font-weight: bold;
+  }
 }

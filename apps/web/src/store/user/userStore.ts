@@ -20,6 +20,7 @@ class UserStore {
   @observable isLoginPending = false;
   @observable isCheckTokenPending = false;
   @observable isRegistrationPending = false;
+  @observable userEventsCount: number | null = 0;
 
   @computed get isAuthenticated(): boolean {
     return !!this.user;
@@ -93,14 +94,28 @@ class UserStore {
     removeTokenToLS();
   }
 
+  @action setUserEventsCount(eventCount: number | null): void {
+    this.userEventsCount = eventCount;
+  }
+
   updateUserAction = new Action<{}, TUser>();
+  getUserEventsCountAction = new Action<{}, number>();
 
   async updateUser(): Promise<void | boolean> {
     if (!getTokenFromLS()) return;
 
     const result = await this.updateUserAction.callAction(USER_URL, 'get');
 
-    if (result && typeof result === 'object') this.setUser(result);
+    if (result && typeof result === 'object') {
+      this.setUser(result);
+      this.getUserEventsCount(result._id);
+    }
+  }
+
+  async getUserEventsCount(userId: string): Promise<void> {
+    const result = await this.getUserEventsCountAction.callAction(`/users/userEventsCount/${userId}`, 'get');
+
+    if (typeof result === 'number') this.setUserEventsCount(result);
   }
 
   async login({ email, password }: IUserLoginData): Promise<void> {
