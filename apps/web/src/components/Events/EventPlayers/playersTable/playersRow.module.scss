@@ -8,13 +8,14 @@ td {
 
 .status {
   border-radius: 4px;
-  color: var(--color-black);
+  color: var(--color-accent-dark-hard);
   background-color: var(--color-accent);
   border: 1px solid var(--color-accent-hover);
 
   &.maybe {
-    background-color: var(--color-orange-light);
-    border: 1px solid var(--color-orange);
+    color: var(--color-orange-status-dark-hard);
+    background-color: var(--color-orange-status);
+    border: 1px solid var(--color-orange-status-dark);
   }
 }
 
@@ -23,5 +24,5 @@ td {
 }
 
 .trueIcon {
-  fill: var(--color-accent);
+  fill: var(--color-green);
 }

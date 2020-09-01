@@ -9,10 +9,10 @@ import { TUseEventForm, TEventFormSubmit } from './types';
 export const useEventForm: TUseEventForm = props => {
   const { applyCallback } = props;
   const isCreatePending = useObserver(() => EventsStore.createEventAction.isPending);
-  const isСhangePending = useObserver(() => EventStore.changeEventAction.isPending);
-  const event = useObserver(() => EventStore.entity);
+  const isChangePending = useObserver(() => EventStore.changeEventAction.isPending);
+  const currentEvent = useObserver(() => EventStore.entity);
 
-  const eventName = useTextField(event?.eventName ?? '');
+  const eventName = useTextField(currentEvent?.eventName ?? '');
   const eventNameProps = useInputProps({
     ...eventName,
     localError: null,
@@ -20,7 +20,7 @@ export const useEventForm: TUseEventForm = props => {
     label: 'Название',
   });
 
-  const place = useTextField(event?.place ?? '');
+  const place = useTextField(currentEvent?.place ?? '');
   const placeProps = useInputProps({
     ...place,
     localError: null,
@@ -28,7 +28,7 @@ export const useEventForm: TUseEventForm = props => {
     label: 'Место',
   });
 
-  const date = useTextField(event?.date ?? '');
+  const date = useTextField(currentEvent?.date ?? '');
   const dateProps = useInputProps({
     ...date,
     localError: null,
@@ -36,7 +36,7 @@ export const useEventForm: TUseEventForm = props => {
     label: 'Дата',
   });
 
-  const time = useTextField(event?.time ?? '');
+  const time = useTextField(currentEvent?.time ?? '');
   const timeProps = useInputProps({
     ...time,
     localError: null,
@@ -44,7 +44,7 @@ export const useEventForm: TUseEventForm = props => {
     label: 'Время',
   });
 
-  const minimum = useTextField(String(event?.minimum) ?? '');
+  const minimum = useTextField(currentEvent?.minimum ? String(currentEvent?.minimum) : '');
   const minimumProps = useInputProps({
     ...minimum,
     localError: null,
@@ -52,7 +52,8 @@ export const useEventForm: TUseEventForm = props => {
     label: 'Количество игроков',
   });
 
-  const isDisabled = !eventNameProps.value || !placeProps.value;
+  const isDisabled =
+    !eventNameProps.value || !placeProps.value || !minimumProps.value || !timeProps.value || !dateProps.value;
 
   const handleSubmit: TEventFormSubmit = useCallback(
     async event => {
@@ -66,13 +67,21 @@ export const useEventForm: TUseEventForm = props => {
         minimum: minimumProps.value,
       };
 
-      const result = event ? await EventStore.changeEvent(data) : await EventsStore.createEvent(data);
+      const result = currentEvent ? await EventStore.changeEvent(data) : await EventsStore.createEvent(data);
       if (result) applyCallback && applyCallback();
     },
-    [applyCallback, dateProps.value, eventNameProps.value, minimumProps.value, placeProps.value, timeProps.value],
+    [
+      applyCallback,
+      currentEvent,
+      dateProps.value,
+      eventNameProps.value,
+      minimumProps.value,
+      placeProps.value,
+      timeProps.value,
+    ],
   );
 
-  const isLoading = isCreatePending || isСhangePending;
+  const isLoading = isCreatePending || isChangePending;
 
   return {
     isLoading,

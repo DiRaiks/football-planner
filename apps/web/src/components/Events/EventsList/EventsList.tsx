@@ -1,8 +1,7 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { ContainerContent, CenterLoader } from 'reusableComponents';
 import { useObserver } from 'mobx-react';
 
-import { usePageEntitiesUpdate, useEntitiesPagination } from 'hooks';
 import { EventsStore } from 'store';
 import EventForm from 'components/EventForm';
 
@@ -11,11 +10,13 @@ import OldEvents from './OldEvents';
 import styles from './eventsList.module.scss';
 
 export const EventsList: React.FC = () => {
-  const search = usePageEntitiesUpdate(EventsStore, 'all');
-  const pagination = useEntitiesPagination(EventsStore);
   const isEventsPending = useObserver(() => EventsStore.isPending);
 
-  console.log('search, pagination', search, pagination);
+  useEffect(() => {
+    EventsStore.updateEntities();
+
+    return (): void => EventsStore.resetEntities();
+  }, []);
 
   return (
     <ContainerContent>
