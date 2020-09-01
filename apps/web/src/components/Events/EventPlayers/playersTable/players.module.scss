@@ -12,4 +12,9 @@
   .name {
     text-align: left;
   }
+
+  @media (max-width: 475px) {
+    font-size: 14px;
+    border-spacing: 5px;
+  }
 }

@@ -15,7 +15,7 @@ export const SignInForm: React.FC = () => {
 
   return (
     <ServicePage>
-      <ServiceForm method="post" onSubmit={handleSubmit}>
+      <ServiceForm className={styles.form} method="post" onSubmit={handleSubmit}>
         <h1>Вход</h1>
         <FormTextField autoFocus autoComplete="username" {...userNameProps} />
         <FormPasswordField autoComplete="current-password" {...passwordProps} />

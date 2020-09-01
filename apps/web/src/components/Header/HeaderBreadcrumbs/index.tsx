@@ -1,14 +1,15 @@
 import React, { FC, useMemo } from 'react';
+import { observer, useObserver } from 'mobx-react';
 
 import { Icon, BreadCrumbs, Crumb } from 'reusableComponents';
 
 import camelCase from 'lodash/camelCase';
 import { useRouter } from 'hooks';
-
-import { observer } from 'mobx-react';
+import { EventStore } from 'store';
 
 import $ from './headerBreadcrumbs.module.scss';
 import { TIcons, TCrumb } from './types';
+import names from './names.json';
 
 const icons: TIcons = {
   reporting: 'report',
@@ -22,6 +23,8 @@ const icons: TIcons = {
 
 const HeaderBreadcrumbs: FC = () => {
   const router = useRouter();
+  const routNames: Record<string, string> = names as Record<string, string>;
+  const currentEvent = useObserver(() => EventStore.entity);
 
   const [, sectionPath, ...pathArray] = router.pathname.split('/');
 
@@ -58,7 +61,7 @@ const HeaderBreadcrumbs: FC = () => {
       <BreadCrumbs>
         {breadCrumb.map((crumb, index) => (
           <Crumb key={index} href={crumb.path}>
-            {crumb.displayName}
+            {routNames[crumb.displayName] ? routNames[crumb.displayName] : `Матч: ${currentEvent?.eventName}`}
           </Crumb>
         ))}
       </BreadCrumbs>

@@ -31,7 +31,8 @@
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "icons": "node src/reusableComponents/Icon/generate.js"
+    "icons": "node src/reusableComponents/Icon/generate.js",
+    "deploy": "scp -rp ./build/* root@45.80.68.86:/var/www/football-planner.online/public/"
   },
   "eslintConfig": {
     "extends": "react-app"
