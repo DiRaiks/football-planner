@@ -25,9 +25,9 @@ export const App: React.FC = () => {
         <>
           <Suspense
             fallback={
-              <div>
+              <>
                 <h2>Loading...</h2>
-              </div>
+              </>
             }
           >
             <Main>

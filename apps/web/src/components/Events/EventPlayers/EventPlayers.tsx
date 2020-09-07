@@ -5,13 +5,12 @@ import { useObserver } from 'mobx-react';
 import { PlayersStore, EventStore, UserStore } from 'store';
 import EventForm from 'components/EventForm';
 import EventInfo from 'components/EventInfo';
+import PlayerForm from 'components/PlayerForm';
+import PlayersTable from 'components/PlayersTable';
 import { Button } from 'reusableComponents';
 
-import Players from './playersTable/Players';
-import CountInfo from './playersTable/CountInfo';
-import PlayerForm from './playerForm';
 import { IEventPlayersParams } from './types';
-import styles from './playersTable/eventPlayers.module.scss';
+import styles from './eventPlayers.module.scss';
 
 const EventPlayers: FC<RouteComponentProps<IEventPlayersParams>> = props => {
   const { match } = props;
@@ -23,7 +22,6 @@ const EventPlayers: FC<RouteComponentProps<IEventPlayersParams>> = props => {
   const isPlayersPending = useObserver(() => PlayersStore.isPending);
   const event = useObserver(() => EventStore.entity);
   const isCanModifyEvent = useObserver(() => EventStore.isCanModify);
-  const eventPending = useObserver(() => EventStore.isPending);
   const isCreator = userId === event?.creatorId;
 
   useEffect(() => {
@@ -41,8 +39,7 @@ const EventPlayers: FC<RouteComponentProps<IEventPlayersParams>> = props => {
     <div className={styles.wrapper}>
       <div className={styles.leftColumn}>
         <EventInfo />
-        <Players players={players} isLoading={isPlayersPending} />
-        {!eventPending && <CountInfo playersAmount={event?.playersAmount || 0} minimum={event?.minimum || 0} />}
+        <PlayersTable players={players} isLoading={isPlayersPending} />
       </div>
       {isCanModifyEvent && (
         <div className={styles.rightColumn}>
