@@ -7,6 +7,7 @@ import { ICountInfoProps } from './types';
 import styles from './countInfo.module.scss';
 
 const MAX_PLAYERS = 22;
+const MIN_PLAYERS = 10;
 
 const CountInfo: FC<ICountInfoProps> = props => {
   const { playersAmount, minimum } = props;
@@ -20,7 +21,7 @@ const CountInfo: FC<ICountInfoProps> = props => {
   }, []);
 
   const currentProgress = allPlayers.concat(new Array(MAX_PLAYERS - playersAmount).fill(0));
-  const activeFiled = playersAmount >= minimum ? (playersAmount < MAX_PLAYERS ? 'miniField' : 'normalField') : '';
+  const activeField = playersAmount >= MIN_PLAYERS ? (playersAmount < MAX_PLAYERS ? 'miniField' : 'normalField') : '';
 
   const getChunkClasses = useCallback((item: Record<string, boolean>) => {
     if (!item) return { [styles.chunk]: true };
@@ -35,10 +36,10 @@ const CountInfo: FC<ICountInfoProps> = props => {
   const getOptionClasses = useCallback(() => {
     return {
       [styles.optionsWr]: true,
-      [styles.notEnough]: playersAmount < minimum,
-      [`${activeFiled}`]: true,
+      [styles.notEnough]: playersAmount < MIN_PLAYERS,
+      [styles[activeField]]: true,
     };
-  }, [activeFiled, minimum, playersAmount]);
+  }, [activeField, playersAmount]);
 
   const getTotalPlayersClasses = useCallback(() => {
     return {
