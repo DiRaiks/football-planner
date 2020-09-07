@@ -20,6 +20,7 @@ export { default as EventsStore } from './events';
 export { default as EventStore } from './event';
 export { default as PlayersStore } from './players';
 export { default as PlayerStore } from './player';
+export { default as WeatherStore } from './weather';
 
 export * from './user';
 export * from './errors';
@@ -28,3 +29,4 @@ export * from './events';
 export * from './event';
 export * from './players';
 export * from './player';
+export * from './weather';
