@@ -3,13 +3,14 @@ import React, { Suspense } from 'react';
 import { BrowserRouter as Router, Switch, Route, Redirect } from 'react-router-dom';
 import { useObserver } from 'mobx-react';
 
-import { ROUTE_REGISTRATION, ROUTE_EVENTS } from 'constantsVars';
+import { ROUTE_REGISTRATION, ROUTE_EVENTS, ROUTE_ACCOUNT } from 'constantsVars';
 import { UserStore } from 'store';
 import { CenterLoader, Tooltip } from 'reusableComponents';
 import Login from 'components/Login';
 import Registration from 'components/Registration';
 import Main from 'components/Main';
 import Events from 'components/Events';
+import Account from 'components/Account';
 
 import './App.scss';
 
@@ -33,6 +34,7 @@ export const App: React.FC = () => {
             <Main>
               <Switch>
                 <Route path={`${ROUTE_EVENTS}`} component={Events} />
+                <Route path={`${ROUTE_ACCOUNT}`} component={Account} />
                 <Redirect to={ROUTE_EVENTS} />
               </Switch>
             </Main>
