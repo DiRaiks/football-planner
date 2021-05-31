@@ -3,6 +3,7 @@ import { IErrorKeys, IExtractedFlatErrors } from './types';
 export const EMPTY_ERRORS: IExtractedFlatErrors = Object.freeze({
   global: null,
   fields: null,
+  status: null,
 });
 
 export const GLOBAL_ERRORS_TRANSLATION_PREFIX = 'globalErrors';

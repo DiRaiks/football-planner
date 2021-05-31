@@ -1,5 +1,5 @@
 export interface IActionOptions {
+  showErrors?: boolean;
   isInterrupted?: boolean;
-  hasDeprecatedPascalCase?: boolean;
   translationPrefix?: string;
 }

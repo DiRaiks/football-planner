@@ -9,7 +9,7 @@ import EventPlayers from './EventPlayers';
 const Events: FC = () => (
   <>
     <Switch>
-      <Route path={`${ROUTE_EVENTS}/:status(all|active|blocked|deleted)?`} exact component={EventsList} />
+      <Route path={ROUTE_EVENTS} exact component={EventsList} />
       <Route path={`${ROUTE_EVENTS}/:eventId`} component={EventPlayers} />
       <Route component={NoMatch} />
     </Switch>

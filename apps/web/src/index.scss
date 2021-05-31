@@ -78,11 +78,3 @@ h6 {
   margin: 16px 0 4px;
   color: var(--color-primary-lighten-40);
 }
-
-[data-menu='collapsed'] {
-  --nav-size: var(--nav-collapsed-size);
-}
-
-[data-menu='hidden'] {
-  --nav-size: 0px;
-}

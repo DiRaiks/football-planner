@@ -54,7 +54,7 @@ class ErrorsStore {
   }
 
   translateErrors(errors: IExtractedErrors, translationPrefix?: string): IExtractedFlatErrors {
-    const { global, fields } = errors;
+    const { global, fields, status } = errors;
     const translate = this.getErrorTranslation.bind(this, translationPrefix);
 
     return {
@@ -68,6 +68,7 @@ class ErrorsStore {
             return translate(fieldErrors) || '';
           })
         : null,
+      status,
     };
   }
 
@@ -81,6 +82,7 @@ class ErrorsStore {
     const extractedErrors: IExtractedErrors = {
       global: null,
       fields: null,
+      status: null,
     };
 
     if (ok) {
@@ -118,17 +120,20 @@ class ErrorsStore {
 
   async mapErrors(response: Response, extractMap?: IExtractMap): Promise<IExtractedErrors> {
     const { status } = response;
-    const { errors, Error = null } = await response.json();
+    const result = await response.json();
+    const error = result.Error || result.error || null;
+    const errors = result.Errors || result.errors || null;
     const mappedField = extractMap?.[status];
 
     const extractedErrors: IExtractedErrors = {
-      global: !mappedField ? Error : null,
+      global: !mappedField ? error : null,
       fields: size(errors) ? errors : null,
+      status,
     };
 
     if (!mappedField) return extractedErrors;
 
-    return set(extractedErrors, `fields.${mappedField}`, [Error || ERROR_KEYS[status]]);
+    return set(extractedErrors, `fields.${mappedField}`, [error || ERROR_KEYS[status]]);
   }
 
   getOneError(errors: IExtractedFlatErrors): string | null {
@@ -138,11 +143,13 @@ class ErrorsStore {
     return null;
   }
 
-  async processGetErrors(response: Response, translationPrefix?: string): Promise<void> {
+  async processGetErrors(response: Response, translationPrefix?: string): Promise<IExtractedFlatErrors> {
     const errors = await this.extractError(response, translationPrefix);
     const error = this.getOneError(errors);
 
     this.showTempError(error || CommonError.UNKNOWN);
+
+    return errors;
   }
 }
 

@@ -1,17 +1,22 @@
-import { observable, action } from 'mobx';
+import { observable, action, computed, transaction } from 'mobx';
 import { fetch } from 'utils';
-import { ErrorsStore } from 'store';
+import { ErrorsStore, IExtractedFlatErrors } from 'store';
+import { EMPTY_ERRORS } from 'store/errors';
 
 import { IActionOptions } from './types';
 
 class Action<T extends unknown, R extends unknown> {
   constructor(options?: IActionOptions) {
+    this.showErrors = options?.showErrors ?? true;
     this.isInterrupted = options?.isInterrupted ?? false;
     this.translationPrefix = options?.translationPrefix;
   }
 
   @observable isPending = false;
+  @observable errors: IExtractedFlatErrors = EMPTY_ERRORS;
+  @observable status: number | null = null;
 
+  showErrors: boolean;
   isInterrupted: boolean;
   abortController: AbortController | null = null;
   translationPrefix: string | undefined;
@@ -20,8 +25,30 @@ class Action<T extends unknown, R extends unknown> {
     this.isPending = state;
   }
 
+  @action setStatus(status: number | null): void {
+    this.status = status;
+  }
+
+  @action resetStatus(): void {
+    this.status = null;
+  }
+
+  @action setErrors(errors: IExtractedFlatErrors): void {
+    this.errors = errors;
+  }
+
+  @action resetErrors(): void {
+    this.errors = EMPTY_ERRORS;
+  }
+
   @action setAbortController(controller: AbortController): void {
     this.abortController = controller;
+  }
+
+  @computed get firstError(): string | null {
+    if (!this.errors.fields && !this.errors.global) return null;
+
+    return ErrorsStore.getOneError(this.errors);
   }
 
   async callAction(
@@ -32,15 +59,20 @@ class Action<T extends unknown, R extends unknown> {
   ): Promise<void | boolean | R> {
     this.abortController?.abort();
     const currentAbortController = new AbortController();
-    if (this.isInterrupted) this.setAbortController(currentAbortController);
 
-    this.setPending(true);
+    transaction(() => {
+      if (this.isInterrupted) this.setAbortController(currentAbortController);
+      this.setPending(true);
+      this.resetErrors();
+      this.resetStatus();
+    });
 
     const body = payload ? JSON.stringify(payload) : null;
 
     try {
       const response = await fetch(actionUrl, { method, body, queryParams, signal: currentAbortController.signal });
       const { status, ok } = response;
+      this.setStatus(status);
 
       if (status === 200) {
         try {
@@ -54,7 +86,12 @@ class Action<T extends unknown, R extends unknown> {
 
       if (ok) return true;
 
-      ErrorsStore.processGetErrors(response, this.translationPrefix);
+      const errors = this.showErrors
+        ? await ErrorsStore.processGetErrors(response, this.translationPrefix)
+        : await ErrorsStore.extractError(response, this.translationPrefix);
+
+      this.setErrors(errors);
+      this.setStatus(errors.status);
     } catch (error) {
       ErrorsStore.showTempError(error);
     } finally {
