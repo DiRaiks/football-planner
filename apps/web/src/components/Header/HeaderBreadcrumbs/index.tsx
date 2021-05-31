@@ -1,72 +1,59 @@
 import React, { FC, useMemo } from 'react';
-import { observer, useObserver } from 'mobx-react';
-
-import { Icon, BreadCrumbs, Crumb } from 'reusableComponents';
-
+import { observer } from 'mobx-react';
+import { useLocation } from 'react-router-dom';
 import camelCase from 'lodash/camelCase';
-import { useRouter } from 'hooks';
+import { BreadCrumbs, Crumb } from 'reusableComponents';
 import { EventStore } from 'store';
 
-import $ from './headerBreadcrumbs.module.scss';
-import { TIcons, TCrumb } from './types';
+import styles from './headerBreadcrumbs.module.scss';
+import { TCrumb } from './types';
 import names from './names.json';
 
-const icons: TIcons = {
-  reporting: 'report',
-  settings: 'settings',
-  dialogues: 'dialogues',
-  accountSettings: 'admin',
-  adminSettings: 'tenant',
-  automation: 'report',
-  interactions: 'dialogues',
-};
-
 const HeaderBreadcrumbs: FC = () => {
-  const router = useRouter();
+  const { pathname } = useLocation();
   const routNames: Record<string, string> = names as Record<string, string>;
-  const currentEvent = useObserver(() => EventStore.entity);
-
-  const [, sectionPath, ...pathArray] = router.pathname.split('/');
+  const { entity: currentEvent } = EventStore;
 
   const breadCrumb: TCrumb[] = useMemo(() => {
-    const sectionDisplayName = camelCase(sectionPath);
-    // TODO: delete sectionPath from array
+    const [, ...pathArray] = pathname.split('/');
 
-    return pathArray.length
-      ? [sectionPath, ...pathArray].reduce((array, item, index) => {
-          const displayName = camelCase(item);
+    return pathArray.reduce((array: TCrumb[], path, index) => {
+      const isIdItem = !routNames[path];
+      const name = isIdItem ? 'guid' : camelCase(path);
+      const namePath = array[index - 1]?.namePath ? `${array[index - 1].namePath}.${name}` : name;
 
-          if (item.length && displayName) {
-            return [
-              ...array,
-              {
-                path: `/${[sectionPath, ...pathArray].slice(0, index + 1).join('/')}`,
-                displayName,
-              },
-            ];
-          }
+      if (!path) return array;
 
-          return array;
-        }, [] as TCrumb[])
-      : sectionDisplayName
-      ? [{ displayName: sectionDisplayName, path: `/${sectionPath}` }]
-      : [];
-  }, [pathArray, sectionPath]);
+      return [
+        ...array,
+        {
+          path: `/${pathArray.slice(0, index + 1).join('/')}`,
+          namePath,
+          originName: path,
+        },
+      ];
+    }, []);
+  }, [pathname, routNames]);
 
-  const breadCrumbIcon = icons[camelCase(sectionPath)];
+  if (!breadCrumb.length) return null;
 
-  return breadCrumb.length ? (
-    <div className={$.breadCrumbCont}>
-      <Icon className={$.breadCrumbIcon} type={breadCrumbIcon} />
+  return (
+    <div className={styles.breadCrumbCont}>
       <BreadCrumbs>
-        {breadCrumb.map((crumb, index) => (
-          <Crumb key={index} href={crumb.path}>
-            {routNames[crumb.displayName] ? routNames[crumb.displayName] : `Матч: ${currentEvent?.eventName}`}
-          </Crumb>
-        ))}
+        {breadCrumb.map((crumb, index) => {
+          const name = routNames[crumb.namePath] ? routNames[crumb.namePath] : `Матч: ${currentEvent?.eventName || ''}`;
+
+          if (!name) return null;
+
+          return (
+            <Crumb key={index} href={crumb.path}>
+              {name}
+            </Crumb>
+          );
+        })}
       </BreadCrumbs>
     </div>
-  ) : null;
+  );
 };
 
 export default observer(HeaderBreadcrumbs);

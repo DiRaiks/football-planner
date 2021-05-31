@@ -31,8 +31,6 @@ class WeatherStore extends EntityStore<IWeatherModel> {
       const itemDay = itemDate.getDate();
       const itemYear = itemDate.getFullYear();
 
-      console.log('--->>>>', year, itemYear, day, itemDay, month, itemMonth);
-
       return year === itemYear && day === itemDay && month === itemMonth;
     });
   }

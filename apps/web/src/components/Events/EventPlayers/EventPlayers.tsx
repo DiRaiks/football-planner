@@ -7,7 +7,7 @@ import EventForm from 'components/EventForm';
 import EventInfo from 'components/EventInfo';
 import PlayerForm from 'components/PlayerForm';
 import PlayersTable from 'components/PlayersTable';
-import { Button } from 'reusableComponents';
+import { Button, CenterLoader } from 'reusableComponents';
 
 import { IEventPlayersParams } from './types';
 import styles from './eventPlayers.module.scss';
@@ -19,15 +19,15 @@ const EventPlayers: FC<RouteComponentProps<IEventPlayersParams>> = props => {
 
   const userId = useObserver(() => UserStore.user?._id);
   const players = useObserver(() => PlayersStore.entities);
-  const isPlayersPending = useObserver(() => PlayersStore.isPending);
   const event = useObserver(() => EventStore.entity);
   const isCanModifyEvent = useObserver(() => EventStore.isCanModify);
+  const isPending = useObserver(() => EventStore.isPending);
   const isCreator = userId === event?.creatorId;
 
   useEffect(() => {
     PlayersStore.setEventId(eventId);
-    PlayersStore.updateEntities();
     EventStore.updateEvent(eventId);
+    PlayersStore.updateEntities();
 
     return (): void => {
       PlayersStore.resetEntities();
@@ -35,11 +35,13 @@ const EventPlayers: FC<RouteComponentProps<IEventPlayersParams>> = props => {
     };
   }, [eventId]);
 
+  if (isPending) return <CenterLoader size="l" />;
+
   return (
     <div className={styles.wrapper}>
       <div className={styles.leftColumn}>
         <EventInfo />
-        <PlayersTable players={players} isLoading={isPlayersPending} />
+        <PlayersTable players={players} />
       </div>
       {isCanModifyEvent && (
         <div className={styles.rightColumn}>

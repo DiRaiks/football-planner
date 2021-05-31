@@ -3,7 +3,7 @@ import { fetch, getTokenFromLS, saveTokenToLS, removeTokenToLS } from 'utils';
 import { ErrorsStore, IExtractedFlatErrors, Action } from 'store';
 import { EMPTY_ERRORS } from 'store/errors';
 
-import { IUserLoginData, TUser, IUserRegistrationModel } from './types.d';
+import { IUserLoginData, TUser, IUserRegistrationModel } from './types';
 import { DEFAULT_STATE, LOGIN_URL, LOGOUT_URL, USER_URL, REGISTRATION_URL } from './constants';
 
 class UserStore {

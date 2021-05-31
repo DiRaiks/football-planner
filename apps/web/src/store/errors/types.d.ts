@@ -11,6 +11,7 @@ export interface IErrorKeys {
 export interface IExtractedErrors {
   global: string | null;
   fields: IExtractedErrorsFields | null;
+  status: number | null;
 }
 
 export interface IExtractedErrorsFields {
@@ -21,7 +22,7 @@ export interface IExtractedFlatErrorsFields {
   [field: string]: string;
 }
 
-export interface IExtractedFlatErrors extends IExtractedErrors {
+export interface IExtractedFlatErrors extends Omit<IExtractedErrors, 'fields'> {
   fields: IExtractedFlatErrorsFields | null;
 }
 

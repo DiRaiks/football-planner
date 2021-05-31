@@ -2,7 +2,7 @@ import React, { FC } from 'react';
 import { useObserver } from 'mobx-react';
 
 import { StickyLoader } from 'components/Loaders';
-import { EventStore } from 'store';
+import { EventStore, PlayerStore } from 'store';
 
 import PlayersRow from './PlayersRow';
 import CountInfo from './CountInfo';
@@ -10,10 +10,11 @@ import { IPlayersProps } from './types';
 import styles from './playersTable.module.scss';
 
 const PlayersTable: FC<IPlayersProps> = props => {
-  const { players, isLoading = false } = props;
+  const { players } = props;
 
   const eventPending = useObserver(() => EventStore.isPending);
   const event = useObserver(() => EventStore.entity);
+  const isLoading = useObserver(() => PlayerStore.isPending);
 
   return (
     <>

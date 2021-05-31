@@ -24,13 +24,7 @@ export const App: React.FC = () => {
     <Router>
       {isAuthenticated ? (
         <>
-          <Suspense
-            fallback={
-              <>
-                <h2>Loading...</h2>
-              </>
-            }
-          >
+          <Suspense fallback={<h2>Loading...</h2>}>
             <Main>
               <Switch>
                 <Route path={`${ROUTE_EVENTS}`} component={Events} />
