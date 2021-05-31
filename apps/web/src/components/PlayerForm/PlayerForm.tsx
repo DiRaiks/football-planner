@@ -30,8 +30,6 @@ export const PlayerForm: FC<IPlayerFormProps> = props => {
     changeFriendStatus,
   } = usePlayerForm(props);
 
-  console.log('----isPlayerLoading', isPlayerLoading);
-
   if (isPlayerLoading) return null;
 
   if (!isShowForm) {
