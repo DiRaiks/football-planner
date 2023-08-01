@@ -29,9 +29,13 @@ class EventsStore extends EntitiesStore<IEventModel, typeof EventFilterStatus> {
     const nowDay = new Date().getDate();
     const nowYear = new Date().getFullYear();
 
-    return this.entities.filter(event => {
-      return new Date(event.date) < new Date(nowYear, nowMonth, nowDay);
-    });
+    return this.entities
+      .filter(event => {
+        return new Date(event.date) < new Date(nowYear, nowMonth, nowDay);
+      })
+      .sort((a, b) => {
+        return new Date(b.date).getTime() - new Date(a.date).getTime();
+      });
   }
 
   createEventAction = new Action();
