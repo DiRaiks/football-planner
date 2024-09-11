@@ -1,0 +1,27 @@
+{
+  "name": "football-planner/server",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DiRaiks/football-planner.git"
+  },
+  "author": "DiRaiks",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/DiRaiks/football-planner/issues"
+  },
+  "homepage": "https://github.com/DiRaiks/football-planner#readme",
+  "dependencies": {
+    "@fastify/env": "^4.4.0",
+    "fastify": "^4.28.1",
+    "fastify-plugin": "^4.5.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.2"
+  }
+}
