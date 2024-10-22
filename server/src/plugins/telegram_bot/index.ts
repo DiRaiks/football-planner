@@ -2,11 +2,24 @@ import { Telegraf } from "telegraf";
 import { FastifyPluginAsync } from "fastify";
 import fp from "fastify-plugin";
 
-import { ENVS } from "../../env.js";
+import { ENVS } from "env.js";
+import { initBotCommands } from "./commands.js";
+import {
+  sendMessageAddEvent,
+  sendMessageAddPlayer,
+  sendMessageRemovePlayer,
+  sendMessageUpdatePlayer,
+} from "./messages.js";
 
 declare module "fastify" {
   interface FastifyInstance {
-    telegramBot: Telegraf;
+    telegramBot: {
+      bot: Telegraf;
+      sendMessageAddEvent: typeof sendMessageAddEvent;
+      sendMessageAddPlayer: typeof sendMessageAddPlayer;
+      sendMessageRemovePlayer: typeof sendMessageRemovePlayer;
+      sendMessageUpdatePlayer: typeof sendMessageUpdatePlayer;
+    };
   }
 }
 
@@ -14,13 +27,22 @@ const telegramBot: FastifyPluginAsync = async (fastify) => {
   const { BOT_TOKEN } = fastify.getEnvs<ENVS>();
   const { logger } = fastify;
 
-  const bot = new Telegraf(BOT_TOKEN);
+  let bot = new Telegraf(BOT_TOKEN);
+  initBotCommands(bot, logger);
 
-  logger.info("Telegram bot plugin initialized");
+  bot.launch();
 
   if (!fastify.telegramBot) {
-    fastify.decorate("telegramBot", bot);
+    fastify.decorate("telegramBot", {
+      bot,
+      sendMessageAddEvent,
+      sendMessageAddPlayer,
+      sendMessageRemovePlayer,
+      sendMessageUpdatePlayer,
+    });
   }
+
+  logger.info("Telegram bot plugin initialized");
 };
 
 export default fp(telegramBot, "4.x");
