@@ -1,6 +1,9 @@
 import Fastify from "fastify";
 import fastifyEnv from "@fastify/env";
 
+import { ENV_OPTIONS, ENVS } from "./env.js";
+import { TelegramBotPlugin, LoggerPlugin } from "./plugins/index.js";
+
 const fastify = Fastify({
   logger: true,
   ajv: {
@@ -10,36 +13,34 @@ const fastify = Fastify({
   },
 });
 
-const ENV_SCHEME = {
-  type: "object",
-  required: [
-    "PORT",
-    "DATABASE_USER",
-    "DATABASE_PASSWORD",
-    "DATABASE_NAME",
-    "BOT_TOKEN",
-  ],
-  properties: {
-    PORT: {
-      type: "number",
-    },
-    DATABASE_USER: {
-      type: "string",
-    },
-    DATABASE_PASSWORD: {
-      type: "string",
-    },
-    DATABASE_NAME: {
-      type: "string",
-    },
-    BOT_TOKEN: {
-      type: "string",
-    },
-  },
-};
-const ENV_OPTIONS = {
-  dotenv: true,
-  schema: ENV_SCHEME,
+const fastifyInit = async () => {
+  await Promise.all([
+    fastify.register(fastifyEnv, ENV_OPTIONS),
+    fastify.register(LoggerPlugin),
+    fastify.register(TelegramBotPlugin),
+  ]);
+
+  // await fastify.register(async (instance) => {
+  //   instance.get('/metrics', instance.metrics.routeHandler())
+  //   instance.get('/health', instance.healthChecker.routeHandler())
+  // })
 };
 
-void fastify.register(fastifyEnv, ENV_OPTIONS);
+const start = async () => {
+  try {
+    await fastifyInit();
+
+    const { PORT } = fastify.getEnvs<ENVS>();
+    await fastify.listen({ port: PORT });
+
+    fastify.log.info(`server listening on ${PORT}`);
+  } catch (err) {
+    fastify.log.error(err);
+    process.exit(1);
+  }
+};
+process.on("unhandledRejection", function (reason) {
+  fastify.logger.error("unhandledRejection", reason);
+});
+
+void start();
