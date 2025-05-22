@@ -6,6 +6,7 @@ export type ENVS = {
   BOT_TOKEN: string;
   LOG_FORMAT: string;
   JWT_SECRET: string;
+  OPENWEATHER_API_KEY: string;
   HTTPS_PRIVKEY_PATH?: string;
   HTTPS_FULLCHAIN_PATH?: string;
 };
@@ -26,6 +27,7 @@ const ENV_SCHEME = {
     "BOT_TOKEN",
     "LOG_FORMAT",
     "JWT_SECRET",
+    "OPENWEATHER_API_KEY",
   ],
   properties: {
     PORT: {
@@ -48,6 +50,9 @@ const ENV_SCHEME = {
       default: "info",
     },
     JWT_SECRET: {
+      type: "string",
+    },
+    OPENWEATHER_API_KEY: {
       type: "string",
     },
     HTTPS_PRIVKEY_PATH: {
