@@ -5,7 +5,7 @@
   "main": "index.js",
   "private": true,
   "scripts": {
-    "test": "yarn --cwd server test",
+    "test": "npm --workspace server test",
     "lint": "eslint . --ext .js,.ts,.tsx",
     "format": "prettier . --check",
     "commitlint": "commitlint --from=HEAD~1",
@@ -36,5 +36,5 @@
     "prettier": "^3.3.3",
     "husky": "^9.0.11"
   },
-  "packageManager": "yarn@1.22.21+sha1.1959a18351b811cdeedbd484a8f86c3cc3bbaf72"
+  "packageManager": "npm@11.4.0"
 }
