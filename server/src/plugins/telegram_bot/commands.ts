@@ -1,5 +1,6 @@
 import { Telegraf } from "telegraf";
 import { Logger } from "winston";
+import { ChatModel } from "./chat.model.js";
 
 export const initBotCommands = (bot: Telegraf, logger?: Logger) => {
   bot.command("start", (ctx) => ctx.reply("Hello!"));
@@ -8,8 +9,13 @@ export const initBotCommands = (bot: Telegraf, logger?: Logger) => {
     logger?.info(`Init command received from ${ctx.chat.id}`);
     const { id } = ctx.chat;
 
-    // TODO: Save chat to database
-    const saveChat = await Promise.resolve(true);
+    let saveChat = true;
+    try {
+      await ChatModel.updateOne({ chatId: id }, { chatId: id }, { upsert: true });
+    } catch (err) {
+      saveChat = false;
+      logger?.error(`Error saving chat ${id}: ${(err as Error).message}`);
+    }
 
     if (saveChat) ctx.reply(`Chat ${id} saved`);
     else ctx.reply(`Chat ${id} not saved`);
@@ -19,8 +25,13 @@ export const initBotCommands = (bot: Telegraf, logger?: Logger) => {
     logger?.info(`Remove command received from ${ctx.chat.id}`);
     const { id } = ctx.chat;
 
-    // TODO: Remove chat from database
-    const removeChat = await Promise.resolve(true);
+    let removeChat = true;
+    try {
+      await ChatModel.deleteOne({ chatId: id });
+    } catch (err) {
+      removeChat = false;
+      logger?.error(`Error removing chat ${id}: ${(err as Error).message}`);
+    }
 
     if (removeChat) ctx.reply(`Chat ${id} removed`);
     else ctx.reply(`Chat ${id} not removed`);
