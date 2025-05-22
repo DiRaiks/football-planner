@@ -10,6 +10,7 @@ import {
 } from "./plugins/index.js";
 import EventsRoutes from "./modules/events/routes.js";
 import PlayersRoutes from "./modules/players/routes.js";
+import UsersRoutes from "./modules/users/routes.js";
 
 const fastify = Fastify({
   logger: true,
@@ -35,6 +36,10 @@ const fastifyInit = async () => {
 
   await fastify.register(async (instance) => {
     instance.register(PlayersRoutes, { prefix: '/players' });
+  });
+
+  await fastify.register(async (instance) => {
+    instance.register(UsersRoutes, { prefix: '/users' });
   });
 
   // await fastify.register(async (instance) => {
