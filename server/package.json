@@ -21,7 +21,7 @@
     "watch": "tsc --watch --preserveWatchOutput --pretty",
     "dev": "nodemon",
     "clean": "rimraf dist",
-    "test": "jest"
+    "test": "node --test"
   },
   "repository": {
     "type": "git",
