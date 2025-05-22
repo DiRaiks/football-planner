@@ -1,8 +1,5 @@
 import { Telegraf } from "telegraf";
-
-type Chat = {
-  chatId: string;
-};
+import { ChatModel, type Chat } from "./chat.model.js";
 
 type Player = {
   name: string;
@@ -26,8 +23,7 @@ export const sendMessageAddPlayer = async <P extends Player, E extends Event>(
   maybe: number,
   bot: Telegraf,
 ) => {
-  // TODO: Get all chats from database
-  const chats = await Promise.resolve<Chat[]>([]);
+  const chats = await ChatModel.find();
 
   let message = `Игрок ${player.name} пойдёт на матч "${event.eventName}",`;
   if (player.friends.length) {
@@ -56,7 +52,7 @@ export const sendMessageRemovePlayer = async <
   maybe: number,
   bot: Telegraf,
 ) => {
-  const chats = await Promise.resolve<Chat[]>([]);
+  const chats = await ChatModel.find();
 
   let message = `Игрок ${player.name} не пойдет на матч "${event.eventName}",`;
   if (player.friends.length) {
@@ -80,7 +76,7 @@ export const sendMessageUpdatePlayer = async <
   maybe: number,
   bot: Telegraf,
 ) => {
-  const chats = await Promise.resolve<Chat[]>([]);
+  const chats = await ChatModel.find();
 
   let message = `Игрок ${player.name} изменил свою запись на матч "${event.eventName}",`;
   if (player.friends.length) {
@@ -98,7 +94,7 @@ export const sendMessageAddEvent = async <E extends Event>(
   event: E,
   bot: Telegraf,
 ) => {
-  const chats = await Promise.resolve<Chat[]>([]);
+  const chats = await ChatModel.find();
 
   const message =
     `Создан матч "${event.eventName}",` +
