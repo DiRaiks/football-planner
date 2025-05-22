@@ -12,7 +12,7 @@ const databasePlugin: FastifyPluginAsync = async (fastify) => {
   const { DATABASE_USER, DATABASE_PASSWORD, DATABASE_NAME } = fastify.config;
   const { logger } = fastify;
 
-  const uri = `mongodb://${DATABASE_USER}:${DATABASE_PASSWORD}@localhost:27017/${DATABASE_NAME}`;
+  const uri = `mongodb+srv://${DATABASE_USER}:${DATABASE_PASSWORD}@cluster0-nuyru.mongodb.net/${DATABASE_NAME}?retryWrites=true&w=majority`;
 
   try {
     await mongoose.connect(uri);
@@ -27,7 +27,7 @@ const databasePlugin: FastifyPluginAsync = async (fastify) => {
       logger.info("Database disconnected");
     });
   } catch (err) {
-    logger.error(`Database connection error: ${ (err as Error).message }`);
+    logger.error(`Database connection error: ${(err as Error).message}`);
   }
 };
 
