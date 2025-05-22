@@ -31,6 +31,10 @@ const telegramBot: FastifyPluginAsync = async (fastify) => {
 
   bot.launch();
 
+  fastify.addHook("onClose", async () => {
+    await bot.stop();
+  });
+
   if (!fastify.telegramBot) {
     fastify.decorate("telegramBot", {
       bot,
