@@ -7,6 +7,7 @@ import {
   LoggerPlugin,
   DatabasePlugin,
   AuthPlugin,
+  MonitoringPlugin,
 } from "./plugins/index.js";
 import EventsRoutes from "./modules/events/routes.js";
 import PlayersRoutes from "./modules/players/routes.js";
@@ -29,6 +30,7 @@ const fastifyInit = async () => {
     fastify.register(DatabasePlugin),
     fastify.register(TelegramBotPlugin),
     fastify.register(AuthPlugin),
+    fastify.register(MonitoringPlugin),
   ]);
 
   fastify.register(EventsRoutes, { prefix: "/events" });
@@ -36,10 +38,10 @@ const fastifyInit = async () => {
   fastify.register(UsersRoutes, { prefix: "/users" });
   fastify.register(AuthRoutes, { prefix: "/auth" });
 
-  // await fastify.register(async (instance) => {
-  //   instance.get('/metrics', instance.metrics.routeHandler())
-  //   instance.get('/health', instance.healthChecker.routeHandler())
-  // })
+  await fastify.register(async (instance) => {
+    instance.get('/metrics', instance.metrics.routeHandler)
+    instance.get('/health', instance.healthChecker.routeHandler)
+  })
 };
 
 const start = async () => {
