@@ -34,7 +34,15 @@
     "eslint-plugin-react": "^7.35.2",
     "eslint-plugin-react-hooks": "^4.6.2",
     "prettier": "^3.3.3",
-    "husky": "^9.0.11"
+    "husky": "^9.0.11",
+    "lint-staged": "^15.2.10"
+  },
+  "lint-staged": {
+    "*.{js,ts,tsx}": [
+      "eslint --max-warnings 0 --fix",
+      "prettier --write"
+    ],
+    "*.{json,md}": "prettier --write"
   },
   "packageManager": "npm@11.4.0"
 }
