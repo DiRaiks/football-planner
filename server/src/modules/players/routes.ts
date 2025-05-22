@@ -38,12 +38,60 @@ const playersRoutes: FastifyPluginAsync = async (fastify) => {
 
   fastify.delete('/delete', { onRequest: [fastify.authenticate] }, async (request) => {
     const { id } = request.query as { id: string };
-    return PlayerModel.findByIdAndDelete(id);
+
+    const removedPlayer = await PlayerModel.findByIdAndDelete(id);
+    if (!removedPlayer) return null;
+
+    const players = await PlayerModel.find({ eventId: removedPlayer.eventId });
+    const exactly = players.filter((p) => p.status).length;
+    const maybe = players.length - exactly;
+
+    const updatedEvent = await EventModel.findByIdAndUpdate(
+      removedPlayer.eventId,
+      { playersAmount: players.length },
+      { new: true },
+    );
+
+    if (updatedEvent) {
+      await fastify.telegramBot.sendMessageRemovePlayer(
+        removedPlayer.toObject(),
+        updatedEvent.toObject(),
+        exactly,
+        maybe,
+        fastify.telegramBot.bot,
+      );
+    }
+
+    return { player: removedPlayer, players, event: updatedEvent };
   });
 
   fastify.delete('/delete/:playerID', { onRequest: [fastify.authenticate] }, async (request) => {
     const { playerID } = request.params as { playerID: string };
-    return PlayerModel.findByIdAndDelete(playerID);
+
+    const removedPlayer = await PlayerModel.findByIdAndDelete(playerID);
+    if (!removedPlayer) return null;
+
+    const players = await PlayerModel.find({ eventId: removedPlayer.eventId });
+    const exactly = players.filter((p) => p.status).length;
+    const maybe = players.length - exactly;
+
+    const updatedEvent = await EventModel.findByIdAndUpdate(
+      removedPlayer.eventId,
+      { playersAmount: players.length },
+      { new: true },
+    );
+
+    if (updatedEvent) {
+      await fastify.telegramBot.sendMessageRemovePlayer(
+        removedPlayer.toObject(),
+        updatedEvent.toObject(),
+        exactly,
+        maybe,
+        fastify.telegramBot.bot,
+      );
+    }
+
+    return { player: removedPlayer, players, event: updatedEvent };
   });
 
   fastify.get('/byEventId', { onRequest: [fastify.authenticate] }, async (request) => {
