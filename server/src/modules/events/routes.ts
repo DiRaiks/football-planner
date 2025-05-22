@@ -10,6 +10,10 @@ const eventsRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post('/save', { onRequest: [fastify.authenticate] }, async (request) => {
     const body = request.body as EventEntity;
     const event = await EventModel.create(body);
+    await fastify.telegramBot.sendMessageAddEvent(
+      event.toObject(),
+      fastify.telegramBot.bot,
+    );
     return event;
   });
 
