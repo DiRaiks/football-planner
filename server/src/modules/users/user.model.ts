@@ -1,4 +1,4 @@
-import { Schema, model, type Document } from 'mongoose';
+import { Schema, model, type Document } from "mongoose";
 
 export class CreateUserDTO {
   readonly email!: string;
@@ -15,11 +15,14 @@ export interface User extends Document {
   readonly salt: string;
 }
 
-const UserSchema = new Schema<User>({
-  email: { type: String, required: true },
-  name: { type: String, required: true },
-  hash: { type: String, required: true },
-  salt: { type: String, required: true },
-}, { timestamps: true });
+const UserSchema = new Schema<User>(
+  {
+    email: { type: String, required: true },
+    name: { type: String, required: true },
+    hash: { type: String, required: true },
+    salt: { type: String, required: true },
+  },
+  { timestamps: true },
+);
 
-export const UserModel = model<User>('User', UserSchema);
+export const UserModel = model<User>("User", UserSchema);

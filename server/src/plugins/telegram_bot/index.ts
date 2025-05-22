@@ -8,7 +8,6 @@ import {
   sendMessageAddPlayer,
   sendMessageRemovePlayer,
   sendMessageUpdatePlayer,
-  sendEditPlayerMessage,
 } from "./messages.js";
 
 declare module "fastify" {
@@ -19,7 +18,6 @@ declare module "fastify" {
       sendMessageAddPlayer: typeof sendMessageAddPlayer;
       sendMessageRemovePlayer: typeof sendMessageRemovePlayer;
       sendMessageUpdatePlayer: typeof sendMessageUpdatePlayer;
-      sendEditPlayerMessage: typeof sendEditPlayerMessage;
     };
   }
 }
@@ -40,7 +38,6 @@ const telegramBot: FastifyPluginAsync = async (fastify) => {
       sendMessageAddPlayer,
       sendMessageRemovePlayer,
       sendMessageUpdatePlayer,
-      sendEditPlayerMessage,
     });
   }
 

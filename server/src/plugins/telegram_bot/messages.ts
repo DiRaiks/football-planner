@@ -94,8 +94,6 @@ export const sendMessageUpdatePlayer = async <
   chats.forEach((chat) => bot.telegram.sendMessage(chat.chatId, message));
 };
 
-export const sendEditPlayerMessage = sendMessageUpdatePlayer;
-
 export const sendMessageAddEvent = async <E extends Event>(
   event: E,
   bot: Telegraf,

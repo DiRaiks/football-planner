@@ -1,4 +1,4 @@
-import { Schema, model } from 'mongoose';
+import { Schema, model } from "mongoose";
 
 export interface FriendEntity {
   name: string;
@@ -19,13 +19,16 @@ export const FriendSchema = new Schema<FriendEntity>({
   status: { type: Boolean, required: true },
 });
 
-const PlayerSchema = new Schema<PlayerEntity>({
-  friends: { type: [FriendSchema], required: true },
-  name: { type: String, required: true },
-  date: { type: String, required: true },
-  status: { type: Boolean, required: true },
-  eventId: { type: String, required: true },
-  userId: { type: String, required: true },
-}, { timestamps: true });
+const PlayerSchema = new Schema<PlayerEntity>(
+  {
+    friends: { type: [FriendSchema], required: true },
+    name: { type: String, required: true },
+    date: { type: String, required: true },
+    status: { type: Boolean, required: true },
+    eventId: { type: String, required: true },
+    userId: { type: String, required: true },
+  },
+  { timestamps: true },
+);
 
-export const PlayerModel = model<PlayerEntity>('Player', PlayerSchema);
+export const PlayerModel = model<PlayerEntity>("Player", PlayerSchema);
