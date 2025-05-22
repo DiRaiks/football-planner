@@ -7,6 +7,8 @@ export type ENVS = {
   LOG_FORMAT: string;
   JWT_SECRET: string;
   OPENWEATHER_API_KEY: string;
+  HTTPS_PRIVKEY_PATH?: string;
+  HTTPS_FULLCHAIN_PATH?: string;
 };
 
 declare module "fastify" {
@@ -51,6 +53,12 @@ const ENV_SCHEME = {
       type: "string",
     },
     OPENWEATHER_API_KEY: {
+      type: "string",
+    },
+    HTTPS_PRIVKEY_PATH: {
+      type: "string",
+    },
+    HTTPS_FULLCHAIN_PATH: {
       type: "string",
     },
   },
