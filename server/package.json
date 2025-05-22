@@ -20,7 +20,8 @@
     "start": "tsc && node dist/esm/index.js",
     "watch": "tsc --watch --preserveWatchOutput --pretty",
     "dev": "nodemon",
-    "clean": "rimraf dist"
+    "clean": "rimraf dist",
+    "test": "node --loader ts-node/esm --test ./test/**/*.test.ts"
   },
   "repository": {
     "type": "git",
