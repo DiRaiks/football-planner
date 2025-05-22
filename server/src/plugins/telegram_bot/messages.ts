@@ -39,7 +39,9 @@ export const sendMessageAddPlayer = async <P extends Player, E extends Event>(
     message += "\nНо это не точно.";
   }
 
-  chats.forEach((chat) => bot.telegram.sendMessage(chat.chatId, message));
+  for (const chat of chats) {
+    await bot.telegram.sendMessage(chat.chatId, message);
+  }
 };
 
 export const sendMessageRemovePlayer = async <
@@ -63,7 +65,9 @@ export const sendMessageRemovePlayer = async <
     `\nДата: ${event.date},` +
     `\nТекущее количество игроков: ${event.playersAmount} (точно: ${exactly}, возможно: ${maybe})`;
 
-  chats.forEach((chat) => bot.telegram.sendMessage(chat.chatId, message));
+  for (const chat of chats) {
+    await bot.telegram.sendMessage(chat.chatId, message);
+  }
 };
 
 export const sendMessageUpdatePlayer = async <
@@ -87,7 +91,9 @@ export const sendMessageUpdatePlayer = async <
     `\nДата: ${event.date},` +
     `\nТекущее количество игроков: ${event.playersAmount} (точно: ${exactly}, возможно: ${maybe})`;
 
-  chats.forEach((chat) => bot.telegram.sendMessage(chat.chatId, message));
+  for (const chat of chats) {
+    await bot.telegram.sendMessage(chat.chatId, message);
+  }
 };
 
 export const sendMessageAddEvent = async <E extends Event>(
@@ -103,8 +109,8 @@ export const sendMessageAddEvent = async <E extends Event>(
     `\nМесто: ${event.place},` +
     `\nЗапись: https://football-planner.ru/events/${event._id},`;
 
-  chats.forEach(async (chat) => {
+  for (const chat of chats) {
     const currentMessage = await bot.telegram.sendMessage(chat.chatId, message);
     await bot.telegram.pinChatMessage(chat.chatId, currentMessage.message_id);
-  });
+  }
 };

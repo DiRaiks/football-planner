@@ -10,7 +10,7 @@ export function setPassword(password: string): PasswordHash {
   return { hash, salt };
 }
 
-function validatePassword(password: string, user: { hash: string; salt: string }): boolean {
+export function validatePassword(password: string, user: { hash: string; salt: string }): boolean {
   const hash = pbkdf2Sync(password, user.salt, 10000, 512, "sha512").toString("hex");
   return user.hash === hash;
 }
