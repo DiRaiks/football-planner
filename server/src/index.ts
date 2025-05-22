@@ -1,7 +1,7 @@
 import Fastify from "fastify";
 import fastifyEnv from "@fastify/env";
 
-import { ENV_OPTIONS, ENVS } from "./env.js";
+import { ENV_OPTIONS } from "./env.js";
 import { TelegramBotPlugin, LoggerPlugin } from "./plugins/index.js";
 
 const fastify = Fastify({
@@ -30,7 +30,7 @@ const start = async () => {
   try {
     await fastifyInit();
 
-    const { PORT } = fastify.getEnvs<ENVS>();
+    const { PORT } = fastify.config;
     await fastify.listen({ port: PORT });
 
     fastify.log.info(`server listening on ${PORT}`);

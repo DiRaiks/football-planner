@@ -2,8 +2,6 @@ import * as Winston from "winston";
 import { FastifyPluginAsync } from "fastify";
 import fp from "fastify-plugin";
 
-import { ENVS } from "../../env.js";
-
 declare module "fastify" {
   interface FastifyInstance {
     logger: Winston.Logger;
@@ -11,7 +9,7 @@ declare module "fastify" {
 }
 
 const fastifyLogger: FastifyPluginAsync = async (fastify) => {
-  const { LOG_FORMAT } = fastify.getEnvs<ENVS>();
+  const { LOG_FORMAT } = fastify.config;
 
   const logger: Winston.Logger = Winston.createLogger({
     format:

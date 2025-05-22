@@ -2,7 +2,6 @@ import { Telegraf } from "telegraf";
 import { FastifyPluginAsync } from "fastify";
 import fp from "fastify-plugin";
 
-import { ENVS } from "env.js";
 import { initBotCommands } from "./commands.js";
 import {
   sendMessageAddEvent,
@@ -24,7 +23,7 @@ declare module "fastify" {
 }
 
 const telegramBot: FastifyPluginAsync = async (fastify) => {
-  const { BOT_TOKEN } = fastify.getEnvs<ENVS>();
+  const { BOT_TOKEN } = fastify.config;
   const { logger } = fastify;
 
   let bot = new Telegraf(BOT_TOKEN);

@@ -7,6 +7,12 @@ export type ENVS = {
   LOG_FORMAT: string;
 };
 
+declare module "fastify" {
+  interface FastifyInstance {
+    config: ENVS;
+  }
+}
+
 const ENV_SCHEME = {
   type: "object",
   required: [
