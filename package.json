@@ -5,7 +5,7 @@
   "main": "index.js",
   "private": true,
   "scripts": {
-    "test": "node --loader ts-node/esm --test ./server/test/**/*.test.ts"
+    "test": "yarn --cwd server test",
     "lint": "eslint . --ext .js,.ts,.tsx",
     "format": "prettier . --check",
     "commitlint": "commitlint --from=HEAD~1",
