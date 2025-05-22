@@ -1,6 +1,7 @@
 import { FastifyPluginAsync } from 'fastify';
 import fp from 'fastify-plugin';
 import { PlayerModel, PlayerEntity } from './player.model.js';
+import { EventModel } from '../events/event.model.js';
 
 const playersRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get('/all', { onRequest: [fastify.authenticate] }, async () => {
@@ -9,8 +10,30 @@ const playersRoutes: FastifyPluginAsync = async (fastify) => {
 
   fastify.post('/save', { onRequest: [fastify.authenticate] }, async (request) => {
     const body = request.body as PlayerEntity;
+
     const player = await PlayerModel.create(body);
-    return player;
+
+    const players = await PlayerModel.find({ eventId: player.eventId });
+    const exactly = players.filter((p) => p.status).length;
+    const maybe = players.length - exactly;
+
+    const updatedEvent = await EventModel.findByIdAndUpdate(
+      player.eventId,
+      { playersAmount: players.length },
+      { new: true },
+    );
+
+    if (updatedEvent) {
+      await fastify.telegramBot.sendMessageAddPlayer(
+        player.toObject(),
+        updatedEvent.toObject(),
+        exactly,
+        maybe,
+        fastify.telegramBot.bot,
+      );
+    }
+
+    return { players, event: updatedEvent };
   });
 
   fastify.delete('/delete', { onRequest: [fastify.authenticate] }, async (request) => {
