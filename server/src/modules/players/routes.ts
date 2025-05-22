@@ -116,13 +116,61 @@ const playersRoutes: FastifyPluginAsync = async (fastify) => {
 
   fastify.patch('/change', { onRequest: [fastify.authenticate] }, async (request) => {
     const { id, ...data } = request.body as Partial<PlayerEntity> & { id: string };
-    return PlayerModel.findByIdAndUpdate(id, data, { new: true });
+
+    const updatedPlayer = await PlayerModel.findByIdAndUpdate(id, data, { new: true });
+    if (!updatedPlayer) return null;
+
+    const players = await PlayerModel.find({ eventId: updatedPlayer.eventId });
+    const exactly = players.filter((p) => p.status).length;
+    const maybe = players.length - exactly;
+
+    const updatedEvent = await EventModel.findByIdAndUpdate(
+      updatedPlayer.eventId,
+      { playersAmount: players.length },
+      { new: true },
+    );
+
+    if (updatedEvent) {
+      await fastify.telegramBot.sendEditPlayerMessage(
+        updatedPlayer.toObject(),
+        updatedEvent.toObject(),
+        exactly,
+        maybe,
+        fastify.telegramBot.bot,
+      );
+    }
+
+    return { player: updatedPlayer, players, event: updatedEvent };
   });
 
   fastify.patch('/change/:playerID', { onRequest: [fastify.authenticate] }, async (request) => {
     const { playerID } = request.params as { playerID: string };
     const data = request.body as Partial<PlayerEntity>;
-    return PlayerModel.findByIdAndUpdate(playerID, data, { new: true });
+
+    const updatedPlayer = await PlayerModel.findByIdAndUpdate(playerID, data, { new: true });
+    if (!updatedPlayer) return null;
+
+    const players = await PlayerModel.find({ eventId: updatedPlayer.eventId });
+    const exactly = players.filter((p) => p.status).length;
+    const maybe = players.length - exactly;
+
+    const updatedEvent = await EventModel.findByIdAndUpdate(
+      updatedPlayer.eventId,
+      { playersAmount: players.length },
+      { new: true },
+    );
+
+    if (updatedEvent) {
+      await fastify.telegramBot.sendEditPlayerMessage(
+        updatedPlayer.toObject(),
+        updatedEvent.toObject(),
+        exactly,
+        maybe,
+        fastify.telegramBot.bot,
+      );
+    }
+
+    return { player: updatedPlayer, players, event: updatedEvent };
   });
 };
 
