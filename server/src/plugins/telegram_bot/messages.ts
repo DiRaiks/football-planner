@@ -1,5 +1,5 @@
-import { Telegraf } from "telegraf";
-import { ChatModel, type Chat } from "./chat.model.js";
+import { Telegraf } from 'telegraf';
+import { ChatModel } from './chat.model.js';
 
 type Player = {
   name: string;
@@ -36,7 +36,7 @@ export const sendMessageAddPlayer = async <P extends Player, E extends Event>(
     `\nТекущее количество игроков: ${event.playersAmount} (точно: ${exactly}, возможно: ${maybe})`;
 
   if (!player.status) {
-    message += "\nНо это не точно.";
+    message += '\nНо это не точно.';
   }
 
   for (const chat of chats) {
