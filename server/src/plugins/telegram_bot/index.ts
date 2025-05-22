@@ -44,4 +44,4 @@ const telegramBot: FastifyPluginAsync = async (fastify) => {
   logger.info("Telegram bot plugin initialized");
 };
 
-export default fp(telegramBot, "4.x");
+export default fp(telegramBot, "5.x");

@@ -31,4 +31,4 @@ const databasePlugin: FastifyPluginAsync = async (fastify) => {
   }
 };
 
-export default fp(databasePlugin, "4.x");
+export default fp(databasePlugin, "5.x");

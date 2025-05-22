@@ -24,4 +24,4 @@ const fastifyLogger: FastifyPluginAsync = async (fastify) => {
   }
 };
 
-export default fp(fastifyLogger, "4.x");
+export default fp(fastifyLogger, "5.x");

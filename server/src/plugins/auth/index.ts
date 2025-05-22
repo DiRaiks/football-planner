@@ -1,8 +1,8 @@
-import fp from 'fastify-plugin';
-import { FastifyPluginAsync } from 'fastify';
-import fastifyJwt from '@fastify/jwt';
+import fp from "fastify-plugin";
+import { FastifyPluginAsync } from "fastify";
+import fastifyJwt from "@fastify/jwt";
 
-declare module 'fastify' {
+declare module "fastify" {
   interface FastifyInstance {
     authenticate: (request: any, reply: any) => Promise<void>;
   }
@@ -13,7 +13,7 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
 
   fastify.register(fastifyJwt, { secret: JWT_SECRET });
 
-  fastify.decorate('authenticate', async (request, reply) => {
+  fastify.decorate("authenticate", async (request, reply) => {
     try {
       await request.jwtVerify();
     } catch (err) {
@@ -22,4 +22,4 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
   });
 };
 
-export default fp(authPlugin, '4.x');
+export default fp(authPlugin, "5.x");
