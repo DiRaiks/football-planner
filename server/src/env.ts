@@ -5,6 +5,7 @@ export type ENVS = {
   DATABASE_NAME: string;
   BOT_TOKEN: string;
   LOG_FORMAT: string;
+  JWT_SECRET: string;
 };
 
 declare module "fastify" {
@@ -22,6 +23,7 @@ const ENV_SCHEME = {
     "DATABASE_NAME",
     "BOT_TOKEN",
     "LOG_FORMAT",
+    "JWT_SECRET",
   ],
   properties: {
     PORT: {
@@ -42,6 +44,9 @@ const ENV_SCHEME = {
     LOG_FORMAT: {
       type: "string",
       default: "info",
+    },
+    JWT_SECRET: {
+      type: "string",
     },
   },
 };

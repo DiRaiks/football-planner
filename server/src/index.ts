@@ -6,7 +6,9 @@ import {
   TelegramBotPlugin,
   LoggerPlugin,
   DatabasePlugin,
+  AuthPlugin,
 } from "./plugins/index.js";
+import EventsRoutes from "./modules/events/routes.js";
 
 const fastify = Fastify({
   logger: true,
@@ -23,7 +25,12 @@ const fastifyInit = async () => {
     fastify.register(LoggerPlugin),
     fastify.register(DatabasePlugin),
     fastify.register(TelegramBotPlugin),
+    fastify.register(AuthPlugin),
   ]);
+
+  await fastify.register(async (instance) => {
+    instance.register(EventsRoutes, { prefix: '/events' });
+  });
 
   // await fastify.register(async (instance) => {
   //   instance.get('/metrics', instance.metrics.routeHandler())
