@@ -20,10 +20,22 @@ const playersRoutes: FastifyPluginAsync = async (fastify) => {
       const exactly = players.filter((p) => p.status).length;
       const maybe = players.length - exactly;
 
-      const updatedEvent = await EventModel.findByIdAndUpdate(
-        player.eventId,
-        { playersAmount: players.length },
-        { new: true },
+    const updatedEvent = await EventModel.findByIdAndUpdate(
+      player.eventId,
+      { playersAmount: players.length },
+      { new: true },
+    );
+
+    if (updatedEvent) {
+      await fastify.telegramBot.sendMessageAddPlayer(
+        player.toObject(),
+        {
+          ...updatedEvent.toObject(),
+          _id: updatedEvent._id.toString(),
+        },
+        exactly,
+        maybe,
+        fastify.telegramBot.bot,
       );
 
       if (updatedEvent) {
@@ -55,10 +67,16 @@ const playersRoutes: FastifyPluginAsync = async (fastify) => {
       const exactly = players.filter((p) => p.status).length;
       const maybe = players.length - exactly;
 
-      const updatedEvent = await EventModel.findByIdAndUpdate(
-        removedPlayer.eventId,
-        { playersAmount: players.length },
-        { new: true },
+    if (updatedEvent) {
+      await fastify.telegramBot.sendMessageRemovePlayer(
+        removedPlayer.toObject(),
+        {
+          ...updatedEvent.toObject(),
+          _id: updatedEvent._id.toString(),
+        },
+        exactly,
+        maybe,
+        fastify.telegramBot.bot,
       );
 
       if (updatedEvent) {
@@ -90,10 +108,16 @@ const playersRoutes: FastifyPluginAsync = async (fastify) => {
       const exactly = players.filter((p) => p.status).length;
       const maybe = players.length - exactly;
 
-      const updatedEvent = await EventModel.findByIdAndUpdate(
-        removedPlayer.eventId,
-        { playersAmount: players.length },
-        { new: true },
+    if (updatedEvent) {
+      await fastify.telegramBot.sendMessageRemovePlayer(
+        removedPlayer.toObject(),
+        {
+          ...updatedEvent.toObject(),
+          _id: updatedEvent._id.toString(),
+        },
+        exactly,
+        maybe,
+        fastify.telegramBot.bot,
       );
 
       if (updatedEvent) {
@@ -168,10 +192,16 @@ const playersRoutes: FastifyPluginAsync = async (fastify) => {
       const exactly = players.filter((p) => p.status).length;
       const maybe = players.length - exactly;
 
-      const updatedEvent = await EventModel.findByIdAndUpdate(
-        updatedPlayer.eventId,
-        { playersAmount: players.length },
-        { new: true },
+    if (updatedEvent) {
+      await fastify.telegramBot.sendEditPlayerMessage(
+        updatedPlayer.toObject(),
+        {
+          ...updatedEvent.toObject(),
+          _id: updatedEvent._id.toString(),
+        },
+        exactly,
+        maybe,
+        fastify.telegramBot.bot,
       );
 
       if (updatedEvent) {
@@ -195,10 +225,26 @@ const playersRoutes: FastifyPluginAsync = async (fastify) => {
       const { playerID } = request.params as { playerID: string };
       const data = request.body as Partial<PlayerEntity>;
 
-      const updatedPlayer = await PlayerModel.findByIdAndUpdate(
-        playerID,
-        data,
-        { new: true },
+    const players = await PlayerModel.find({ eventId: updatedPlayer.eventId });
+    const exactly = players.filter((p) => p.status).length;
+    const maybe = players.length - exactly;
+
+    const updatedEvent = await EventModel.findByIdAndUpdate(
+      updatedPlayer.eventId,
+      { playersAmount: players.length },
+      { new: true },
+    );
+
+    if (updatedEvent) {
+      await fastify.telegramBot.sendEditPlayerMessage(
+        updatedPlayer.toObject(),
+        {
+          ...updatedEvent.toObject(),
+          _id: updatedEvent._id.toString(),
+        },
+        exactly,
+        maybe,
+        fastify.telegramBot.bot,
       );
       if (!updatedPlayer) return null;
 

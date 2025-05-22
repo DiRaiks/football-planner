@@ -14,7 +14,10 @@ const eventsRoutes: FastifyPluginAsync = async (fastify) => {
       const body = request.body as EventEntity;
       const event = await EventModel.create(body);
       await fastify.telegramBot.sendMessageAddEvent(
-        event.toObject(),
+        {
+          ...event.toObject(),
+          _id: event._id.toString(),
+        },
         fastify.telegramBot.bot,
       );
       return event;
