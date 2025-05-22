@@ -26,7 +26,10 @@ const playersRoutes: FastifyPluginAsync = async (fastify) => {
     if (updatedEvent) {
       await fastify.telegramBot.sendMessageAddPlayer(
         player.toObject(),
-        updatedEvent.toObject(),
+        {
+          ...updatedEvent.toObject(),
+          _id: updatedEvent._id.toString(),
+        },
         exactly,
         maybe,
         fastify.telegramBot.bot,
@@ -55,7 +58,10 @@ const playersRoutes: FastifyPluginAsync = async (fastify) => {
     if (updatedEvent) {
       await fastify.telegramBot.sendMessageRemovePlayer(
         removedPlayer.toObject(),
-        updatedEvent.toObject(),
+        {
+          ...updatedEvent.toObject(),
+          _id: updatedEvent._id.toString(),
+        },
         exactly,
         maybe,
         fastify.telegramBot.bot,
@@ -84,7 +90,10 @@ const playersRoutes: FastifyPluginAsync = async (fastify) => {
     if (updatedEvent) {
       await fastify.telegramBot.sendMessageRemovePlayer(
         removedPlayer.toObject(),
-        updatedEvent.toObject(),
+        {
+          ...updatedEvent.toObject(),
+          _id: updatedEvent._id.toString(),
+        },
         exactly,
         maybe,
         fastify.telegramBot.bot,
@@ -133,7 +142,10 @@ const playersRoutes: FastifyPluginAsync = async (fastify) => {
     if (updatedEvent) {
       await fastify.telegramBot.sendEditPlayerMessage(
         updatedPlayer.toObject(),
-        updatedEvent.toObject(),
+        {
+          ...updatedEvent.toObject(),
+          _id: updatedEvent._id.toString(),
+        },
         exactly,
         maybe,
         fastify.telegramBot.bot,
@@ -163,7 +175,10 @@ const playersRoutes: FastifyPluginAsync = async (fastify) => {
     if (updatedEvent) {
       await fastify.telegramBot.sendEditPlayerMessage(
         updatedPlayer.toObject(),
-        updatedEvent.toObject(),
+        {
+          ...updatedEvent.toObject(),
+          _id: updatedEvent._id.toString(),
+        },
         exactly,
         maybe,
         fastify.telegramBot.bot,
