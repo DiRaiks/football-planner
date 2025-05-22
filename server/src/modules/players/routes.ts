@@ -1,24 +1,21 @@
-import { FastifyPluginAsync } from "fastify";
-import fp from "fastify-plugin";
-import { PlayerModel, PlayerEntity } from "./player.model.js";
-import { EventModel } from "../events/event.model.js";
+import { FastifyPluginAsync } from 'fastify';
+import fp from 'fastify-plugin';
+import { PlayerModel, PlayerEntity } from './player.model.js';
+import { EventModel } from '../events/event.model.js';
 
 const playersRoutes: FastifyPluginAsync = async (fastify) => {
-  fastify.get("/all", { onRequest: [fastify.authenticate] }, async () => {
+  fastify.get('/all', { onRequest: [fastify.authenticate] }, async () => {
     return PlayerModel.find();
   });
 
-  fastify.post(
-    "/save",
-    { onRequest: [fastify.authenticate] },
-    async (request) => {
-      const body = request.body as PlayerEntity;
+  fastify.post('/save', { onRequest: [fastify.authenticate] }, async (request) => {
+    const body = request.body as PlayerEntity;
 
-      const player = await PlayerModel.create(body);
+    const player = await PlayerModel.create(body);
 
-      const players = await PlayerModel.find({ eventId: player.eventId });
-      const exactly = players.filter((p) => p.status).length;
-      const maybe = players.length - exactly;
+    const players = await PlayerModel.find({ eventId: player.eventId });
+    const exactly = players.filter((p) => p.status).length;
+    const maybe = players.length - exactly;
 
     const updatedEvent = await EventModel.findByIdAndUpdate(
       player.eventId,
@@ -37,35 +34,26 @@ const playersRoutes: FastifyPluginAsync = async (fastify) => {
         maybe,
         fastify.telegramBot.bot,
       );
+    }
 
-      if (updatedEvent) {
-        await fastify.telegramBot.sendMessageAddPlayer(
-          player.toObject(),
-          updatedEvent.toObject(),
-          exactly,
-          maybe,
-          fastify.telegramBot.bot,
-        );
-      }
+    return { players, event: updatedEvent };
+  });
 
-      return { players, event: updatedEvent };
-    },
-  );
+  fastify.delete('/delete', { onRequest: [fastify.authenticate] }, async (request) => {
+    const { id } = request.query as { id: string };
 
-  fastify.delete(
-    "/delete",
-    { onRequest: [fastify.authenticate] },
-    async (request) => {
-      const { id } = request.query as { id: string };
+    const removedPlayer = await PlayerModel.findByIdAndDelete(id);
+    if (!removedPlayer) return null;
 
-      const removedPlayer = await PlayerModel.findByIdAndDelete(id);
-      if (!removedPlayer) return null;
+    const players = await PlayerModel.find({ eventId: removedPlayer.eventId });
+    const exactly = players.filter((p) => p.status).length;
+    const maybe = players.length - exactly;
 
-      const players = await PlayerModel.find({
-        eventId: removedPlayer.eventId,
-      });
-      const exactly = players.filter((p) => p.status).length;
-      const maybe = players.length - exactly;
+    const updatedEvent = await EventModel.findByIdAndUpdate(
+      removedPlayer.eventId,
+      { playersAmount: players.length },
+      { new: true },
+    );
 
     if (updatedEvent) {
       await fastify.telegramBot.sendMessageRemovePlayer(
@@ -78,35 +66,26 @@ const playersRoutes: FastifyPluginAsync = async (fastify) => {
         maybe,
         fastify.telegramBot.bot,
       );
+    }
 
-      if (updatedEvent) {
-        await fastify.telegramBot.sendMessageRemovePlayer(
-          removedPlayer.toObject(),
-          updatedEvent.toObject(),
-          exactly,
-          maybe,
-          fastify.telegramBot.bot,
-        );
-      }
+    return { player: removedPlayer, players, event: updatedEvent };
+  });
 
-      return { player: removedPlayer, players, event: updatedEvent };
-    },
-  );
+  fastify.delete('/delete/:playerID', { onRequest: [fastify.authenticate] }, async (request) => {
+    const { playerID } = request.params as { playerID: string };
 
-  fastify.delete(
-    "/delete/:playerID",
-    { onRequest: [fastify.authenticate] },
-    async (request) => {
-      const { playerID } = request.params as { playerID: string };
+    const removedPlayer = await PlayerModel.findByIdAndDelete(playerID);
+    if (!removedPlayer) return null;
 
-      const removedPlayer = await PlayerModel.findByIdAndDelete(playerID);
-      if (!removedPlayer) return null;
+    const players = await PlayerModel.find({ eventId: removedPlayer.eventId });
+    const exactly = players.filter((p) => p.status).length;
+    const maybe = players.length - exactly;
 
-      const players = await PlayerModel.find({
-        eventId: removedPlayer.eventId,
-      });
-      const exactly = players.filter((p) => p.status).length;
-      const maybe = players.length - exactly;
+    const updatedEvent = await EventModel.findByIdAndUpdate(
+      removedPlayer.eventId,
+      { playersAmount: players.length },
+      { new: true },
+    );
 
     if (updatedEvent) {
       await fastify.telegramBot.sendMessageRemovePlayer(
@@ -119,111 +98,36 @@ const playersRoutes: FastifyPluginAsync = async (fastify) => {
         maybe,
         fastify.telegramBot.bot,
       );
+    }
 
-      if (updatedEvent) {
-        await fastify.telegramBot.sendMessageRemovePlayer(
-          removedPlayer.toObject(),
-          updatedEvent.toObject(),
-          exactly,
-          maybe,
-          fastify.telegramBot.bot,
-        );
-      }
+    return { player: removedPlayer, players, event: updatedEvent };
+  });
 
-      return { player: removedPlayer, players, event: updatedEvent };
-    },
-  );
+  fastify.get('/byEventId', { onRequest: [fastify.authenticate] }, async (request) => {
+    const { eventID } = request.query as { eventID: string };
+    return PlayerModel.find({ eventId: eventID });
+  });
 
-  fastify.get(
-    "/byEventId",
-    { onRequest: [fastify.authenticate] },
-    async (request) => {
-      const { eventID } = request.query as { eventID: string };
-      return PlayerModel.find({ eventId: eventID });
-    },
-  );
+  fastify.get('/byEventId/:eventID', { onRequest: [fastify.authenticate] }, async (request) => {
+    const { eventID } = request.params as { eventID: string };
+    return PlayerModel.find({ eventId: eventID });
+  });
 
-  fastify.get(
-    "/byEventId/:eventID",
-    { onRequest: [fastify.authenticate] },
-    async (request) => {
-      const { eventID } = request.params as { eventID: string };
-      return PlayerModel.find({ eventId: eventID });
-    },
-  );
+  fastify.get('/:eventID/:userID', { onRequest: [fastify.authenticate] }, async (request) => {
+    const { eventID, userID } = request.params as { eventID: string; userID: string };
+    return PlayerModel.findOne({ eventId: eventID, userId: userID });
+  });
 
-  fastify.get(
-    "/:eventID/:userID",
-    { onRequest: [fastify.authenticate] },
-    async (request) => {
-      const { eventID, userID } = request.params as {
-        eventID: string;
-        userID: string;
-      };
-      return PlayerModel.findOne({ eventId: eventID, userId: userID });
-    },
-  );
+  fastify.get('/get/:playerID', { onRequest: [fastify.authenticate] }, async (request) => {
+    const { playerID } = request.params as { playerID: string };
+    return PlayerModel.findById(playerID);
+  });
 
-  fastify.get(
-    "/get/:playerID",
-    { onRequest: [fastify.authenticate] },
-    async (request) => {
-      const { playerID } = request.params as { playerID: string };
-      return PlayerModel.findById(playerID);
-    },
-  );
+  fastify.patch('/change', { onRequest: [fastify.authenticate] }, async (request) => {
+    const { id, ...data } = request.body as Partial<PlayerEntity> & { id: string };
 
-  fastify.patch(
-    "/change",
-    { onRequest: [fastify.authenticate] },
-    async (request) => {
-      const { id, ...data } = request.body as Partial<PlayerEntity> & {
-        id: string;
-      };
-
-      const updatedPlayer = await PlayerModel.findByIdAndUpdate(id, data, {
-        new: true,
-      });
-      if (!updatedPlayer) return null;
-
-      const players = await PlayerModel.find({
-        eventId: updatedPlayer.eventId,
-      });
-      const exactly = players.filter((p) => p.status).length;
-      const maybe = players.length - exactly;
-
-    if (updatedEvent) {
-      await fastify.telegramBot.sendEditPlayerMessage(
-        updatedPlayer.toObject(),
-        {
-          ...updatedEvent.toObject(),
-          _id: updatedEvent._id.toString(),
-        },
-        exactly,
-        maybe,
-        fastify.telegramBot.bot,
-      );
-
-      if (updatedEvent) {
-        await fastify.telegramBot.sendMessageUpdatePlayer(
-          updatedPlayer.toObject(),
-          updatedEvent.toObject(),
-          exactly,
-          maybe,
-          fastify.telegramBot.bot,
-        );
-      }
-
-      return { player: updatedPlayer, players, event: updatedEvent };
-    },
-  );
-
-  fastify.patch(
-    "/change/:playerID",
-    { onRequest: [fastify.authenticate] },
-    async (request) => {
-      const { playerID } = request.params as { playerID: string };
-      const data = request.body as Partial<PlayerEntity>;
+    const updatedPlayer = await PlayerModel.findByIdAndUpdate(id, data, { new: true });
+    if (!updatedPlayer) return null;
 
     const players = await PlayerModel.find({ eventId: updatedPlayer.eventId });
     const exactly = players.filter((p) => p.status).length;
@@ -246,33 +150,43 @@ const playersRoutes: FastifyPluginAsync = async (fastify) => {
         maybe,
         fastify.telegramBot.bot,
       );
-      if (!updatedPlayer) return null;
+    }
 
-      const players = await PlayerModel.find({
-        eventId: updatedPlayer.eventId,
-      });
-      const exactly = players.filter((p) => p.status).length;
-      const maybe = players.length - exactly;
+    return { player: updatedPlayer, players, event: updatedEvent };
+  });
 
-      const updatedEvent = await EventModel.findByIdAndUpdate(
-        updatedPlayer.eventId,
-        { playersAmount: players.length },
-        { new: true },
+  fastify.patch('/change/:playerID', { onRequest: [fastify.authenticate] }, async (request) => {
+    const { playerID } = request.params as { playerID: string };
+    const data = request.body as Partial<PlayerEntity>;
+
+    const updatedPlayer = await PlayerModel.findByIdAndUpdate(playerID, data, { new: true });
+    if (!updatedPlayer) return null;
+
+    const players = await PlayerModel.find({ eventId: updatedPlayer.eventId });
+    const exactly = players.filter((p) => p.status).length;
+    const maybe = players.length - exactly;
+
+    const updatedEvent = await EventModel.findByIdAndUpdate(
+      updatedPlayer.eventId,
+      { playersAmount: players.length },
+      { new: true },
+    );
+
+    if (updatedEvent) {
+      await fastify.telegramBot.sendEditPlayerMessage(
+        updatedPlayer.toObject(),
+        {
+          ...updatedEvent.toObject(),
+          _id: updatedEvent._id.toString(),
+        },
+        exactly,
+        maybe,
+        fastify.telegramBot.bot,
       );
+    }
 
-      if (updatedEvent) {
-        await fastify.telegramBot.sendMessageUpdatePlayer(
-          updatedPlayer.toObject(),
-          updatedEvent.toObject(),
-          exactly,
-          maybe,
-          fastify.telegramBot.bot,
-        );
-      }
-
-      return { player: updatedPlayer, players, event: updatedEvent };
-    },
-  );
+    return { player: updatedPlayer, players, event: updatedEvent };
+  });
 };
 
-export default fp(playersRoutes, "4.x");
+export default fp(playersRoutes, '4.x');
