@@ -30,9 +30,9 @@ const fastifyInit = async () => {
     fastify.register(AuthPlugin),
   ]);
 
-  await fastify.register(EventsRoutes, { prefix: '/events' });
-  await fastify.register(PlayersRoutes, { prefix: '/players' });
-  await fastify.register(UsersRoutes, { prefix: '/users' });
+  fastify.register(EventsRoutes, { prefix: "/events" });
+  fastify.register(PlayersRoutes, { prefix: "/players" });
+  fastify.register(UsersRoutes, { prefix: "/users" });
 
   // await fastify.register(async (instance) => {
   //   instance.get('/metrics', instance.metrics.routeHandler())

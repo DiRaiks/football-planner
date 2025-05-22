@@ -1,10 +1,9 @@
-import { FastifyPluginAsync } from "fastify";
-import fp from "fastify-plugin";
+import { FastifyInstance } from "fastify";
 import { UserModel, type User } from "./user.model.js";
 import { PlayerModel } from "../players/player.model.js";
 
-const usersRoutes: FastifyPluginAsync = async (fastify) => {
-  fastify.get("/all", { onRequest: [fastify.authenticate] }, async () => {
+const usersRoutes = async (fastify: FastifyInstance) => {
+  fastify.get("/", { onRequest: [fastify.authenticate] }, async () => {
     return UserModel.find();
   });
 
@@ -28,4 +27,4 @@ const usersRoutes: FastifyPluginAsync = async (fastify) => {
   );
 };
 
-export default fp(usersRoutes, "4.x");
+export default usersRoutes;

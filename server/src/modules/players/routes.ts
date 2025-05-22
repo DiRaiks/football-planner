@@ -1,10 +1,9 @@
-import { FastifyPluginAsync } from "fastify";
-import fp from "fastify-plugin";
+import { FastifyInstance } from "fastify";
 import { PlayerModel, PlayerEntity } from "./player.model.js";
 import { EventModel } from "../events/event.model.js";
 
-const playersRoutes: FastifyPluginAsync = async (fastify) => {
-  fastify.get("/all", { onRequest: [fastify.authenticate] }, async () => {
+const playersRoutes = async (fastify: FastifyInstance) => {
+  fastify.get("/", { onRequest: [fastify.authenticate] }, async () => {
     return PlayerModel.find();
   });
 
@@ -244,4 +243,4 @@ const playersRoutes: FastifyPluginAsync = async (fastify) => {
   );
 };
 
-export default fp(playersRoutes, "4.x");
+export default playersRoutes;

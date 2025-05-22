@@ -1,9 +1,8 @@
-import { FastifyPluginAsync } from "fastify";
-import fp from "fastify-plugin";
 import { EventModel, EventEntity } from "./event.model.js";
+import { FastifyInstance } from "fastify";
 
-const eventsRoutes: FastifyPluginAsync = async (fastify) => {
-  fastify.get("/all", { onRequest: [fastify.authenticate] }, async () => {
+const eventsRoutes = async (fastify: FastifyInstance) => {
+  fastify.get("/", { onRequest: [fastify.authenticate] }, async () => {
     return EventModel.find();
   });
 
@@ -73,4 +72,4 @@ const eventsRoutes: FastifyPluginAsync = async (fastify) => {
   );
 };
 
-export default fp(eventsRoutes, "4.x");
+export default eventsRoutes;
