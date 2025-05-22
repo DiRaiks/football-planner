@@ -6,5 +6,11 @@ services:
       dockerfile: Dockerfile
     env_file:
       - .env
+    environment:
+      HTTPS_PRIVKEY_PATH: /certs/privkey.pem
+      HTTPS_FULLCHAIN_PATH: /certs/fullchain.pem
     ports:
       - "3000:3000"
+      - "443:3000"
+    volumes:
+      - ./certs:/certs:ro
