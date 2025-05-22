@@ -1,4 +1,6 @@
 import Fastify from "fastify";
+import fs from "fs";
+import path from "path";
 import fastifyEnv from "@fastify/env";
 
 import { ENV_OPTIONS } from "./env.js";
@@ -13,8 +15,28 @@ import PlayersRoutes from "./modules/players/routes.js";
 import UsersRoutes from "./modules/users/routes.js";
 import AuthRoutes from "./modules/auth/routes.js";
 
+const httpsKeyPath = process.env.HTTPS_PRIVKEY_PATH
+  ? path.resolve(process.env.HTTPS_PRIVKEY_PATH)
+  : undefined;
+const httpsCertPath = process.env.HTTPS_FULLCHAIN_PATH
+  ? path.resolve(process.env.HTTPS_FULLCHAIN_PATH)
+  : undefined;
+
+const httpsOptions =
+  httpsKeyPath && httpsCertPath &&
+  fs.existsSync(httpsKeyPath) &&
+  fs.existsSync(httpsCertPath)
+    ? {
+        https: {
+          key: fs.readFileSync(httpsKeyPath),
+          cert: fs.readFileSync(httpsCertPath),
+        },
+      }
+    : {};
+
 const fastify = Fastify({
   logger: true,
+  ...httpsOptions,
   ajv: {
     customOptions: {
       allowUnionTypes: true,

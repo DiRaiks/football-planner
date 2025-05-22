@@ -6,6 +6,8 @@ export type ENVS = {
   BOT_TOKEN: string;
   LOG_FORMAT: string;
   JWT_SECRET: string;
+  HTTPS_PRIVKEY_PATH?: string;
+  HTTPS_FULLCHAIN_PATH?: string;
 };
 
 declare module "fastify" {
@@ -46,6 +48,12 @@ const ENV_SCHEME = {
       default: "info",
     },
     JWT_SECRET: {
+      type: "string",
+    },
+    HTTPS_PRIVKEY_PATH: {
+      type: "string",
+    },
+    HTTPS_FULLCHAIN_PATH: {
       type: "string",
     },
   },
