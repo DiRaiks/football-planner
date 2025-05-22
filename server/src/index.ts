@@ -2,7 +2,11 @@ import Fastify from "fastify";
 import fastifyEnv from "@fastify/env";
 
 import { ENV_OPTIONS } from "./env.js";
-import { TelegramBotPlugin, LoggerPlugin } from "./plugins/index.js";
+import {
+  TelegramBotPlugin,
+  LoggerPlugin,
+  DatabasePlugin,
+} from "./plugins/index.js";
 
 const fastify = Fastify({
   logger: true,
@@ -17,6 +21,7 @@ const fastifyInit = async () => {
   await Promise.all([
     fastify.register(fastifyEnv, ENV_OPTIONS),
     fastify.register(LoggerPlugin),
+    fastify.register(DatabasePlugin),
     fastify.register(TelegramBotPlugin),
   ]);
 
