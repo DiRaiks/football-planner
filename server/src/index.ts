@@ -12,6 +12,7 @@ import EventsRoutes from "./modules/events/routes.js";
 import PlayersRoutes from "./modules/players/routes.js";
 import UsersRoutes from "./modules/users/routes.js";
 import AuthRoutes from "./modules/auth/routes.js";
+import WeatherRoutes from "./modules/weather/routes.js";
 
 const fastify = Fastify({
   logger: true,
@@ -35,6 +36,7 @@ const fastifyInit = async () => {
   fastify.register(PlayersRoutes, { prefix: "/players" });
   fastify.register(UsersRoutes, { prefix: "/users" });
   fastify.register(AuthRoutes, { prefix: "/auth" });
+  fastify.register(WeatherRoutes, { prefix: "/weather" });
 
   // await fastify.register(async (instance) => {
   //   instance.get('/metrics', instance.metrics.routeHandler())
