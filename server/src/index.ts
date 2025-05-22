@@ -1,21 +1,21 @@
-import Fastify from "fastify";
-import fs from "fs";
-import path from "path";
-import fastifyEnv from "@fastify/env";
+import Fastify from 'fastify';
+import fs from 'fs';
+import path from 'path';
+import fastifyEnv from '@fastify/env';
 
-import { ENV_OPTIONS } from "./env.js";
+import { ENV_OPTIONS } from './env.js';
 import {
   TelegramBotPlugin,
   LoggerPlugin,
   DatabasePlugin,
   AuthPlugin,
   MonitoringPlugin,
-} from "./plugins/index.js";
-import EventsRoutes from "./modules/events/routes.js";
-import PlayersRoutes from "./modules/players/routes.js";
-import UsersRoutes from "./modules/users/routes.js";
-import AuthRoutes from "./modules/auth/routes.js";
-import WeatherRoutes from "./modules/weather/routes.js";
+} from './plugins/index.js';
+import EventsRoutes from './modules/events/routes.js';
+import PlayersRoutes from './modules/players/routes.js';
+import UsersRoutes from './modules/users/routes.js';
+import AuthRoutes from './modules/auth/routes.js';
+import WeatherRoutes from './modules/weather/routes.js';
 
 const httpsKeyPath = process.env.HTTPS_PRIVKEY_PATH
   ? path.resolve(process.env.HTTPS_PRIVKEY_PATH)
@@ -25,7 +25,8 @@ const httpsCertPath = process.env.HTTPS_FULLCHAIN_PATH
   : undefined;
 
 const httpsOptions =
-  httpsKeyPath && httpsCertPath &&
+  httpsKeyPath &&
+  httpsCertPath &&
   fs.existsSync(httpsKeyPath) &&
   fs.existsSync(httpsCertPath)
     ? {
@@ -56,16 +57,16 @@ const fastifyInit = async () => {
     fastify.register(MonitoringPlugin),
   ]);
 
-  fastify.register(EventsRoutes, { prefix: "/events" });
-  fastify.register(PlayersRoutes, { prefix: "/players" });
-  fastify.register(UsersRoutes, { prefix: "/users" });
-  fastify.register(AuthRoutes, { prefix: "/auth" });
-  fastify.register(WeatherRoutes, { prefix: "/weather" });
+  fastify.register(EventsRoutes, { prefix: '/events' });
+  fastify.register(PlayersRoutes, { prefix: '/players' });
+  fastify.register(UsersRoutes, { prefix: '/users' });
+  fastify.register(AuthRoutes, { prefix: '/auth' });
+  fastify.register(WeatherRoutes, { prefix: '/weather' });
 
   await fastify.register(async (instance) => {
-    instance.get('/metrics', instance.metrics.routeHandler)
-    instance.get('/health', instance.healthChecker.routeHandler)
-  })
+    instance.get('/metrics', instance.metrics.routeHandler);
+    instance.get('/health', instance.healthChecker.routeHandler);
+  });
 };
 
 const start = async () => {
@@ -73,7 +74,7 @@ const start = async () => {
     await fastifyInit();
 
     const { PORT } = fastify.config;
-    await fastify.listen({ port: PORT });
+    await fastify.listen({ port: PORT, host: '0.0.0.0' });
 
     fastify.log.info(`server listening on ${PORT}`);
   } catch (err) {
@@ -81,8 +82,8 @@ const start = async () => {
     process.exit(1);
   }
 };
-process.on("unhandledRejection", function (reason) {
-  fastify.logger.error("unhandledRejection", reason);
+process.on('unhandledRejection', function (reason) {
+  fastify.logger.error('unhandledRejection', reason);
 });
 
 void start();
