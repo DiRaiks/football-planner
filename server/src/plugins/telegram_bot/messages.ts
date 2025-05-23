@@ -110,7 +110,14 @@ export const sendMessageAddEvent = async <E extends Event>(
     `\nЗапись: https://football-planner.ru/events/${event._id},`;
 
   for (const chat of chats) {
-    const currentMessage = await bot.telegram.sendMessage(chat.chatId, message);
-    await bot.telegram.pinChatMessage(chat.chatId, currentMessage.message_id);
+    try {
+      const currentMessage = await bot.telegram.sendMessage(
+        chat.chatId,
+        message,
+      );
+      await bot.telegram.pinChatMessage(chat.chatId, currentMessage.message_id);
+    } catch (error) {
+      console.error(error);
+    }
   }
 };
