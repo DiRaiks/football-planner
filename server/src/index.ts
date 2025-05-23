@@ -48,6 +48,19 @@ const fastify = Fastify({
   },
 });
 
+// TODO: Remove this hook after fixing the issue with empty body
+fastify.addHook('preParsing', (request, _reply, _payload, done) => {
+  if (
+    ['POST', 'DELETE'].includes(request.method) &&
+    request.headers['content-type'] == 'application/json' &&
+    request.headers['content-length'] == '0'
+  ) {
+    delete request.headers['content-type'];
+  }
+
+  done();
+});
+
 const fastifyInit = async () => {
   await Promise.all([
     fastify.register(cors, {
