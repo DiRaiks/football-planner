@@ -10,12 +10,14 @@ const eventsRoutes = async (fastify: FastifyInstance) => {
     '/save',
     { onRequest: [fastify.authenticate] },
     async (request) => {
+      const { id } = request.user as { id: string };
       const body = request.body as EventEntity;
       const event = await EventModel.create(body);
       await fastify.telegramBot.sendMessageAddEvent(
         {
           ...event.toObject(),
           _id: event._id.toString(),
+          creatorId: id,
         },
         fastify.telegramBot.bot,
       );

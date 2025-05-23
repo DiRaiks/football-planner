@@ -12,6 +12,7 @@ const usersRoutes = async (fastify: FastifyInstance) => {
     { onRequest: [fastify.authenticate] },
     async (request) => {
       const { id, ...data } = request.body as Partial<User> & { id: string };
+
       return UserModel.findByIdAndUpdate(id, data, { new: true, upsert: true });
     },
   );
@@ -22,7 +23,8 @@ const usersRoutes = async (fastify: FastifyInstance) => {
     async (request) => {
       const { userId } = request.params as { userId: string };
       const events = await PlayerModel.find({ userId });
-      return { count: events.length };
+
+      return events.length;
     },
   );
 };
