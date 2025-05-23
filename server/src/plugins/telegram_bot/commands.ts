@@ -1,17 +1,21 @@
-import { Telegraf } from "telegraf";
-import { Logger } from "winston";
-import { ChatModel } from "./chat.model.js";
+import { Telegraf } from 'telegraf';
+import { Logger } from 'winston';
+import { ChatModel } from './chat.model.js';
 
 export const initBotCommands = (bot: Telegraf, logger?: Logger) => {
-  bot.command("start", (ctx) => ctx.reply("Hello!"));
+  bot.command('start', (ctx) => ctx.reply('Hello!'));
 
-  bot.command("init", async (ctx) => {
+  bot.command('init', async (ctx) => {
     logger?.info(`Init command received from ${ctx.chat.id}`);
     const { id } = ctx.chat;
 
     let saveChat = true;
     try {
-      await ChatModel.updateOne({ chatId: id }, { chatId: id }, { upsert: true });
+      await ChatModel.updateOne(
+        { chatId: id },
+        { chatId: id },
+        { upsert: true },
+      );
     } catch (err) {
       saveChat = false;
       logger?.error(`Error saving chat ${id}: ${(err as Error).message}`);
@@ -21,7 +25,7 @@ export const initBotCommands = (bot: Telegraf, logger?: Logger) => {
     else ctx.reply(`Chat ${id} not saved`);
   });
 
-  bot.command("remove", async (ctx) => {
+  bot.command('remove', async (ctx) => {
     logger?.info(`Remove command received from ${ctx.chat.id}`);
     const { id } = ctx.chat;
 
@@ -37,13 +41,13 @@ export const initBotCommands = (bot: Telegraf, logger?: Logger) => {
     else ctx.reply(`Chat ${id} not removed`);
   });
 
-  bot.command("help", (ctx) => {
+  bot.command('help', (ctx) => {
     logger?.info(`Help command received from ${ctx.chat.id}`);
-    const message = "/init - Initialize the bot" + "\n/remove - Remove the bot";
+    const message = '/init - Initialize the bot' + '\n/remove - Remove the bot';
     ctx.reply(message);
   });
 
-  logger?.info("Bot commands initialized");
+  logger?.info('Bot commands initialized');
 
   return bot;
 };
