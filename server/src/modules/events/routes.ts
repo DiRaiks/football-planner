@@ -12,12 +12,11 @@ const eventsRoutes = async (fastify: FastifyInstance) => {
     async (request) => {
       const { id } = request.user as { id: string };
       const body = request.body as EventEntity;
-      const event = await EventModel.create(body);
+      const event = await EventModel.create({ ...body, creatorId: id });
       await fastify.telegramBot.sendMessageAddEvent(
         {
           ...event.toObject(),
           _id: event._id.toString(),
-          creatorId: id,
         },
         fastify.telegramBot.bot,
       );
