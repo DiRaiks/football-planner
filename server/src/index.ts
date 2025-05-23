@@ -55,6 +55,7 @@ fastify.addHook('preParsing', (request, _reply, _payload, done) => {
     request.headers['content-type'] == 'application/json; charset=utf-8' &&
     !request.body
   ) {
+    console.log('--------------empty body');
     delete request.headers['content-type'];
   }
 
