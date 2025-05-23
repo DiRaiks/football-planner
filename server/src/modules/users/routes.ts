@@ -1,14 +1,14 @@
-import { FastifyInstance } from "fastify";
-import { UserModel, type User } from "./user.model.js";
-import { PlayerModel } from "../players/player.model.js";
+import { FastifyInstance } from 'fastify';
+import { UserModel, type User } from './user.model.js';
+import { PlayerModel } from '../players/player.model.js';
 
 const usersRoutes = async (fastify: FastifyInstance) => {
-  fastify.get("/", { onRequest: [fastify.authenticate] }, async () => {
+  fastify.get('/all', { onRequest: [fastify.authenticate] }, async () => {
     return UserModel.find();
   });
 
   fastify.patch(
-    "/change",
+    '/change',
     { onRequest: [fastify.authenticate] },
     async (request) => {
       const { id, ...data } = request.body as Partial<User> & { id: string };
@@ -17,7 +17,7 @@ const usersRoutes = async (fastify: FastifyInstance) => {
   );
 
   fastify.get(
-    "/userEventsCount/:userId",
+    '/userEventsCount/:userId',
     { onRequest: [fastify.authenticate] },
     async (request) => {
       const { userId } = request.params as { userId: string };

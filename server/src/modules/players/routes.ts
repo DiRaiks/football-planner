@@ -1,14 +1,14 @@
-import { FastifyInstance } from "fastify";
-import { PlayerModel, PlayerEntity } from "./player.model.js";
-import { EventModel } from "../events/event.model.js";
+import { FastifyInstance } from 'fastify';
+import { PlayerModel, PlayerEntity } from './player.model.js';
+import { EventModel } from '../events/event.model.js';
 
 const playersRoutes = async (fastify: FastifyInstance) => {
-  fastify.get("/", { onRequest: [fastify.authenticate] }, async () => {
+  fastify.get('/all', { onRequest: [fastify.authenticate] }, async () => {
     return PlayerModel.find();
   });
 
   fastify.post(
-    "/save",
+    '/save',
     { onRequest: [fastify.authenticate] },
     async (request) => {
       const body = request.body as PlayerEntity;
@@ -43,7 +43,7 @@ const playersRoutes = async (fastify: FastifyInstance) => {
   );
 
   fastify.delete(
-    "/delete",
+    '/delete',
     { onRequest: [fastify.authenticate] },
     async (request) => {
       const { id } = request.query as { id: string };
@@ -81,7 +81,7 @@ const playersRoutes = async (fastify: FastifyInstance) => {
   );
 
   fastify.delete(
-    "/delete/:playerID",
+    '/delete/:playerID',
     { onRequest: [fastify.authenticate] },
     async (request) => {
       const { playerID } = request.params as { playerID: string };
@@ -119,7 +119,7 @@ const playersRoutes = async (fastify: FastifyInstance) => {
   );
 
   fastify.get(
-    "/byEventId",
+    '/byEventId',
     { onRequest: [fastify.authenticate] },
     async (request) => {
       const { eventID } = request.query as { eventID: string };
@@ -128,7 +128,7 @@ const playersRoutes = async (fastify: FastifyInstance) => {
   );
 
   fastify.get(
-    "/byEventId/:eventID",
+    '/byEventId/:eventID',
     { onRequest: [fastify.authenticate] },
     async (request) => {
       const { eventID } = request.params as { eventID: string };
@@ -137,7 +137,7 @@ const playersRoutes = async (fastify: FastifyInstance) => {
   );
 
   fastify.get(
-    "/:eventID/:userID",
+    '/:eventID/:userID',
     { onRequest: [fastify.authenticate] },
     async (request) => {
       const { eventID, userID } = request.params as {
@@ -149,7 +149,7 @@ const playersRoutes = async (fastify: FastifyInstance) => {
   );
 
   fastify.get(
-    "/get/:playerID",
+    '/get/:playerID',
     { onRequest: [fastify.authenticate] },
     async (request) => {
       const { playerID } = request.params as { playerID: string };
@@ -158,7 +158,7 @@ const playersRoutes = async (fastify: FastifyInstance) => {
   );
 
   fastify.patch(
-    "/change",
+    '/change',
     { onRequest: [fastify.authenticate] },
     async (request) => {
       const { id, ...data } = request.body as Partial<PlayerEntity> & {
@@ -200,7 +200,7 @@ const playersRoutes = async (fastify: FastifyInstance) => {
   );
 
   fastify.patch(
-    "/change/:playerID",
+    '/change/:playerID',
     { onRequest: [fastify.authenticate] },
     async (request) => {
       const { playerID } = request.params as { playerID: string };

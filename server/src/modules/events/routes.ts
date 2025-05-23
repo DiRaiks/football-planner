@@ -1,13 +1,13 @@
-import { EventModel, EventEntity } from "./event.model.js";
-import { FastifyInstance } from "fastify";
+import { EventModel, EventEntity } from './event.model.js';
+import { FastifyInstance } from 'fastify';
 
 const eventsRoutes = async (fastify: FastifyInstance) => {
-  fastify.get("/", { onRequest: [fastify.authenticate] }, async () => {
+  fastify.get('/all', { onRequest: [fastify.authenticate] }, async () => {
     return EventModel.find();
   });
 
   fastify.post(
-    "/save",
+    '/save',
     { onRequest: [fastify.authenticate] },
     async (request) => {
       const body = request.body as EventEntity;
@@ -24,7 +24,7 @@ const eventsRoutes = async (fastify: FastifyInstance) => {
   );
 
   fastify.delete(
-    "/delete",
+    '/delete',
     { onRequest: [fastify.authenticate] },
     async (request) => {
       const { id } = request.query as { id: string };
@@ -33,7 +33,7 @@ const eventsRoutes = async (fastify: FastifyInstance) => {
   );
 
   fastify.get(
-    "/get",
+    '/get',
     { onRequest: [fastify.authenticate] },
     async (request) => {
       const { id } = request.query as { id: string };
@@ -42,7 +42,7 @@ const eventsRoutes = async (fastify: FastifyInstance) => {
   );
 
   fastify.get(
-    "/get/:eventID",
+    '/get/:eventID',
     { onRequest: [fastify.authenticate] },
     async (request) => {
       const { eventID } = request.params as { eventID: string };
@@ -51,7 +51,7 @@ const eventsRoutes = async (fastify: FastifyInstance) => {
   );
 
   fastify.patch(
-    "/change",
+    '/change',
     { onRequest: [fastify.authenticate] },
     async (request) => {
       const { id, ...data } = request.body as Partial<EventEntity> & {
@@ -62,7 +62,7 @@ const eventsRoutes = async (fastify: FastifyInstance) => {
   );
 
   fastify.patch(
-    "/change/:eventID",
+    '/change/:eventID',
     { onRequest: [fastify.authenticate] },
     async (request) => {
       const { eventID } = request.params as { eventID: string };
