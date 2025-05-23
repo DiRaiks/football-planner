@@ -157,7 +157,7 @@ const playersRoutes = async (fastify: FastifyInstance) => {
     },
   );
 
-  fastify.patch(
+  fastify.put(
     '/change',
     { onRequest: [fastify.authenticate] },
     async (request) => {
@@ -199,7 +199,7 @@ const playersRoutes = async (fastify: FastifyInstance) => {
     },
   );
 
-  fastify.patch(
+  fastify.put(
     '/change/:playerID',
     { onRequest: [fastify.authenticate] },
     async (request) => {

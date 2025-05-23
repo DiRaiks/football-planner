@@ -7,7 +7,7 @@ const usersRoutes = async (fastify: FastifyInstance) => {
     return UserModel.find();
   });
 
-  fastify.patch(
+  fastify.put(
     '/change',
     { onRequest: [fastify.authenticate] },
     async (request) => {

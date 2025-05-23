@@ -51,7 +51,7 @@ const eventsRoutes = async (fastify: FastifyInstance) => {
     },
   );
 
-  fastify.patch(
+  fastify.put(
     '/change',
     { onRequest: [fastify.authenticate] },
     async (request) => {
@@ -62,7 +62,7 @@ const eventsRoutes = async (fastify: FastifyInstance) => {
     },
   );
 
-  fastify.patch(
+  fastify.put(
     '/change/:eventID',
     { onRequest: [fastify.authenticate] },
     async (request) => {
