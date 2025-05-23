@@ -24,6 +24,8 @@ const httpsCertPath = process.env.HTTPS_FULLCHAIN_PATH
   ? path.resolve(process.env.HTTPS_FULLCHAIN_PATH)
   : undefined;
 
+console.log(httpsKeyPath, httpsCertPath);
+
 const httpsOptions =
   httpsKeyPath &&
   httpsCertPath &&
