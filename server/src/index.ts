@@ -47,12 +47,12 @@ const fastify = Fastify({
     },
   },
 });
-await fastify.register(cors, {
-  origin: '*',
-});
 
 const fastifyInit = async () => {
   await Promise.all([
+    fastify.register(cors, {
+      origin: '*',
+    }),
     fastify.register(fastifyEnv, ENV_OPTIONS),
     fastify.register(LoggerPlugin),
     fastify.register(DatabasePlugin),
