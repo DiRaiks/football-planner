@@ -28,8 +28,8 @@ const eventsRoutes = async (fastify: FastifyInstance) => {
     '/delete',
     { onRequest: [fastify.authenticate] },
     async (request) => {
-      const { id } = request.query as { id: string };
-      return EventModel.findByIdAndDelete(id);
+      const { eventID } = request.query as { eventID: string };
+      return EventModel.findByIdAndDelete(eventID);
     },
   );
 
@@ -37,8 +37,8 @@ const eventsRoutes = async (fastify: FastifyInstance) => {
     '/get',
     { onRequest: [fastify.authenticate] },
     async (request) => {
-      const { id } = request.query as { id: string };
-      return EventModel.findById(id);
+      const { eventID } = request.query as { eventID: string };
+      return EventModel.findById(eventID);
     },
   );
 
@@ -55,10 +55,10 @@ const eventsRoutes = async (fastify: FastifyInstance) => {
     '/change',
     { onRequest: [fastify.authenticate] },
     async (request) => {
-      const { id, ...data } = request.body as Partial<EventEntity> & {
-        id: string;
+      const { eventID, ...data } = request.body as Partial<EventEntity> & {
+        eventID: string;
       };
-      return EventModel.findByIdAndUpdate(id, data, { new: true });
+      return EventModel.findByIdAndUpdate(eventID, data, { new: true });
     },
   );
 
