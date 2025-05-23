@@ -52,6 +52,9 @@ const fastifyInit = async () => {
   await Promise.all([
     fastify.register(cors, {
       origin: '*',
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization'],
+      credentials: true,
     }),
     fastify.register(fastifyEnv, ENV_OPTIONS),
     fastify.register(LoggerPlugin),
