@@ -40,7 +40,11 @@ export const sendMessageAddPlayer = async <P extends Player, E extends Event>(
   }
 
   for (const chat of chats) {
-    await bot.telegram.sendMessage(chat.chatId, message);
+    try {
+      await bot.telegram.sendMessage(chat.chatId, message);
+    } catch (error) {
+      console.error(error);
+    }
   }
 };
 
@@ -66,7 +70,11 @@ export const sendMessageRemovePlayer = async <
     `\nТекущее количество игроков: ${event.playersAmount} (точно: ${exactly}, возможно: ${maybe})`;
 
   for (const chat of chats) {
-    await bot.telegram.sendMessage(chat.chatId, message);
+    try {
+      await bot.telegram.sendMessage(chat.chatId, message);
+    } catch (error) {
+      console.error(error);
+    }
   }
 };
 
@@ -92,7 +100,11 @@ export const sendMessageUpdatePlayer = async <
     `\nТекущее количество игроков: ${event.playersAmount} (точно: ${exactly}, возможно: ${maybe})`;
 
   for (const chat of chats) {
-    await bot.telegram.sendMessage(chat.chatId, message);
+    try {
+      await bot.telegram.sendMessage(chat.chatId, message);
+    } catch (error) {
+      console.error(error);
+    }
   }
 };
 
