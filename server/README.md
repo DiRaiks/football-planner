@@ -13,3 +13,14 @@ Tests are written with the built-in Node.js runner. Run them with:
 ```bash
 npm test
 ```
+
+## Development
+
+Run the development server with:
+
+```bash
+npm run dev
+```
+
+The command includes `NODE_OPTIONS=--openssl-legacy-provider` so it works on
+Node.js versions that require the legacy OpenSSL provider.

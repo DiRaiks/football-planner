@@ -19,7 +19,7 @@
     "lint": "eslint . --ext .ts --max-warnings 0",
     "start": "tsc && node dist/esm/index.js",
     "watch": "tsc --watch --preserveWatchOutput --pretty",
-    "dev": "nodemon",
+    "dev": "NODE_OPTIONS=--openssl-legacy-provider nodemon",
     "clean": "rimraf dist",
     "test": "node --test"
   },
