@@ -50,6 +50,8 @@ const fastify = Fastify({
 
 // TODO: Remove this hook after fixing the issue with empty body
 fastify.addHook('preParsing', (request, _reply, _payload, done) => {
+  console.log('--------------preParsing');
+
   if (
     ['POST', 'DELETE'].includes(request.method) &&
     request.headers['content-type'] == 'application/json' &&
