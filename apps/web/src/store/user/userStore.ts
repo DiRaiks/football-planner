@@ -131,7 +131,7 @@ class UserStore {
 
       const { status, ok } = response;
 
-      if (ok && status === 201) {
+      if (ok && status === 200) {
         const user: TUser = await response.json();
         this.setUser(user);
 

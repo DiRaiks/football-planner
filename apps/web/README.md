@@ -1,5 +1,10 @@
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
+## Requirements
+
+- Node.js 18 or later
+- When using Node.js 18, prepend `NODE_OPTIONS=--openssl-legacy-provider` when running `yarn start` or `yarn build`.
+
 ## Available Scripts
 
 In the project directory, you can run:
