@@ -34,6 +34,7 @@
   },
   "homepage": "https://github.com/DiRaiks/football-planner#readme",
   "dependencies": {
+    "@fastify/cors": "^11.0.1",
     "@fastify/env": "^5",
     "@fastify/jwt": "^9.1.0",
     "fastify": "^5",

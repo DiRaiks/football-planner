@@ -1,4 +1,5 @@
 import Fastify from 'fastify';
+import cors from '@fastify/cors';
 import fs from 'fs';
 import path from 'path';
 import fastifyEnv from '@fastify/env';
@@ -45,6 +46,9 @@ const fastify = Fastify({
       allowUnionTypes: true,
     },
   },
+});
+await fastify.register(cors, {
+  origin: '*',
 });
 
 const fastifyInit = async () => {
