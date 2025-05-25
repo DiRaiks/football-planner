@@ -7,8 +7,8 @@ services:
     env_file:
       - .env
     environment:
-      HTTPS_PRIVKEY_PATH: ./privkey.pem
-      HTTPS_FULLCHAIN_PATH: ./fullchain.pem
+      HTTPS_PRIVKEY_PATH: /certs/privkey.pem
+      HTTPS_FULLCHAIN_PATH: /certs/fullchain.pem
     ports:
       - "3000:3000"
       - "8443:3000"
