@@ -1,17 +1,17 @@
 # Build stage
 FROM node:20-alpine AS build
 WORKDIR /app
-COPY package.json yarn.lock ./
-RUN yarn install --frozen-lockfile
+COPY package.json ./
+RUN npm ci
 COPY . .
-RUN yarn build
+RUN npm run build
 
 # Production stage
 FROM node:20-alpine
 WORKDIR /app
 ENV NODE_ENV=production
-COPY package.json yarn.lock ./
-RUN yarn install --frozen-lockfile --production --ignore-scripts && yarn cache clean
+COPY package.json ./
+RUN npm ci --production --ignore-scripts && npm cache clean --force
 COPY --from=build /app/dist ./dist
 CMD ["node", "dist/esm/index.js"]
 EXPOSE 3000
