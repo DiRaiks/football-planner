@@ -1,6 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { PlayerModel, PlayerEntity } from './player.model.js';
 import { EventModel } from '../events/event.model.js';
+import { calcAllPlayers } from '../../utils/index.js';
 
 const playersRoutes = async (fastify: FastifyInstance) => {
   fastify.get('/all', { onRequest: [fastify.authenticate] }, async () => {
@@ -16,12 +17,11 @@ const playersRoutes = async (fastify: FastifyInstance) => {
       const player = await PlayerModel.create(body);
 
       const players = await PlayerModel.find({ eventId: player.eventId });
-      const exactly = players.filter((p) => p.status).length;
-      const maybe = players.length - exactly;
+      const { all: playersAmount, exactly, maybe } = calcAllPlayers(players);
 
       const updatedEvent = await EventModel.findByIdAndUpdate(
         player.eventId,
-        { playersAmount: players.length },
+        { playersAmount },
         { new: true },
       );
 
@@ -54,12 +54,11 @@ const playersRoutes = async (fastify: FastifyInstance) => {
       const players = await PlayerModel.find({
         eventId: removedPlayer.eventId,
       });
-      const exactly = players.filter((p) => p.status).length;
-      const maybe = players.length - exactly;
+      const { all: playersAmount, exactly, maybe } = calcAllPlayers(players);
 
       const updatedEvent = await EventModel.findByIdAndUpdate(
         removedPlayer.eventId,
-        { playersAmount: players.length },
+        { playersAmount },
         { new: true },
       );
 
@@ -92,12 +91,11 @@ const playersRoutes = async (fastify: FastifyInstance) => {
       const players = await PlayerModel.find({
         eventId: removedPlayer.eventId,
       });
-      const exactly = players.filter((p) => p.status).length;
-      const maybe = players.length - exactly;
+      const { all: playersAmount, exactly, maybe } = calcAllPlayers(players);
 
       const updatedEvent = await EventModel.findByIdAndUpdate(
         removedPlayer.eventId,
-        { playersAmount: players.length },
+        { playersAmount },
         { new: true },
       );
 
@@ -173,12 +171,11 @@ const playersRoutes = async (fastify: FastifyInstance) => {
       const players = await PlayerModel.find({
         eventId: updatedPlayer.eventId,
       });
-      const exactly = players.filter((p) => p.status).length;
-      const maybe = players.length - exactly;
+      const { all: playersAmount, exactly, maybe } = calcAllPlayers(players);
 
       const updatedEvent = await EventModel.findByIdAndUpdate(
         updatedPlayer.eventId,
-        { playersAmount: players.length },
+        { playersAmount },
         { new: true },
       );
 
@@ -216,12 +213,11 @@ const playersRoutes = async (fastify: FastifyInstance) => {
       const players = await PlayerModel.find({
         eventId: updatedPlayer.eventId,
       });
-      const exactly = players.filter((p) => p.status).length;
-      const maybe = players.length - exactly;
+      const { all: playersAmount, exactly, maybe } = calcAllPlayers(players);
 
       const updatedEvent = await EventModel.findByIdAndUpdate(
         updatedPlayer.eventId,
-        { playersAmount: players.length },
+        { playersAmount },
         { new: true },
       );
 
