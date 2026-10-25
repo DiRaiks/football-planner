@@ -104,6 +104,7 @@ const MESSAGES: Record<string, string> = {
   NOT_FOUND: 'Не найдено',
   TELEGRAM_DISABLED: 'Бот сейчас выключен',
   TELEGRAM_ONLY: 'Аккаунт создан из Telegram: без него войти будет нельзя',
+  NOT_ENOUGH_PLAYERS: 'Для команд нужно больше игроков в составе',
   VALIDATION_ERROR: 'Проверьте заполнение полей',
   INVALID_PASSWORD: 'Текущий пароль указан неверно',
   WEATHER_UNAVAILABLE: 'Прогноз сейчас недоступен',

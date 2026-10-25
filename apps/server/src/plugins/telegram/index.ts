@@ -34,6 +34,7 @@ import {
   minimumReachedMessage,
   playersChangeMessage,
   squadChangedMessage,
+  teamsMessage,
   reminderMessage,
   rsvpKeyboard,
   type NotifyEvent,
@@ -63,6 +64,8 @@ export type TelegramNotifier = {
     eventId: string,
     moves: { promoted: RosterPerson[]; demoted: RosterPerson[] },
   ) => void;
+  /** The organiser split the squad into teams */
+  teamsSplit: (eventId: string) => void;
   /** Sends the reminders due at `now`; resolves with how many went out */
   sendDueReminders: (now?: Date) => Promise<number>;
   /** The bot's username, for t.me links; null while the bot is off or not started */
@@ -100,6 +103,7 @@ const disabledNotifier: TelegramNotifier = {
   eventCancelled: noop,
   playersChanged: noop,
   squadChanged: noop,
+  teamsSplit: noop,
   sendDueReminders: async () => 0,
   botUsername: () => null,
 };
@@ -472,6 +476,16 @@ const telegramPlugin: FastifyPluginAsync<TelegramPluginOptions> = async (
               : html`⏳ Мест на «${event.eventName}» стало меньше: вы в листе ожидания. Освободится место — напишу.`,
           );
         }
+      }),
+
+    teamsSplit: (eventId) =>
+      void serial(eventId, async () => {
+        const state = await load(eventId);
+        if (!state?.event.teams?.length) return;
+        await notifier.notify(
+          TOPIC,
+          teamsMessage(toNotifyEvent(state.event), state.event.teams),
+        );
       }),
 
     sendDueReminders,

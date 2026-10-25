@@ -7,6 +7,7 @@ import {
   TelegramAccounts,
   UsersService,
 } from '../../modules/users/users.service.js';
+import { StatsService } from '../../modules/stats/stats.service.js';
 import { WeatherService } from '../../modules/weather/weather.service.js';
 
 export type Services = {
@@ -14,6 +15,7 @@ export type Services = {
   players: PlayersService;
   users: UsersService;
   telegramAccounts: TelegramAccounts;
+  stats: StatsService;
   weather: WeatherService;
 };
 
@@ -33,6 +35,7 @@ const servicesPlugin: FastifyPluginAsync = async (fastify) => {
     players,
     users: new UsersService(),
     telegramAccounts: new TelegramAccounts(players),
+    stats: new StatsService(),
     weather: new WeatherService(
       lat !== undefined && lon !== undefined ? { lat, lon } : undefined,
     ),

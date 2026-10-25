@@ -7,6 +7,7 @@ import { LoginPage, RegisterPage } from '@/routes/AuthPages';
 import { EditEventPage, NewEventPage } from '@/routes/EventFormPages';
 import { EventPage } from '@/routes/EventPage';
 import { EventsPage } from '@/routes/EventsPage';
+import { StatsPage } from '@/routes/StatsPage';
 import { AppLayout, AuthLayout } from '@/routes/Layout';
 
 function NotFound() {
@@ -39,6 +40,7 @@ export const router = createBrowserRouter([
       { path: '/events/new', element: <NewEventPage /> },
       { path: '/events/:eventId', element: <EventPage /> },
       { path: '/events/:eventId/edit', element: <EditEventPage /> },
+      { path: '/stats', element: <StatsPage /> },
       { path: '/account', element: <AccountPage /> },
       { path: '*', element: <NotFound /> },
     ],

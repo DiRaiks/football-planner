@@ -99,6 +99,7 @@ export const useSignUp = (eventId: string, userId: string) =>
         userId,
         date: '',
         waitlisted: false,
+        paid: false,
       },
     ],
   );
@@ -117,6 +118,35 @@ export const useUpdatePlayer = (eventId: string) =>
         player._id === playerId ? { ...player, ...body } : player,
       ),
   );
+
+/** The organiser marks who paid; the roster updates at once */
+export const useSetPaid = (eventId: string) => {
+  const queryClient = useQueryClient();
+  const key = playersKey(eventId);
+  return useMutation({
+    mutationFn: ({ playerId, paid }: { playerId: string; paid: boolean }) =>
+      api<Player>('PATCH', `/events/${eventId}/players/${playerId}/paid`, {
+        paid,
+      }),
+    onMutate: async ({ playerId, paid }) => {
+      await queryClient.cancelQueries({ queryKey: key });
+      queryClient.setQueryData<Player[]>(key, (players) =>
+        players?.map((player) =>
+          player._id === playerId ? { ...player, paid } : player,
+        ),
+      );
+    },
+    // Undo only this mark: other marks made meanwhile stand
+    onError: (_error, { playerId, paid }) =>
+      queryClient.setQueryData<Player[]>(key, (players) =>
+        players?.map((player) =>
+          player._id === playerId ? { ...player, paid: !paid } : player,
+        ),
+      ),
+    onSettled: () =>
+      void queryClient.invalidateQueries({ queryKey: key, exact: true }),
+  });
+};
 
 export const useLeave = (eventId: string) =>
   usePlayersMutation(

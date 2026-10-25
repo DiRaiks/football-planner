@@ -24,12 +24,15 @@ export type BuildAppOptions = {
   fastify?: FastifyServerOptions;
   /** Fake Telegram API for tests */
   telegram?: TelegramTestOptions;
+  /** Background jobs such as the next match of a weekly series (default true) */
+  jobs?: boolean;
 };
 
 export const buildApp = async ({
   env,
   fastify: fastifyOptions,
   telegram,
+  jobs = true,
 }: BuildAppOptions = {}) => {
   const fastify = Fastify({
     logger: getLoggerOptions(env),
@@ -106,6 +109,21 @@ export const buildApp = async ({
   await fastify.register(MonitoringPlugin);
 
   await fastify.register(V1Routes, { prefix: '/v1' });
+
+  if (jobs) {
+    // Once a minute: weekly series get their next match when one starts
+    let timer: NodeJS.Timeout | undefined;
+    fastify.addHook('onReady', async () => {
+      timer = setInterval(() => {
+        fastify.services.events
+          .createDueRepeats()
+          .catch((err: unknown) =>
+            fastify.log.error({ err }, 'weekly matches failed'),
+          );
+      }, 60_000);
+    });
+    fastify.addHook('onClose', async () => clearInterval(timer));
+  }
 
   fastify.get('/metrics', fastify.metrics.routeHandler);
   fastify.get('/health', fastify.healthChecker.routeHandler);
