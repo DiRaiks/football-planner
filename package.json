@@ -12,7 +12,8 @@
     "prepare": "husky",
     "build": "npm run build --workspaces --if-present",
     "types": "npm run types --workspaces --if-present",
-    "dev": "npm run dev --workspace apps/server"
+    "dev": "npm run dev --workspace apps/server",
+    "dev:web": "npm run dev --workspace apps/web"
   },
   "repository": {
     "type": "git",

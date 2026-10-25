@@ -1,6 +1,7 @@
 import js from '@eslint/js';
 import prettier from 'eslint-config-prettier';
 import globals from 'globals';
+import reactHooks from 'eslint-plugin-react-hooks';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
@@ -20,6 +21,11 @@ export default tseslint.config(
       sourceType: 'module',
       globals: { ...globals.node },
     },
+  },
+  {
+    files: ['apps/web/**/*.{ts,tsx}'],
+    ...reactHooks.configs.flat['recommended-latest'],
+    languageOptions: { globals: { ...globals.browser } },
   },
   prettier,
 );
