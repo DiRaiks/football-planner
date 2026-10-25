@@ -60,3 +60,7 @@ yarn-error.log\*
 
 \_build/
 \*.beam
+
+# build output and coverage in any workspace
+**/dist
+**/coverage
