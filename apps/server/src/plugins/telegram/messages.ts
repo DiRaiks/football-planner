@@ -1,4 +1,7 @@
 import { html, joinHtml, type Html } from '@dirai/tg-kit';
+import type { DailyForecast } from '@football-planner/shared';
+
+import type { RosterPerson } from '../../modules/players/count.js';
 
 export type NotifyFriend = { name: string; status: boolean };
 
@@ -15,9 +18,16 @@ export type NotifyEvent = {
   time: string;
   place: string;
   minimum: number;
+  /** Places on the pitch; 0 or missing: no limit */
+  maximum?: number;
 };
 
-export type PlayersCount = { all: number; exactly: number; maybe: number };
+export type PlayersCount = {
+  all: number;
+  exactly: number;
+  maybe: number;
+  waiting?: number;
+};
 
 export type PlayersChangeKind = 'added' | 'updated' | 'removed';
 
@@ -52,19 +62,20 @@ export const progressBar = (exactly: number, minimum: number) => {
   return '▰'.repeat(filled) + '▱'.repeat(PROGRESS_CELLS - filled);
 };
 
-/** Everyone who signed up, friends listed after the player who brought them */
-const roster = (players: NotifyPlayer[], status: boolean) =>
-  players.flatMap((player) => [
-    ...(player.status === status ? [player.name] : []),
-    ...player.friends
-      .filter((friend) => friend.status === status)
-      .map((friend) => `${friend.name} (от ${player.name})`),
-  ]);
+/** Names in one place of the roster, friends with the player who brought them */
+const namesIn = (people: RosterPerson[], place: RosterPerson['place']) =>
+  people
+    .filter((person) => person.place === place)
+    .map((person) =>
+      person.from ? `${person.name} (от ${person.from})` : person.name,
+    );
 
-const progressLine = (count: PlayersCount, minimum: number) =>
-  minimum > 0
-    ? html`👥 <b>${count.exactly}</b> из ${minimum}  ${progressBar(count.exactly, minimum)}`
-    : html`👥 Точно идут: <b>${count.exactly}</b>`;
+const progressLine = (count: PlayersCount, event: NotifyEvent) => {
+  const places = event.maximum ? ` · мест ${event.maximum}` : '';
+  return event.minimum > 0
+    ? html`👥 <b>${count.exactly}</b> из ${event.minimum}  ${progressBar(count.exactly, event.minimum)}${places}`
+    : html`👥 Точно идут: <b>${count.exactly}</b>${places}`;
+};
 
 const missingLine = (count: PlayersCount, minimum: number) => {
   if (minimum <= 0) return null;
@@ -86,11 +97,12 @@ const nameList = (names: string[], limit: number) =>
 /** The pinned message of a match, edited on every change of the players list */
 export const announcementMessage = (
   event: NotifyEvent,
-  players: NotifyPlayer[],
+  people: RosterPerson[],
   count: PlayersCount,
 ): Html => {
-  const sure = roster(players, true);
-  const maybe = roster(players, false);
+  const sure = namesIn(people, 'squad');
+  const maybe = namesIn(people, 'maybe');
+  const waiting = namesIn(people, 'waiting');
 
   const render = (limit: number) =>
     joinHtml([
@@ -98,14 +110,15 @@ export const announcementMessage = (
       html`📅 ${formatWhen(event)}`,
       html`📍 ${event.place}`,
       '',
-      progressLine(count, event.minimum),
+      progressLine(count, event),
       html`✅ Точно: ${sure.length ? nameList(sure, limit) : 'пока никого'}`,
       maybe.length > 0 && html`🤔 Возможно: ${nameList(maybe, limit)}`,
+      waiting.length > 0 && html`⏳ Лист ожидания: ${nameList(waiting, limit)}`,
       missingLine(count, event.minimum),
     ]);
 
   // Shorten the lists until the message fits
-  let limit = Math.max(sure.length, maybe.length);
+  let limit = Math.max(sure.length, maybe.length, waiting.length);
   let message = render(limit);
   while (message.value.length > MAX_MESSAGE_LENGTH && limit > 0) {
     limit = Math.floor(limit / 2);
@@ -138,16 +151,69 @@ export const playersChangeMessage = (
   player: NotifyPlayer,
   event: NotifyEvent,
   count: PlayersCount,
+  waitlisted = false,
 ): Html => {
   const name = html`<b>${player.name}</b>${friendsSuffix(player)}`;
   const where = html`«${event.eventName}» · ${score(count, event.minimum)}`;
 
   if (kind === 'removed') return html`❌ ${name} не пойдёт на ${where}`;
   if (kind === 'updated') return html`✏️ ${name} изменил запись на ${where}`;
+  if (waitlisted) return html`⏳ ${name} в листе ожидания на ${where}`;
   return player.status
     ? html`✅ ${name} идёт на ${where}`
     : html`🤔 ${name}, возможно, придёт на ${where}`;
 };
+
+/** Who got a place and who lost one, e.g. after someone left or the places changed */
+export const squadChangedMessage = (
+  event: NotifyEvent,
+  promoted: string[],
+  demoted: string[],
+) =>
+  joinHtml([
+    promoted.length > 0 &&
+      html`🎉 Из листа ожидания в состав: <b>${promoted.join(', ')}</b>`,
+    demoted.length > 0 &&
+      html`⏳ Мест стало меньше, в лист ожидания: <b>${demoted.join(', ')}</b>`,
+    html`«${event.eventName}», ${formatWhen(event)}`,
+  ]);
+
+export type ReminderKind = 'day' | 'soon';
+
+const forecastLine = (forecast: DailyForecast | null) => {
+  if (!forecast) return null;
+  const temp =
+    Math.round(forecast.tempMin) === Math.round(forecast.tempMax)
+      ? `${Math.round(forecast.tempMax)}°`
+      : `${Math.round(forecast.tempMin)}…${Math.round(forecast.tempMax)}°`;
+  const rain =
+    forecast.precipitationProbability !== null &&
+    forecast.precipitationProbability >= 30
+      ? `, осадки ${forecast.precipitationProbability}%`
+      : '';
+  return html`🌤 ${forecast.description}, ${temp}${rain}`;
+};
+
+/** The day before and two hours before the start, with the score and the weather */
+export const reminderMessage = (
+  kind: ReminderKind,
+  event: NotifyEvent,
+  count: PlayersCount,
+  forecast: DailyForecast | null,
+  /** For the day-before reminder: whether the match is today or tomorrow at the venue */
+  day: 'today' | 'tomorrow' = 'tomorrow',
+) =>
+  joinHtml([
+    kind === 'soon'
+      ? html`⏰ Скоро начало: <b>${event.eventName}</b>`
+      : day === 'today'
+        ? html`⏰ Сегодня матч <b>${event.eventName}</b>`
+        : html`⏰ Завтра матч <b>${event.eventName}</b>`,
+    html`📅 ${formatWhen(event)} · 📍 ${event.place}`,
+    progressLine(count, event),
+    missingLine(count, event.minimum),
+    forecastLine(forecast),
+  ]);
 
 export const minimumReachedMessage = (
   event: NotifyEvent,
@@ -162,12 +228,27 @@ export const eventChangedMessage = (event: NotifyEvent) =>
     html`📍 ${event.place}`,
   ]);
 
-/** "Sign up" button under the announcement; only when the site URL is known */
-export const signUpKeyboard = (event: NotifyEvent, publicUrl?: string) =>
-  publicUrl
-    ? {
-        inline_keyboard: [
-          [{ text: 'Записаться', url: `${publicUrl}/events/${event._id}` }],
-        ],
-      }
-    : undefined;
+export type RsvpAction = 'yes' | 'maybe' | 'no' | 'friend';
+
+/** Sign-up buttons under announcements and reminders, and a link to the match page */
+export const rsvpKeyboard = (event: NotifyEvent, publicUrl?: string) => {
+  const button = (text: string, action: RsvpAction) => ({
+    text,
+    callback_data: `rsvp:${event._id}:${action}`,
+  });
+  return {
+    inline_keyboard: [
+      [
+        button('✅ Иду', 'yes'),
+        button('🤔 Возможно', 'maybe'),
+        button('❌ Не иду', 'no'),
+      ],
+      [
+        button('➕ Друг', 'friend'),
+        ...(publicUrl
+          ? [{ text: '🔗 Открыть', url: `${publicUrl}/events/${event._id}` }]
+          : []),
+      ],
+    ],
+  };
+};

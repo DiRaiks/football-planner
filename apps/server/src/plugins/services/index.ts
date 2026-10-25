@@ -3,13 +3,17 @@ import type { FastifyPluginAsync } from 'fastify';
 
 import { EventsService } from '../../modules/events/events.service.js';
 import { PlayersService } from '../../modules/players/players.service.js';
-import { UsersService } from '../../modules/users/users.service.js';
+import {
+  TelegramAccounts,
+  UsersService,
+} from '../../modules/users/users.service.js';
 import { WeatherService } from '../../modules/weather/weather.service.js';
 
 export type Services = {
   events: EventsService;
   players: PlayersService;
   users: UsersService;
+  telegramAccounts: TelegramAccounts;
   weather: WeatherService;
 };
 
@@ -23,10 +27,12 @@ const servicesPlugin: FastifyPluginAsync = async (fastify) => {
   const { WEATHER_DEFAULT_LAT: lat, WEATHER_DEFAULT_LON: lon } = fastify.config;
   const notifier = fastify.telegramBot;
 
+  const players = new PlayersService(notifier);
   fastify.decorate('services', {
     events: new EventsService(notifier, fastify.config.TIME_ZONE),
-    players: new PlayersService(notifier),
+    players,
     users: new UsersService(),
+    telegramAccounts: new TelegramAccounts(players),
     weather: new WeatherService(
       lat !== undefined && lon !== undefined ? { lat, lon } : undefined,
     ),

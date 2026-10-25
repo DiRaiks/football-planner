@@ -14,8 +14,82 @@ const validate = (values: Values): Errors => {
   if (!values.place.trim()) errors.place = 'Где играем?';
   if (!/^\d{4}-\d{2}-\d{2}$/.test(values.date)) errors.date = 'Выберите дату';
   if (!/^\d{2}:\d{2}$/.test(values.time)) errors.time = 'Выберите время';
+  const maximum = values.maximum ?? 0;
+  if (maximum > 0 && maximum < values.minimum) {
+    errors.maximum = 'Мест не может быть меньше минимума';
+  }
   return errors;
 };
+
+/** A number with − and + buttons, for counts of players */
+function Stepper({
+  id,
+  label,
+  value,
+  onChange,
+  display,
+  hint,
+  error,
+  step,
+}: {
+  id: string;
+  label: string;
+  value: number;
+  onChange: (value: number) => void;
+  display?: string;
+  hint: string;
+  error?: string;
+  /** The next value up or down; one step by default */
+  step?: (value: number, direction: 1 | -1) => number;
+}) {
+  const move = (direction: 1 | -1) =>
+    onChange(
+      Math.min(
+        100,
+        Math.max(0, step ? step(value, direction) : value + direction),
+      ),
+    );
+  return (
+    <div className="grid gap-1.5">
+      <span id={`${id}-label`} className="text-sm font-medium">
+        {label}
+      </span>
+      <div
+        role="group"
+        aria-labelledby={`${id}-label`}
+        className="flex items-center gap-2 justify-self-start rounded-control border border-line bg-surface p-1"
+      >
+        <IconButton
+          label={`Меньше: ${label.toLowerCase()}`}
+          disabled={value <= 0}
+          onClick={() => move(-1)}
+        >
+          <Minus className="size-4" weight="bold" aria-hidden />
+        </IconButton>
+        <output
+          aria-live="polite"
+          className="min-w-10 px-1 text-center font-mono text-xl tabular-nums"
+        >
+          {display ?? value}
+        </output>
+        <IconButton
+          label={`Больше: ${label.toLowerCase()}`}
+          disabled={value >= 100}
+          onClick={() => move(1)}
+        >
+          <Plus className="size-4" weight="bold" aria-hidden />
+        </IconButton>
+      </div>
+      {error ? (
+        <p role="alert" className="text-sm text-danger">
+          {error}
+        </p>
+      ) : (
+        <p className="text-sm text-pretty text-muted">{hint}</p>
+      )}
+    </div>
+  );
+}
 
 export function EventForm({
   initial,
@@ -38,6 +112,7 @@ export function EventForm({
     date: initial?.date ?? todayIso(),
     time: initial?.time ?? '20:00',
     minimum: initial?.minimum ?? 10,
+    maximum: initial?.maximum ?? 0,
   });
   const [errors, setErrors] = useState<Errors>({});
 
@@ -95,40 +170,32 @@ export function EventForm({
         />
       </div>
 
-      <div className="grid gap-1.5">
-        <span id="minimum-label" className="text-sm font-medium">
-          Минимум игроков
-        </span>
-        <div
-          role="group"
-          aria-labelledby="minimum-label"
-          className="flex items-center gap-2 justify-self-start rounded-control border border-line bg-surface p-1"
-        >
-          <IconButton
-            label="Меньше"
-            disabled={values.minimum <= 0}
-            onClick={() => set('minimum')(Math.max(0, values.minimum - 1))}
-          >
-            <Minus className="size-4" weight="bold" aria-hidden />
-          </IconButton>
-          <output
-            aria-live="polite"
-            className="w-10 text-center font-mono text-xl tabular-nums"
-          >
-            {values.minimum}
-          </output>
-          <IconButton
-            label="Больше"
-            disabled={values.minimum >= 100}
-            onClick={() => set('minimum')(Math.min(100, values.minimum + 1))}
-          >
-            <Plus className="size-4" weight="bold" aria-hidden />
-          </IconButton>
-        </div>
-        <p className="text-sm text-muted">
-          Когда наберётся столько точно идущих, бот сообщит в чат.
-        </p>
-      </div>
+      <Stepper
+        id="minimum"
+        label="Минимум игроков"
+        value={values.minimum}
+        onChange={set('minimum')}
+        hint="Когда наберётся столько точно идущих, бот сообщит в чат."
+      />
+      <Stepper
+        id="maximum"
+        label="Мест на поле"
+        value={values.maximum ?? 0}
+        onChange={set('maximum')}
+        display={values.maximum ? String(values.maximum) : '∞'}
+        // No limit and the minimum are neighbours: fewer places than the minimum make no sense
+        step={(value, direction) =>
+          direction === 1
+            ? value === 0
+              ? Math.max(values.minimum, 1)
+              : value + 1
+            : value - 1 < values.minimum
+              ? 0
+              : value - 1
+        }
+        hint="Кто запишется сверх, встанет в лист ожидания и попадёт в состав, когда место освободится. ∞ — без ограничения."
+        error={errors.maximum}
+      />
 
       {error && <ErrorNote>{error}</ErrorNote>}
 

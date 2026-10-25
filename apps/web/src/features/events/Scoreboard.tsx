@@ -5,7 +5,7 @@ import { cn } from '@/components/ui';
 import { formatDay, plural, PLAYERS } from '@/lib/format';
 import { WeatherBadge } from '@/features/weather/WeatherBadge';
 
-type Count = { all: number; exactly: number; maybe: number };
+type Count = { all: number; exactly: number; maybe: number; waiting?: number };
 
 /**
  * Cells for sure and maybe players against the minimum. Sure players fill solid,
@@ -121,6 +121,13 @@ export function Scoreboard({ event, count }: { event: Event; count: Count }) {
             {count.maybe > 0 && (
               <span className="text-pitch-muted">
                 ещё {count.maybe} под вопросом
+              </span>
+            )}
+            {(event.maximum ?? 0) > 0 && (
+              <span className="text-pitch-muted">
+                мест {event.maximum}
+                {(count.waiting ?? 0) > 0 &&
+                  ` · ${count.waiting} в листе ожидания`}
               </span>
             )}
           </div>

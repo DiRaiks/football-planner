@@ -8,6 +8,15 @@ export const isTimeZone = (timeZone: string) => {
   }
 };
 
+/** The calendar day of an instant in a time zone, e.g. 2026-11-03 */
+export const zonedDay = (instant: Date, timeZone: string) =>
+  new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(instant);
+
 /** Offset of the zone from UTC at `instant`, in ms */
 const zoneOffset = (instant: number, timeZone: string) => {
   const parts = new Intl.DateTimeFormat('en-US', {

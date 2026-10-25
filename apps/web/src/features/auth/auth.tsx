@@ -31,11 +31,18 @@ const AuthContext = createContext<AuthState | null>(null);
 
 export const meKey = ['me'] as const;
 
-const userFromSession = ({ _id, email, name, role }: Session): User => ({
+const userFromSession = ({
   _id,
   email,
   name,
   role,
+  telegramLinked,
+}: Session): User => ({
+  _id,
+  ...(email && { email }),
+  name,
+  role,
+  telegramLinked,
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {

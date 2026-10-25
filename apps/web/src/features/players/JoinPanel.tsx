@@ -98,6 +98,13 @@ export function JoinPanel({
         </Button>
       </div>
 
+      {me.waitlisted && (
+        <p className="rounded-control bg-accent-soft px-3 py-2.5 text-sm text-pretty">
+          Мест нет: вы в листе ожидания. Когда кто-то откажется, вы попадёте в
+          состав, а бот напишет об этом в чат.
+        </p>
+      )}
+
       <Segmented
         label="Ваш статус"
         value={toStatus(me.status)}

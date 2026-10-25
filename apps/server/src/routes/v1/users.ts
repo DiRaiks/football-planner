@@ -5,15 +5,18 @@ import {
   ObjectId,
   PublicUser,
   Session,
+  TelegramLink,
   UpdateMeBody,
   User,
   UserStats,
 } from '@football-planner/shared';
 
+import { AppError } from '../../lib/errors.js';
+
 import { toPublicUser } from '../../modules/users/user.model.js';
 
 const usersRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
-  const { users, players } = fastify.services;
+  const { users, players, telegramAccounts } = fastify.services;
 
   fastify.addHook('onRequest', fastify.authenticate);
 
@@ -28,6 +31,28 @@ const usersRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
     { schema: { body: UpdateMeBody, response: { 200: User } } },
     async (request) =>
       toPublicUser(await users.updateMe(request.currentUser!, request.body)),
+  );
+
+  fastify.post(
+    '/me/telegram',
+    { schema: { response: { 200: TelegramLink } } },
+    async (request) => {
+      const bot = fastify.telegramBot.botUsername();
+      if (!bot) {
+        throw new AppError(409, 'TELEGRAM_DISABLED', 'the Telegram bot is off');
+      }
+      return {
+        code: await telegramAccounts.createLinkCode(request.currentUser!),
+        botUrl: `https://t.me/${bot}`,
+      };
+    },
+  );
+
+  fastify.delete(
+    '/me/telegram',
+    { schema: { response: { 200: User } } },
+    async (request) =>
+      toPublicUser(await telegramAccounts.unlink(request.currentUser!)),
   );
 
   fastify.post(

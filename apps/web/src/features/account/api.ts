@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
   ChangePasswordBody,
   Session,
+  TelegramLink,
   UpdateMeBody,
   User,
   UserStats,
@@ -20,6 +21,20 @@ export const useUpdateMe = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (body: UpdateMeBody) => api<User>('PATCH', '/users/me', body),
+    onSuccess: (user) => queryClient.setQueryData(meKey, user),
+  });
+};
+
+/** A one-time code for `/link CODE` in the bot */
+export const useTelegramLink = () =>
+  useMutation({
+    mutationFn: () => api<TelegramLink>('POST', '/users/me/telegram'),
+  });
+
+export const useUnlinkTelegram = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => api<User>('DELETE', '/users/me/telegram'),
     onSuccess: (user) => queryClient.setQueryData(meKey, user),
   });
 };

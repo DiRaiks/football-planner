@@ -41,7 +41,7 @@ export function EventPage() {
     );
   }
 
-  const count = countPeople(players.data);
+  const count = countPeople(players.data, event.data.maximum ?? 0);
   const canManage = event.data.creatorId === user._id || user.role === 'admin';
   const isPast = event.data.date < todayIso();
 
@@ -83,7 +83,11 @@ export function EventPage() {
         </div>
         <section aria-label="Состав" className="grid gap-4">
           <h2 className="text-lg font-semibold">Состав</h2>
-          <Roster players={players.data} myUserId={user._id} />
+          <Roster
+            players={players.data}
+            myUserId={user._id}
+            maximum={event.data.maximum ?? 0}
+          />
         </section>
       </div>
 

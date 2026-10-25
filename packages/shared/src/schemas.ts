@@ -16,9 +16,17 @@ export const UserRole = Type.Union([
 
 export const User = Type.Object({
   _id: Type.String(),
-  email: Type.String(),
+  // Missing for people who only used the bot's buttons in Telegram
+  email: Type.Optional(Type.String()),
   name: Type.String(),
   role: UserRole,
+  telegramLinked: Type.Boolean(),
+});
+
+/** A one-time code to send to the bot as `/link CODE`, valid for 15 minutes */
+export const TelegramLink = Type.Object({
+  code: Type.String(),
+  botUrl: Type.String(),
 });
 
 export const PublicUser = Type.Object({
@@ -81,6 +89,8 @@ const EventFields = {
   // Start time at the venue, as produced by <input type="time">
   time: Type.String({ pattern: '^([01]\\d|2[0-3]):[0-5]\\d$' }),
   minimum: Type.Integer({ minimum: 0, maximum: 100 }),
+  // Places on the pitch; later sure sign-ups wait in line. 0: no limit
+  maximum: Type.Optional(Type.Integer({ minimum: 0, maximum: 100 })),
   // Coordinates of the venue, used for the weather forecast
   location: Type.Optional(Location),
 };
@@ -142,12 +152,17 @@ export const Player = Type.Object({
   eventId: Type.String(),
   userId: Type.String(),
   date: Type.String(),
+  // Sure, but signed up after the places ran out
+  waitlisted: Type.Boolean(),
 });
 
 export const PlayersCount = Type.Object({
   all: Type.Integer(),
+  // Sure and with a place
   exactly: Type.Integer(),
   maybe: Type.Integer(),
+  // Sure, waiting for a place
+  waiting: Type.Integer(),
 });
 
 export const PlayersChange = Type.Object({
@@ -180,6 +195,7 @@ export const EventWeather = Type.Object({
 export type ErrorResponse = Static<typeof ErrorResponse>;
 export type UserRole = Static<typeof UserRole>;
 export type User = Static<typeof User>;
+export type TelegramLink = Static<typeof TelegramLink>;
 export type PublicUser = Static<typeof PublicUser>;
 export type Session = Static<typeof Session>;
 export type LoginBody = Static<typeof LoginBody>;

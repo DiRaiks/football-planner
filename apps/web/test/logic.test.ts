@@ -68,7 +68,19 @@ describe('players', () => {
   ];
 
   it('counts players and friends like the server', () => {
-    expect(countPeople(players)).toEqual({ all: 4, exactly: 2, maybe: 2 });
+    expect(countPeople(players)).toEqual({
+      all: 4,
+      exactly: 2,
+      maybe: 2,
+      waiting: 0,
+    });
+    // With one place, the second sure person waits
+    expect(countPeople(players, 1)).toEqual({
+      all: 4,
+      exactly: 1,
+      maybe: 2,
+      waiting: 1,
+    });
   });
 
   it('groups the roster and marks the current user', () => {
@@ -117,5 +129,24 @@ describe('shouldRetry', () => {
     expect(shouldRetry(0, serverError)).toBe(true);
     expect(shouldRetry(1, new TypeError('Failed to fetch'))).toBe(true);
     expect(shouldRetry(2, serverError)).toBe(false);
+  });
+});
+
+describe('waitlist', () => {
+  it('puts sure people beyond the places in line, in sign-up order', () => {
+    const players = [
+      player({
+        _id: 'a',
+        name: 'Аня',
+        userId: 'u1',
+        friends: [{ name: 'Гость', status: true }],
+      }),
+      player({ _id: 'b', name: 'Боря', userId: 'u2', status: false }),
+      player({ _id: 'c', name: 'Вера', userId: 'u3' }),
+    ];
+    const { sure, maybe, waiting } = rosterGroups(players, 'u3', 2);
+    expect(sure.map((p) => p.name)).toEqual(['Аня', 'Гость']);
+    expect(maybe.map((p) => p.name)).toEqual(['Боря']);
+    expect(waiting).toEqual([{ key: 'c', name: 'Вера', isMe: true }]);
   });
 });

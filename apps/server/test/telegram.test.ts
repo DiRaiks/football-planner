@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { EventModel } from '../src/modules/events/event.model.js';
+import { computeRoster } from '../src/modules/players/count.js';
 import {
   MAX_MESSAGE_LENGTH,
   announcementMessage,
@@ -112,8 +113,14 @@ describe('telegram announcements', () => {
     expect(payload.reply_markup).toEqual({
       inline_keyboard: [
         [
+          { text: '✅ Иду', callback_data: `rsvp:${event._id}:yes` },
+          { text: '🤔 Возможно', callback_data: `rsvp:${event._id}:maybe` },
+          { text: '❌ Не иду', callback_data: `rsvp:${event._id}:no` },
+        ],
+        [
+          { text: '➕ Друг', callback_data: `rsvp:${event._id}:friend` },
           {
-            text: 'Записаться',
+            text: '🔗 Открыть',
             url: `https://football-planner.ru/events/${event._id}`,
           },
         ],
@@ -362,11 +369,14 @@ describe('message helpers', () => {
   });
 
   it('keeps long rosters under the Telegram message limit', () => {
-    const players = Array.from({ length: 200 }, (_, n) => ({
-      name: `Player with a long name ${n}`,
-      status: n % 2 === 0,
-      friends: [{ name: `Friend ${n}`, status: true }],
-    }));
+    const players = computeRoster(
+      Array.from({ length: 200 }, (_, n) => ({
+        _id: String(n),
+        name: `Player with a long name ${n}`,
+        status: n % 2 === 0,
+        friends: [{ name: `Friend ${n}`, status: true }],
+      })),
+    ).people;
 
     const message = announcementMessage(
       {

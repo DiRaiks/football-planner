@@ -153,7 +153,9 @@ describe('EventForm', () => {
       '  Пятничная игра ',
     );
     await userEvent.type(screen.getByLabelText('Место'), 'Манеж');
-    await userEvent.click(screen.getByRole('button', { name: 'Больше' }));
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Больше: минимум игроков' }),
+    );
     await userEvent.click(screen.getByRole('button', { name: 'Создать матч' }));
 
     expect(onSubmit).toHaveBeenCalledWith(
@@ -276,5 +278,51 @@ describe('missing match', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('error');
     expect(screen.queryByText('Матч не найден')).not.toBeInTheDocument();
+  });
+});
+
+describe('places on the pitch', () => {
+  it('refuses fewer places than the minimum', async () => {
+    const onSubmit = vi.fn();
+    renderWithQuery(
+      <EventForm
+        submitLabel="Создать"
+        pending={false}
+        onSubmit={onSubmit}
+        onCancel={() => undefined}
+      />,
+    );
+    await userEvent.type(screen.getByLabelText('Название'), 'Матч');
+    await userEvent.type(screen.getByLabelText('Место'), 'Манеж');
+    // From no limit, + jumps to the minimum; − from there goes back to no limit
+    const places = () => screen.getByRole('group', { name: 'Мест на поле' });
+    const more = screen.getByRole('button', { name: 'Больше: мест на поле' });
+    const fewer = screen.getByRole('button', { name: 'Меньше: мест на поле' });
+    await userEvent.click(more);
+    expect(places()).toHaveTextContent('10');
+    await userEvent.click(fewer);
+    expect(places()).toHaveTextContent('∞');
+    await userEvent.click(more);
+    // Raising the minimum above the places is caught
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Больше: минимум игроков' }),
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Создать' }));
+    expect(
+      await screen.findByText('Мест не может быть меньше минимума'),
+    ).toBeInTheDocument();
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it('tells a waitlisted player where they stand', () => {
+    mockApi(() => ({ body: [] }));
+    renderWithQuery(
+      <JoinPanel
+        eventId="e1"
+        user={user}
+        players={[player({ userId: user._id, waitlisted: true })]}
+      />,
+    );
+    expect(screen.getByText(/вы в листе ожидания/)).toBeInTheDocument();
   });
 });

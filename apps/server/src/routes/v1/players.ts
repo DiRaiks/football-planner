@@ -23,10 +23,12 @@ const playersRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
   fastify.get(
     '/',
     { schema: { params: EventParams, response: { 200: Type.Array(Player) } } },
-    async (request) =>
-      (await players.listByExistingEvent(request.params.eventId)).map(
-        toPlayerDto,
-      ),
+    async (request) => {
+      const roster = await players.roster(request.params.eventId);
+      return roster.players.map((player) =>
+        toPlayerDto(player, roster.waitlisted.has(player._id.toString())),
+      );
+    },
   );
 
   fastify.post(
@@ -51,10 +53,13 @@ const playersRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
   fastify.get(
     '/me',
     { schema: { params: EventParams, response: { 200: Player } } },
-    async (request) =>
-      toPlayerDto(
-        await players.findMine(request.params.eventId, request.currentUser!),
-      ),
+    async (request) => {
+      const mine = await players.findMine(
+        request.params.eventId,
+        request.currentUser!,
+      );
+      return toPlayerDto(mine.player, mine.waitlisted);
+    },
   );
 
   fastify.patch(

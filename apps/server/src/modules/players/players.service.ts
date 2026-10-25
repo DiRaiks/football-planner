@@ -1,4 +1,8 @@
-import type { SignUpBody, UpdatePlayerBody } from '@football-planner/shared';
+import type {
+  Friend,
+  SignUpBody,
+  UpdatePlayerBody,
+} from '@football-planner/shared';
 
 import {
   AppError,
@@ -6,78 +10,105 @@ import {
   isDuplicateKeyError,
   notFoundError,
 } from '../../lib/errors.js';
+import { withEventLock } from '../../lib/event-lock.js';
 import type { TelegramNotifier } from '../../plugins/telegram/index.js';
 import { EventModel, toEventDto } from '../events/event.model.js';
 import { isAdmin, type UserDocument } from '../users/user.model.js';
-import { countPlayers } from './count.js';
+import { computeRoster, squadChanges, type RosterPerson } from './count.js';
 import {
   PlayerModel,
   toPlayerDto,
+  type FriendEntity,
   type PlayerDocument,
 } from './player.model.js';
+
+export const MAX_FRIENDS = 20;
+
+/** Players of an event in sign-up order */
+const playersInOrder = (eventId: string) =>
+  PlayerModel.find({ eventId }).sort({ createdAt: 1, _id: 1 });
+
+const sureSince = (sure: boolean, now: Date) => (sure ? now : undefined);
+
+/**
+ * New friends list from the client, keeping the time each friend became sure: the same
+ * friend (same position and name) who stays sure keeps their turn for a place
+ */
+const mergeFriends = (
+  current: FriendEntity[],
+  next: Friend[],
+  now: Date,
+): FriendEntity[] =>
+  next.map((friend, index) => {
+    const old = current[index];
+    const keep =
+      friend.status && old?.status && old.name === friend.name && old.sureSince;
+    return {
+      name: friend.name,
+      status: friend.status,
+      ...(friend.status && { sureSince: keep ? old.sureSince : now }),
+    };
+  });
 
 export class PlayersService {
   constructor(private readonly notifier: TelegramNotifier) {}
 
-  listByEvent(eventId: string) {
-    return PlayerModel.find({ eventId });
-  }
-
-  /** Same as listByEvent, but 404 when the event does not exist */
-  async listByExistingEvent(eventId: string) {
-    await this.assertEventExists(eventId);
-    return this.listByEvent(eventId);
+  /** The event's players with places and the waitlist */
+  async roster(eventId: string) {
+    const event = await EventModel.findById(eventId);
+    if (!event) throw notFoundError('event');
+    const players = await playersInOrder(eventId);
+    return { event, players, ...computeRoster(players, event.maximum ?? 0) };
   }
 
   async findMine(eventId: string, user: UserDocument) {
-    await this.assertEventExists(eventId);
-    const player = await this.findByEventAndUser(eventId, user._id.toString());
+    const { players, waitlisted } = await this.roster(eventId);
+    const player = players.find((p) => p.userId === user._id.toString());
     if (!player) throw notFoundError('player');
-    return player;
-  }
-
-  private async assertEventExists(eventId: string) {
-    if (!(await EventModel.exists({ _id: eventId })))
-      throw notFoundError('event');
+    return { player, waitlisted: waitlisted.has(player._id.toString()) };
   }
 
   findByEventAndUser(eventId: string, userId: string) {
     return PlayerModel.findOne({ eventId, userId });
   }
 
-  async signUp(eventId: string, input: SignUpBody, user: UserDocument) {
-    const event = await EventModel.findById(eventId);
-    if (!event) throw notFoundError('event');
+  signUp(eventId: string, input: SignUpBody, user: UserDocument) {
+    return withEventLock(eventId, async () => {
+      const before = await this.roster(eventId);
+      const now = new Date();
 
-    let player: PlayerDocument;
-    try {
-      player = await PlayerModel.create({
-        ...input,
-        eventId,
-        userId: user._id.toString(),
-        date: event.date,
-      });
-    } catch (error) {
-      // The unique (eventId, userId) index also covers concurrent sign-ups
-      if (isDuplicateKeyError(error)) {
-        throw new AppError(
-          409,
-          'PLAYER_EXISTS',
-          'already signed up for this event',
-        );
-      }
-      throw error;
-    }
-
-    const result = await this.syncEvent(player).catch(
-      async (error: unknown) => {
-        // The event was deleted while signing up: do not leave an orphaned player
-        await player.deleteOne();
+      let player: PlayerDocument;
+      try {
+        player = await PlayerModel.create({
+          ...input,
+          friends: mergeFriends([], input.friends, now),
+          sureSince: sureSince(input.status, now),
+          eventId,
+          userId: user._id.toString(),
+          date: before.event.date,
+        });
+      } catch (error) {
+        // The unique (eventId, userId) index also covers concurrent sign-ups
+        if (isDuplicateKeyError(error)) {
+          throw new AppError(
+            409,
+            'PLAYER_EXISTS',
+            'already signed up for this event',
+          );
+        }
         throw error;
-      },
-    );
-    this.notifier.playersChanged('added', player.toObject(), player.eventId);
-    return result;
+      }
+
+      const result = await this.syncEvent(player, before.people).catch(
+        async (error: unknown) => {
+          // The event was deleted while signing up: do not leave an orphaned player
+          await player.deleteOne();
+          throw error;
+        },
+      );
+      this.notifier.playersChanged('added', player.toObject(), player.eventId);
+      return result;
+    });
   }
 
   async update(
@@ -86,22 +117,97 @@ export class PlayersService {
     user: UserDocument,
     eventId?: string,
   ) {
-    const player = await this.getManageable(playerId, user, eventId);
-    player.set(input);
-    await player.save();
+    const found = await this.getManageable(playerId, user, eventId);
+    return withEventLock(found.eventId, async () => {
+      const before = await this.roster(found.eventId);
+      const player = await this.getManageable(playerId, user, eventId);
+      const now = new Date();
+      const { friends, ...fields } = input;
 
-    const result = await this.syncEvent(player);
-    this.notifier.playersChanged('updated', player.toObject(), player.eventId);
-    return result;
+      player.set(fields);
+      if (input.status === false) player.sureSince = undefined;
+      // Becoming sure starts the turn for a place; staying sure keeps it
+      else if (
+        input.status === true &&
+        !before.players.find((p) => p._id.equals(player._id))?.status
+      ) {
+        player.sureSince = now;
+      }
+      if (friends)
+        player.friends = mergeFriends(player.friends, friends, now) as never;
+      await player.save();
+
+      const result = await this.syncEvent(player, before.people);
+      this.notifier.playersChanged(
+        'updated',
+        player.toObject(),
+        player.eventId,
+      );
+      return result;
+    });
+  }
+
+  /**
+   * Adds a guest atomically, for quick repeated presses of the bot's button. The guest
+   * is as sure as the player who brings them.
+   */
+  addGuest(playerId: string, user: UserDocument, eventId: string) {
+    return withEventLock(eventId, async () => {
+      const before = await this.roster(eventId);
+      const player = await this.getManageable(playerId, user, eventId);
+      const now = new Date();
+      const guest = {
+        name: `Гость ${player.friends.length + 1}`,
+        status: player.status,
+        ...(player.status && { sureSince: now }),
+      };
+      const pushed = await PlayerModel.findOneAndUpdate(
+        { _id: player._id, [`friends.${MAX_FRIENDS - 1}`]: { $exists: false } },
+        { $push: { friends: guest } },
+        { returnDocument: 'after' },
+      );
+      if (!pushed) {
+        throw new AppError(409, 'TOO_MANY_FRIENDS', 'no more guests');
+      }
+
+      const result = await this.syncEvent(pushed, before.people);
+      this.notifier.playersChanged('updated', pushed.toObject(), eventId);
+      return { ...result, guest: guest.name };
+    });
   }
 
   async remove(playerId: string, user: UserDocument, eventId?: string) {
-    const player = await this.getManageable(playerId, user, eventId);
-    await player.deleteOne();
+    const found = await this.getManageable(playerId, user, eventId);
+    return withEventLock(found.eventId, async () => {
+      const before = await this.roster(found.eventId);
+      const player = await this.getManageable(playerId, user, eventId);
+      await player.deleteOne();
 
-    const result = await this.syncEvent(player);
-    this.notifier.playersChanged('removed', player.toObject(), player.eventId);
-    return result;
+      const result = await this.syncEvent(player, before.people);
+      this.notifier.playersChanged(
+        'removed',
+        player.toObject(),
+        player.eventId,
+      );
+      return result;
+    });
+  }
+
+  /**
+   * Recounts a match after its players changed outside these methods (a merge of
+   * accounts, a new limit of places) and announces who moved
+   */
+  resync(eventId: string, change: () => Promise<void> = async () => undefined) {
+    return withEventLock(eventId, async () => {
+      const before = await this.roster(eventId).catch(() => null);
+      await change();
+      if (!before) return;
+      const after = await this.roster(eventId);
+      after.event.playersAmount = after.count.all;
+      await after.event.save();
+      this.announceMoves(eventId, before.people, after.people);
+      this.notifier.eventUpdated(eventId, false);
+    });
   }
 
   async countEventsOfUser(userId: string) {
@@ -121,18 +227,31 @@ export class PlayersService {
     return player;
   }
 
-  /** Recalculates the event's players amount after its players list changed */
-  private async syncEvent(player: PlayerDocument) {
-    const players = await PlayerModel.find({ eventId: player.eventId });
-    const count = countPlayers(players);
-    const event = await EventModel.findByIdAndUpdate(
-      player.eventId,
-      { playersAmount: count.all },
-      { returnDocument: 'after' },
-    );
-    if (!event) throw notFoundError('event');
+  private announceMoves(
+    eventId: string,
+    before: RosterPerson[],
+    after: RosterPerson[],
+  ) {
+    const { promoted, demoted } = squadChanges(before, after);
+    if (promoted.length || demoted.length) {
+      this.notifier.squadChanged(eventId, { promoted, demoted });
+    }
+  }
 
-    return { player, players, event, count };
+  /** Recalculates the event after its players list changed and announces who moved */
+  private async syncEvent(player: PlayerDocument, before: RosterPerson[]) {
+    const players = await playersInOrder(player.eventId);
+    const event = await EventModel.findById(player.eventId);
+    if (!event) throw notFoundError('event');
+    const { count, waitlisted, people } = computeRoster(
+      players,
+      event.maximum ?? 0,
+    );
+    event.playersAmount = count.all;
+    await event.save();
+    this.announceMoves(player.eventId, before, people);
+
+    return { player, players, event, count, waitlisted };
   }
 }
 
@@ -143,9 +262,10 @@ export const toPlayersChangeDto = ({
   players,
   event,
   count,
+  waitlisted,
 }: PlayersChangeResult) => ({
-  player: toPlayerDto(player),
-  players: players.map(toPlayerDto),
+  player: toPlayerDto(player, waitlisted.has(player._id.toString())),
+  players: players.map((p) => toPlayerDto(p, waitlisted.has(p._id.toString()))),
   event: toEventDto(event),
   count,
 });
