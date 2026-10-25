@@ -6,39 +6,38 @@ const FORECAST_URL = 'https://api.open-meteo.com/v1/forecast';
 const CACHE_TTL_MS = 30 * 60 * 1000;
 
 // WMO weather interpretation codes: https://open-meteo.com/en/docs#weather_variable_documentation
-const WMO: Record<number, { description: string; icon: string }> = {
-  0: { description: 'Ясно', icon: '01d' },
-  1: { description: 'Преимущественно ясно', icon: '02d' },
-  2: { description: 'Переменная облачность', icon: '03d' },
-  3: { description: 'Пасмурно', icon: '04d' },
-  45: { description: 'Туман', icon: '50d' },
-  48: { description: 'Изморозь', icon: '50d' },
-  51: { description: 'Лёгкая морось', icon: '09d' },
-  53: { description: 'Морось', icon: '09d' },
-  55: { description: 'Сильная морось', icon: '09d' },
-  56: { description: 'Ледяная морось', icon: '09d' },
-  57: { description: 'Сильная ледяная морось', icon: '09d' },
-  61: { description: 'Небольшой дождь', icon: '10d' },
-  63: { description: 'Дождь', icon: '10d' },
-  65: { description: 'Сильный дождь', icon: '10d' },
-  66: { description: 'Ледяной дождь', icon: '13d' },
-  67: { description: 'Сильный ледяной дождь', icon: '13d' },
-  71: { description: 'Небольшой снег', icon: '13d' },
-  73: { description: 'Снег', icon: '13d' },
-  75: { description: 'Сильный снег', icon: '13d' },
-  77: { description: 'Снежная крупа', icon: '13d' },
-  80: { description: 'Ливень', icon: '09d' },
-  81: { description: 'Сильный ливень', icon: '09d' },
-  82: { description: 'Очень сильный ливень', icon: '09d' },
-  85: { description: 'Снегопад', icon: '13d' },
-  86: { description: 'Сильный снегопад', icon: '13d' },
-  95: { description: 'Гроза', icon: '11d' },
-  96: { description: 'Гроза с градом', icon: '11d' },
-  99: { description: 'Гроза с сильным градом', icon: '11d' },
+const WMO: Record<number, string> = {
+  0: 'Ясно',
+  1: 'Преимущественно ясно',
+  2: 'Переменная облачность',
+  3: 'Пасмурно',
+  45: 'Туман',
+  48: 'Изморозь',
+  51: 'Лёгкая морось',
+  53: 'Морось',
+  55: 'Сильная морось',
+  56: 'Ледяная морось',
+  57: 'Сильная ледяная морось',
+  61: 'Небольшой дождь',
+  63: 'Дождь',
+  65: 'Сильный дождь',
+  66: 'Ледяной дождь',
+  67: 'Сильный ледяной дождь',
+  71: 'Небольшой снег',
+  73: 'Снег',
+  75: 'Сильный снег',
+  77: 'Снежная крупа',
+  80: 'Ливень',
+  81: 'Сильный ливень',
+  82: 'Очень сильный ливень',
+  85: 'Снегопад',
+  86: 'Сильный снегопад',
+  95: 'Гроза',
+  96: 'Гроза с градом',
+  99: 'Гроза с сильным градом',
 };
 
-export const describeWeather = (code: number) =>
-  WMO[code] ?? { description: 'Неизвестно', icon: '03d' };
+export const describeWeather = (code: number) => WMO[code] ?? 'Неизвестно';
 
 type OpenMeteoDaily = {
   daily: {
@@ -134,7 +133,7 @@ export class WeatherService {
       return {
         date,
         weatherCode,
-        description: describeWeather(weatherCode).description,
+        description: describeWeather(weatherCode),
         tempMin: daily.temperature_2m_min[i] ?? 0,
         tempMax: daily.temperature_2m_max[i] ?? 0,
         precipitationProbability:

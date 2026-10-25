@@ -5,9 +5,11 @@
 - `apps/server` — Fastify API and Telegram bot
 - `packages/shared` — API schemas and types (TypeBox) shared by the server and clients
 
-The API lives under `/v1`. Paths without the prefix serve the current frontend and will be removed once it moves to `/v1`.
+The API lives under `/v1`.
 
 ## Development
+
+Requires Node.js 24+ and npm 11.21+ (older npm versions produce a lockfile that `npm ci` rejects).
 
 ```bash
 npm install

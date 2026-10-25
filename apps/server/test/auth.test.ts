@@ -21,7 +21,7 @@ describe('auth', () => {
   it('registers a user without exposing password data', async () => {
     const res = await ctx.app.inject({
       method: 'POST',
-      url: '/auth/registration',
+      url: '/v1/auth/register',
       payload: {
         email: 'New@Example.com',
         name: 'New',
@@ -45,12 +45,12 @@ describe('auth', () => {
   it('validates registration input', async () => {
     const badEmail = await ctx.app.inject({
       method: 'POST',
-      url: '/auth/registration',
+      url: '/v1/auth/register',
       payload: { email: 'not-an-email', name: 'A', password: 'password123' },
     });
     const shortPassword = await ctx.app.inject({
       method: 'POST',
-      url: '/auth/registration',
+      url: '/v1/auth/register',
       payload: { email: 'a@example.com', name: 'A', password: 'short' },
     });
 
@@ -63,7 +63,7 @@ describe('auth', () => {
     await register(ctx.app, { email: 'dup@example.com' });
     const res = await ctx.app.inject({
       method: 'POST',
-      url: '/auth/registration',
+      url: '/v1/auth/register',
       payload: {
         email: 'DUP@example.com',
         name: 'Dup',
@@ -82,17 +82,17 @@ describe('auth', () => {
 
     const ok = await ctx.app.inject({
       method: 'POST',
-      url: '/auth/login',
+      url: '/v1/auth/login',
       payload: { email: 'LOGIN@example.com', password: 'password123' },
     });
     const wrong = await ctx.app.inject({
       method: 'POST',
-      url: '/auth/login',
+      url: '/v1/auth/login',
       payload: { email: 'login@example.com', password: 'wrong-password' },
     });
     const unknown = await ctx.app.inject({
       method: 'POST',
-      url: '/auth/login',
+      url: '/v1/auth/login',
       payload: { email: 'nobody@example.com', password: 'password123' },
     });
 
@@ -125,7 +125,7 @@ describe('auth', () => {
 
     const res = await ctx.app.inject({
       method: 'POST',
-      url: '/auth/login',
+      url: '/v1/auth/login',
       payload: { email: 'legacy@example.com', password: 'old-password' },
     });
 
@@ -140,7 +140,7 @@ describe('auth', () => {
   it('returns the profile for a valid token', async () => {
     const { auth } = await register(ctx.app, { email: 'me@example.com' });
 
-    for (const url of ['/v1/auth/me', '/auth/check']) {
+    for (const url of ['/v1/auth/me']) {
       const res = await ctx.app.inject({ method: 'GET', url, headers: auth });
       expect(res.statusCode).toBe(200);
       expect(res.json()).toMatchObject({ email: 'me@example.com' });

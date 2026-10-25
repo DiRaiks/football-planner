@@ -9,7 +9,7 @@ describe('auth rate limit', () => {
     const attempt = () =>
       ctx.app.inject({
         method: 'POST',
-        url: '/auth/login',
+        url: '/v1/auth/login',
         payload: { email: 'x@example.com', password: 'whatever' },
       });
 

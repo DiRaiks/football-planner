@@ -49,7 +49,7 @@ export const register = async (
 ) => {
   const res = await app.inject({
     method: 'POST',
-    url: '/auth/registration',
+    url: '/v1/auth/register',
     payload: { email, name, password },
   });
   if (res.statusCode !== 200)
@@ -66,7 +66,7 @@ export const createEvent = async (
 ) => {
   const res = await app.inject({
     method: 'POST',
-    url: '/events/save',
+    url: '/v1/events',
     headers: auth,
     payload: {
       place: 'Stadium',
@@ -77,7 +77,7 @@ export const createEvent = async (
       ...payload,
     },
   });
-  if (res.statusCode !== 200)
+  if (res.statusCode !== 201)
     throw new Error(`event creation failed: ${res.body}`);
 
   return res.json() as {

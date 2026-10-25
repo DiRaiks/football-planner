@@ -117,7 +117,7 @@ describe('users', () => {
     });
     const login = await ctx.app.inject({
       method: 'POST',
-      url: '/auth/login',
+      url: '/v1/auth/login',
       payload: { email: 'p@example.com', password: 'new-password-1' },
     });
 
@@ -130,7 +130,7 @@ describe('users', () => {
     const { auth } = await register(ctx.app);
     const res = await ctx.app.inject({
       method: 'GET',
-      url: '/users/userEventsCount/not-an-id',
+      url: '/v1/users/not-an-id/stats',
       headers: auth,
     });
 

@@ -106,26 +106,6 @@ describe('weather', () => {
     expect(weatherCalls).toHaveLength(1);
     expect(weatherCalls[0]?.searchParams.get('latitude')).toBe('47.22');
   });
-
-  it('serves the legacy OpenWeather-like shape the current client reads', async () => {
-    const { auth } = await register(ctx.app);
-
-    const res = await ctx.app.inject({
-      method: 'GET',
-      url: '/weather/get',
-      headers: auth,
-    });
-
-    expect(res.statusCode).toBe(200);
-    const body = res.json();
-    expect(body.daily[0]).toMatchObject({
-      dt: Date.parse('2026-11-03T12:00:00Z') / 1000,
-      temp: { min: 3.1, max: 9.4 },
-      weather: [{ icon: '10d', description: 'Небольшой дождь' }],
-      pop: 0.8,
-    });
-    expect(body.daily[1].pop).toBeNull();
-  });
 });
 
 describe('weather provider failures', () => {

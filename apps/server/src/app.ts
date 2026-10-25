@@ -14,7 +14,6 @@ import {
   ServicesPlugin,
   TelegramBotPlugin,
 } from './plugins/index.js';
-import LegacyRoutes from './routes/legacy/index.js';
 import V1Routes from './routes/v1/index.js';
 
 export type BuildAppOptions = {
@@ -33,7 +32,7 @@ export const buildApp = async ({
     ajv: {
       customOptions: {
         allowUnionTypes: true,
-        // Strip unknown fields instead of rejecting: the client sends whole documents back
+        // Strip unknown fields (e.g. server-managed `_id`, `creatorId`) instead of rejecting
         removeAdditional: 'all',
       },
     },
@@ -41,7 +40,7 @@ export const buildApp = async ({
 
   await fastify.register(fastifyEnv, getEnvOptions(env));
 
-  // The legacy client sends `Content-Type: application/json` with an empty body on DELETE
+  // Clients often send `Content-Type: application/json` with an empty body on DELETE
   const parseJson = fastify.getDefaultJsonParser('error', 'error');
   fastify.addContentTypeParser(
     'application/json',
@@ -97,8 +96,6 @@ export const buildApp = async ({
   await fastify.register(MonitoringPlugin);
 
   await fastify.register(V1Routes, { prefix: '/v1' });
-  // Routes of the current frontend; removed once it moves to /v1
-  await fastify.register(LegacyRoutes);
 
   fastify.get('/metrics', fastify.metrics.routeHandler);
   fastify.get('/health', fastify.healthChecker.routeHandler);

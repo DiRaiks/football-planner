@@ -39,15 +39,22 @@ describe('security', () => {
   it('requires authentication on every data route', async () => {
     const id = '0123456789abcdef01234567';
     const routes = [
-      ['GET', '/events/all'],
-      ['GET', `/events/get/${id}`],
-      ['GET', `/players/byEventId/${id}`],
-      ['GET', `/players/${id}/${id}`],
+      ['GET', '/v1/auth/me'],
       ['GET', '/v1/users'],
+      ['PATCH', '/v1/users/me'],
+      ['POST', '/v1/users/me/password'],
+      ['GET', `/v1/users/${id}/stats`],
       ['GET', '/v1/events'],
+      ['POST', '/v1/events'],
+      ['GET', `/v1/events/${id}`],
+      ['PATCH', `/v1/events/${id}`],
+      ['DELETE', `/v1/events/${id}`],
+      ['GET', `/v1/events/${id}/weather`],
       ['GET', `/v1/events/${id}/players`],
-      ['GET', `/users/userEventsCount/${id}`],
-      ['GET', '/weather/get'],
+      ['POST', `/v1/events/${id}/players`],
+      ['GET', `/v1/events/${id}/players/me`],
+      ['PATCH', `/v1/events/${id}/players/${id}`],
+      ['DELETE', `/v1/events/${id}/players/${id}`],
     ] as const;
 
     for (const [method, url] of routes) {
@@ -63,7 +70,7 @@ describe('security', () => {
 
     const res = await ctx.app.inject({
       method: 'DELETE',
-      url: `/events/delete?eventID=${event._id}`,
+      url: `/v1/events/${event._id}`,
       headers: intruder.auth,
     });
 
@@ -91,7 +98,7 @@ describe('security', () => {
       Array.from({ length: 4 }, () =>
         ctx.app.inject({
           method: 'POST',
-          url: '/auth/registration',
+          url: '/v1/auth/register',
           payload: {
             email: 'race@example.com',
             name: 'Race',
@@ -116,20 +123,15 @@ describe('security', () => {
       Array.from({ length: 4 }, () =>
         ctx.app.inject({
           method: 'POST',
-          url: '/players/save',
+          url: `/v1/events/${event._id}/players`,
           headers: alice.auth,
-          payload: {
-            name: 'Alice',
-            status: true,
-            friends: [],
-            eventId: event._id,
-          },
+          payload: { name: 'Alice', status: true, friends: [] },
         }),
       ),
     );
 
     expect(results.map((r) => r.statusCode).sort()).toEqual([
-      200, 409, 409, 409,
+      201, 409, 409, 409,
     ]);
     expect(await PlayerModel.countDocuments({ eventId: event._id })).toBe(1);
   });
