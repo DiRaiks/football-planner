@@ -8,7 +8,7 @@ One VPS runs the whole stack with Docker Compose:
 | `server`                | `ghcr.io/<owner>/football-planner-server` | Fastify API and Telegram bot, plain HTTP inside the network, runs as `node`                                    |
 | `mongo`, `mongo-backup` | `mongo:8.0`                               | Optional (`COMPOSE_PROFILES=mongo`): local MongoDB with daily gzip dumps to `./backups`                        |
 
-Every push to `main` builds both images, tags them with the commit SHA and `latest`, and pushes them to GHCR. When the server is configured, the workflow uploads `compose.yml`, pulls the new images, restarts the stack and waits for both health checks. Until then the deploy job is skipped, so pushes stay green.
+When CI passes on `main`, the deploy workflow builds both images from that commit, tags them with its SHA and `latest`, and pushes them to GHCR. When the server is configured, the workflow uploads `compose.yml`, pulls the new images, restarts the stack and waits for both health checks. Until then the deploy job is skipped, so pushes stay green.
 
 ## First deployment
 
@@ -35,13 +35,20 @@ ssh-copy-id -i ~/.ssh/football-planner-deploy.pub <deploy-user>@<vps>
 
 Settings → Environments → **production**:
 
+| Type   | Name          | Value                                        |
+| ------ | ------------- | -------------------------------------------- |
+| secret | `VPS_HOST`    | Server IP or host name                       |
+| secret | `VPS_USER`    | `<deploy-user>`                              |
+| secret | `VPS_SSH_KEY` | Private key `~/.ssh/football-planner-deploy` |
+| secret | `VPS_PORT`    | Only if SSH is not on port 22                |
+
+Settings → Secrets and variables → Actions → Variables → **Repository variables**:
+
 | Type     | Name          | Value                                                       |
 | -------- | ------------- | ----------------------------------------------------------- |
-| secret   | `VPS_HOST`    | Server IP or host name                                      |
-| secret   | `VPS_USER`    | `<deploy-user>`                                             |
-| secret   | `VPS_SSH_KEY` | Private key `~/.ssh/football-planner-deploy`                |
-| secret   | `VPS_PORT`    | Only if SSH is not on port 22                               |
 | variable | `DEPLOY_PATH` | `/opt/football-planner` (setting it enables the deploy job) |
+
+`DEPLOY_PATH` has to be a repository variable: the deploy job is skipped by a job-level condition, which does not see the variables of an environment.
 
 The server logs in to GHCR with the workflow's short-lived token; nothing else to register.
 
