@@ -65,3 +65,7 @@ yarn-error.log\*
 **/dist
 **/coverage
 **/node_modules
+playwright-report
+test-results
+lighthouse-report
+.lighthouseci

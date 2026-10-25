@@ -21,7 +21,6 @@ export function EventCard({
       className={cn(
         'group flex items-center gap-4 rounded-panel bg-surface p-3 pr-4 shadow-panel',
         'transition-[transform,box-shadow] duration-150 ease-out hover:-translate-y-px active:scale-[0.99]',
-        past && 'opacity-70',
       )}
     >
       <div
@@ -30,17 +29,25 @@ export function EventCard({
           past ? 'bg-surface-2 text-muted' : 'bg-pitch text-pitch-ink',
         )}
       >
-        <span className="text-xs text-current/70">{parts?.weekday ?? ''}</span>
+        <span
+          className={cn('text-xs', past ? 'text-muted' : 'text-pitch-muted')}
+        >
+          {parts?.weekday ?? ''}
+        </span>
         <span className="font-mono text-2xl leading-7 font-semibold tabular-nums">
           {parts?.day ?? '?'}
         </span>
-        <span className="text-xs text-current/70">
+        <span
+          className={cn('text-xs', past ? 'text-muted' : 'text-pitch-muted')}
+        >
           {parts?.month ?? event.date}
         </span>
       </div>
 
       <div className="grid min-w-0 flex-1 gap-0.5">
-        <h3 className="truncate font-semibold">{event.eventName}</h3>
+        <h3 className={cn('truncate font-semibold', past && 'text-muted')}>
+          {event.eventName}
+        </h3>
         <p className="truncate text-sm text-muted">
           {event.time}, {event.place}
         </p>
@@ -53,7 +60,7 @@ export function EventCard({
         >
           {event.playersAmount}
           {event.minimum > 0 && (
-            <span className="text-sm font-normal opacity-70">
+            <span className="text-sm font-normal text-muted">
               /{event.minimum}
             </span>
           )}

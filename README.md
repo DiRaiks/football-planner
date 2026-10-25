@@ -138,6 +138,19 @@ npm run types
 
 API tests start an in-memory MongoDB and drive the server through HTTP, including the Telegram bot against a fake Telegram API. Web tests render screens with Testing Library against a fake API.
 
+End-to-end tests run the production build of the web app against the real API on an in-memory MongoDB, on a desktop and a phone screen: sign up, create a match, join and leave it, sign out, plus an accessibility check with axe. Lighthouse checks the public pages:
+
+```bash
+npx playwright install chromium                     # once
+npm run build --workspace football-planner-web
+npm run test:e2e --workspace football-planner-web
+npm run lighthouse --workspace football-planner-web # reports in apps/web/lighthouse-report
+```
+
+## Monitoring
+
+`GET /health` reports the API and its database. `GET /metrics` serves Prometheus metrics: request durations by route, the MongoDB connection, and Node.js process metrics. Caddy does not expose `/metrics` publicly; scrape it inside the Docker network.
+
 ## License
 
 [MIT](LICENSE)
