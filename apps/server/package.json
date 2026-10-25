@@ -31,7 +31,7 @@
   },
   "homepage": "https://github.com/DiRaiks/football-planner#readme",
   "dependencies": {
-    "@dirai/tg-kit": "^1.0.0",
+    "@dirai/tg-kit": "^1.2.0",
     "@fastify/cors": "^11.3.1",
     "@fastify/env": "^7.0.1",
     "@fastify/helmet": "^13.2.0",

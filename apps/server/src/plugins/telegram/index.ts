@@ -5,6 +5,7 @@ import {
   html,
   mongoStore,
   tgBot,
+  tgHealth,
   tgNotifier,
   tgSubscriptions,
   type SentMessage,
@@ -163,6 +164,14 @@ const telegramPlugin: FastifyPluginAsync<TelegramPluginOptions> = async (
     topics: [TOPIC],
   });
   await fastify.register(tgNotifier);
+  // Bot metrics (tg_*) go to the app's /metrics, the bot's state to its /health
+  await fastify.register(tgHealth, {
+    registry: fastify.metrics.registry,
+    healthPath: false,
+    metricsPath: false,
+    // Well inside the 5 s of the Docker health check (Dockerfile)
+    timeoutMs: 2000,
+  });
 
   const { notifier, log } = fastify;
   const publicUrl = PUBLIC_URL?.replace(/\/+$/, '');
@@ -499,5 +508,5 @@ const telegramPlugin: FastifyPluginAsync<TelegramPluginOptions> = async (
 export default fp(telegramPlugin, {
   fastify: '5.x',
   name: 'telegram',
-  dependencies: ['database'],
+  dependencies: ['database', 'monitoring'],
 });
