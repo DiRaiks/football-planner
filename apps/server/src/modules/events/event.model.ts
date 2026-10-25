@@ -9,6 +9,8 @@ export interface EventEntity {
   /** The moment the match starts: date and time in the venue's time zone (TIME_ZONE) */
   startsAt?: Date;
   minimum: number;
+  /** Places on the pitch; 0 means no limit */
+  maximum: number;
   playersAmount: number;
   eventName: string;
   creatorId: string;
@@ -17,6 +19,10 @@ export interface EventEntity {
   telegram?: {
     announcements: { chatId: number; messageId: number }[];
     minimumReached: boolean;
+    /** Reminders already sent: the day before and shortly before the start */
+    reminders?: { day?: boolean; soon?: boolean };
+    /** When the current start time was announced; the day-before reminder needs a day */
+    scheduledAt?: Date;
   };
 }
 
@@ -30,6 +36,7 @@ const EventSchema = new Schema<EventEntity>(
     // Optional until scripts/migrate-dates.mjs fills it for events saved before it existed
     startsAt: { type: Date, required: false, index: true },
     minimum: { type: Number, required: true },
+    maximum: { type: Number, default: 0 },
     playersAmount: { type: Number, required: true },
     eventName: { type: String, required: true },
     creatorId: { type: String, required: true },
@@ -44,6 +51,11 @@ const EventSchema = new Schema<EventEntity>(
             new Schema({ chatId: Number, messageId: Number }, { _id: false }),
           ],
           minimumReached: { type: Boolean, default: false },
+          reminders: {
+            type: new Schema({ day: Boolean, soon: Boolean }, { _id: false }),
+            required: false,
+          },
+          scheduledAt: { type: Date },
         },
         { _id: false },
       ),
@@ -72,6 +84,7 @@ export const toEventDto = (event: EventDocument): Event => ({
   time: event.time,
   ...(event.startsAt && { startsAt: event.startsAt.toISOString() }),
   minimum: event.minimum,
+  maximum: event.maximum ?? 0,
   playersAmount: event.playersAmount,
   creatorId: event.creatorId,
   ...(event.location && {

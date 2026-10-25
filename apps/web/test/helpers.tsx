@@ -10,6 +10,7 @@ export const user: User = {
   email: 'andrey@example.com',
   name: 'Андрей Финаев',
   role: 'user',
+  telegramLinked: false,
 };
 
 export const event = (overrides: Partial<Event> = {}): Event => ({
@@ -32,6 +33,7 @@ export const player = (overrides: Partial<Player> = {}): Player => ({
   eventId: 'e1',
   userId: 'u2',
   date: '2026-11-03',
+  waitlisted: false,
   ...overrides,
 });
 

@@ -4,13 +4,26 @@ import type {
 } from '@football-planner/shared';
 
 import { AppError, forbiddenError, notFoundError } from '../../lib/errors.js';
+import { withEventLock } from '../../lib/event-lock.js';
 import { zonedToInstant } from '../../lib/time.js';
+import { computeRoster, squadChanges } from '../players/count.js';
 import type { TelegramNotifier } from '../../plugins/telegram/index.js';
 import { PlayerModel } from '../players/player.model.js';
 import { isAdmin, type UserDocument } from '../users/user.model.js';
 import { EventModel } from './event.model.js';
 
 const SCHEDULE_FIELDS = ['date', 'time', 'place'] as const;
+
+/** A limit of places below the minimum could never be met */
+const assertPlaces = (minimum: number, maximum: number) => {
+  if (maximum > 0 && maximum < minimum) {
+    throw new AppError(
+      400,
+      'VALIDATION_ERROR',
+      'maximum must not be below minimum',
+    );
+  }
+};
 
 export class EventsService {
   constructor(
@@ -37,6 +50,7 @@ export class EventsService {
   }
 
   async create(input: CreateEventBody, user: UserDocument) {
+    assertPlaces(input.minimum, input.maximum ?? 0);
     const event = await EventModel.create({
       ...input,
       startsAt: this.startsAt(input.date, input.time),
@@ -49,12 +63,31 @@ export class EventsService {
   }
 
   async update(id: string, input: UpdateEventBody, user: UserDocument) {
+    await this.getManageable(id, user);
+    // A new limit of places moves people between the squad and the waitlist
+    return withEventLock(id, () => this.applyUpdate(id, input, user));
+  }
+
+  private async applyUpdate(
+    id: string,
+    input: UpdateEventBody,
+    user: UserDocument,
+  ) {
     const event = await this.getManageable(id, user);
+    const players = await PlayerModel.find({ eventId: id }).sort({
+      createdAt: 1,
+      _id: 1,
+    });
+    const before = computeRoster(players, event.maximum ?? 0).people;
     const { location, ...fields } = input;
     const scheduleChanged = SCHEDULE_FIELDS.some(
       (field) => fields[field] !== undefined && fields[field] !== event[field],
     );
 
+    assertPlaces(
+      fields.minimum ?? event.minimum,
+      fields.maximum ?? event.maximum ?? 0,
+    );
     event.set(fields);
     if (fields.date !== undefined || fields.time !== undefined) {
       event.set('startsAt', this.startsAt(event.date, event.time));
@@ -63,6 +96,13 @@ export class EventsService {
     else if (location) event.set('location', location);
     await event.save();
 
+    const { promoted, demoted } = squadChanges(
+      before,
+      computeRoster(players, event.maximum ?? 0).people,
+    );
+    if (promoted.length || demoted.length) {
+      this.notifier.squadChanged(id, { promoted, demoted });
+    }
     this.notifier.eventUpdated(id, scheduleChanged);
     return event;
   }

@@ -2,6 +2,8 @@ import mongoose from 'mongoose';
 import { FastifyPluginAsync } from 'fastify';
 import fp from 'fastify-plugin';
 
+import { dropLegacyUserIndexes } from '../../modules/users/user.model.js';
+
 declare module 'fastify' {
   interface FastifyInstance {
     mongoose: typeof mongoose;
@@ -15,6 +17,10 @@ const databasePlugin: FastifyPluginAsync = async (fastify) => {
   // Fail fast: the API is useless without a database, so a connection error aborts startup
   await mongoose.connect(MONGO_URI, { serverSelectionTimeoutMS: 5000 });
   logger.info('Database connected');
+
+  await dropLegacyUserIndexes().catch((err: Error) =>
+    logger.error(`Dropping legacy user indexes failed: ${err.message}`),
+  );
 
   // Build indexes before serving requests; unique indexes back the duplicate checks.
   // A failure (e.g. existing duplicates) is logged instead of aborting startup.

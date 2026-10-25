@@ -55,6 +55,7 @@ describe('v1 auth', () => {
       'email',
       'name',
       'role',
+      'telegramLinked',
     ]);
   });
 });
@@ -207,7 +208,12 @@ describe('v1 players', () => {
       headers: alice.auth,
       payload: { friends: [] },
     });
-    expect(update.json().count).toEqual({ all: 1, exactly: 1, maybe: 0 });
+    expect(update.json().count).toEqual({
+      all: 1,
+      exactly: 1,
+      maybe: 0,
+      waiting: 0,
+    });
 
     const leave = await ctx.app.inject({
       method: 'DELETE',

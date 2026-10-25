@@ -1,9 +1,17 @@
 import { useState, type FormEvent } from 'react';
-import { Desktop, Moon, SignOut, Sun } from '@phosphor-icons/react';
+import {
+  Desktop,
+  Moon,
+  SignOut,
+  Sun,
+  TelegramLogo,
+} from '@phosphor-icons/react';
 
 import { Button, ErrorNote, Field, Segmented } from '@/components/ui';
 import {
   useChangePassword,
+  useTelegramLink,
+  useUnlinkTelegram,
   useUpdateMe,
   useUserStats,
 } from '@/features/account/api';
@@ -59,7 +67,7 @@ export function AccountPage() {
     <div className="mx-auto grid max-w-lg gap-6">
       <div className="grid gap-1">
         <h1 className="text-3xl font-semibold tracking-tight">{user.name}</h1>
-        <p className="text-muted">{user.email}</p>
+        {user.email && <p className="text-muted">{user.email}</p>}
       </div>
 
       {stats.data && (
@@ -75,7 +83,8 @@ export function AccountPage() {
       )}
 
       <NameForm initial={user.name} />
-      <PasswordForm />
+      <TelegramSection linked={user.telegramLinked} hasEmail={!!user.email} />
+      {user.email && <PasswordForm />}
 
       <Section title="Тема">
         <Segmented<ThemePreference>
@@ -95,6 +104,78 @@ export function AccountPage() {
         Выйти
       </Button>
     </div>
+  );
+}
+
+/**
+ * Linking Telegram: the account then sees sign-ups made with the bot's buttons, and
+ * the bot can write when a place frees up
+ */
+function TelegramSection({
+  linked,
+  hasEmail,
+}: {
+  linked: boolean;
+  hasEmail: boolean;
+}) {
+  const link = useTelegramLink();
+  const unlink = useUnlinkTelegram();
+
+  if (linked) {
+    return (
+      <Section title="Telegram">
+        <p className="text-pretty text-muted">
+          Привязан: записи кнопками в чате видны здесь, а бот пишет вам, когда
+          освобождается место.
+        </p>
+        {hasEmail && (
+          <Button
+            variant="secondary"
+            className="justify-self-start"
+            loading={unlink.isPending}
+            onClick={() => unlink.mutate()}
+          >
+            Отвязать
+          </Button>
+        )}
+        {unlink.error && <ErrorNote>{errorMessage(unlink.error)}</ErrorNote>}
+      </Section>
+    );
+  }
+
+  return (
+    <Section title="Telegram">
+      <p className="text-pretty text-muted">
+        Записывайтесь кнопками прямо в чате, а сайт покажет те же записи.
+      </p>
+      {link.data ? (
+        <div className="grid gap-3">
+          <p>Отправьте боту в личные сообщения в течение 15 минут:</p>
+          <code className="justify-self-start rounded-control bg-surface-2 px-3 py-2 font-mono text-lg tracking-wider select-all">
+            /link {link.data.code}
+          </code>
+          <a
+            href={link.data.botUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="justify-self-start font-medium underline underline-offset-4"
+          >
+            Открыть бота
+          </a>
+        </div>
+      ) : (
+        <Button
+          variant="secondary"
+          className="justify-self-start"
+          icon={<TelegramLogo className="size-5" aria-hidden />}
+          loading={link.isPending}
+          onClick={() => link.mutate()}
+        >
+          Привязать Telegram
+        </Button>
+      )}
+      {link.error && <ErrorNote>{errorMessage(link.error)}</ErrorNote>}
+    </Section>
   );
 }
 

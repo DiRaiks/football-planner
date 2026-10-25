@@ -20,17 +20,22 @@ export const usePlayers = (eventId: string) =>
   });
 
 /** Counts people (players and their friends) by status, like the server does */
-export const countPeople = (players: Pick<Player, 'status' | 'friends'>[]) => {
-  let exactly = 0;
+/** Sure people beyond `maximum` places (0: no limit) wait in line, as on the server */
+export const countPeople = (
+  players: Pick<Player, 'status' | 'friends'>[],
+  maximum = 0,
+) => {
+  let sure = 0;
   let maybe = 0;
   for (const person of players.flatMap((player) => [
     player,
     ...player.friends,
   ])) {
-    if (person.status) exactly++;
+    if (person.status) sure++;
     else maybe++;
   }
-  return { all: exactly + maybe, exactly, maybe };
+  const exactly = maximum > 0 ? Math.min(sure, maximum) : sure;
+  return { all: sure + maybe, exactly, maybe, waiting: sure - exactly };
 };
 
 /**
@@ -87,7 +92,14 @@ export const useSignUp = (eventId: string, userId: string) =>
       api<PlayersChange>('POST', `/events/${eventId}/players`, body),
     (players, body) => [
       ...players,
-      { ...body, _id: PENDING_ID, eventId, userId, date: '' },
+      {
+        ...body,
+        _id: PENDING_ID,
+        eventId,
+        userId,
+        date: '',
+        waitlisted: false,
+      },
     ],
   );
 

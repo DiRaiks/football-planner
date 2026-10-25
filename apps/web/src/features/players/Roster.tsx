@@ -5,28 +5,43 @@ import { Avatar, cn } from '@/components/ui';
 
 type Person = { key: string; name: string; broughtBy?: string; isMe: boolean };
 
-/** Splits players and their friends into "sure" and "maybe" lists */
-export const rosterGroups = (players: Player[], myUserId: string) => {
+/**
+ * Splits players and their friends into "sure", "maybe" and "waiting". Players arrive in
+ * sign-up order; like the server, each sure person takes the next of `maximum` places
+ * (0: no limit), and later sure people wait in line.
+ */
+export const rosterGroups = (
+  players: Player[],
+  myUserId: string,
+  maximum = 0,
+) => {
   const sure: Person[] = [];
   const maybe: Person[] = [];
+  const waiting: Person[] = [];
+  const place = (person: Person, status: boolean) => {
+    if (!status) maybe.push(person);
+    else if (maximum > 0 && sure.length >= maximum) waiting.push(person);
+    else sure.push(person);
+  };
 
   for (const player of players) {
-    const isMe = player.userId === myUserId;
-    (player.status ? sure : maybe).push({
-      key: player._id,
-      name: player.name,
-      isMe,
-    });
+    place(
+      { key: player._id, name: player.name, isMe: player.userId === myUserId },
+      player.status,
+    );
     player.friends.forEach((friend, index) =>
-      (friend.status ? sure : maybe).push({
-        key: `${player._id}-${index}`,
-        name: friend.name,
-        broughtBy: player.name,
-        isMe: false,
-      }),
+      place(
+        {
+          key: `${player._id}-${index}`,
+          name: friend.name,
+          broughtBy: player.name,
+          isMe: false,
+        },
+        friend.status,
+      ),
     );
   }
-  return { sure, maybe };
+  return { sure, maybe, waiting };
 };
 
 function Group({
@@ -75,13 +90,15 @@ function Group({
 export function Roster({
   players,
   myUserId,
+  maximum = 0,
 }: {
   players: Player[];
   myUserId: string;
+  maximum?: number;
 }) {
-  const { sure, maybe } = rosterGroups(players, myUserId);
+  const { sure, maybe, waiting } = rosterGroups(players, myUserId, maximum);
 
-  if (sure.length + maybe.length === 0) {
+  if (sure.length + maybe.length + waiting.length === 0) {
     return (
       <div className="flex items-center gap-3 rounded-panel border border-dashed border-line p-5 text-muted">
         <UsersThree className="size-6 shrink-0" aria-hidden />
@@ -93,6 +110,7 @@ export function Roster({
   return (
     <div className="grid gap-5">
       <Group title="Точно идут" people={sure} />
+      <Group title="Лист ожидания" people={waiting} muted />
       <Group title="Под вопросом" people={maybe} muted />
     </div>
   );
