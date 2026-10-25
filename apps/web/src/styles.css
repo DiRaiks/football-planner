@@ -1,0 +1,111 @@
+@import 'tailwindcss';
+@import '@fontsource-variable/geist';
+@import '@fontsource-variable/geist-mono';
+
+/*
+ * "Match scoreboard" theme.
+ * One accent (lime) on green-tinted neutrals. Radius rule: controls 12px (rounded-control),
+ * cards and panels 20px (rounded-panel), chips and avatars full.
+ */
+
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+@theme {
+  --font-sans: 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'Geist Mono Variable', ui-monospace, monospace;
+
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-pitch: var(--pitch);
+  --color-pitch-ink: var(--pitch-ink);
+  --color-pitch-muted: var(--pitch-muted);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+
+  --radius-control: 12px;
+  --radius-panel: 20px;
+
+  --shadow-panel:
+    0 1px 2px rgb(18 61 42 / 0.06), 0 8px 24px -12px rgb(18 61 42 / 0.18);
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+:root {
+  color-scheme: light;
+  --bg: #f3f6f2;
+  --surface: #fbfcfa;
+  --surface-2: #eaefe9;
+  --line: #d9e1da;
+  --ink: #0f1c15;
+  --muted: #56665c;
+  --pitch: #123d2a;
+  --pitch-ink: #eef5ec;
+  --pitch-muted: #9fbfaa;
+  --accent: #b8e04a;
+  --accent-ink: #0f1c15;
+  --accent-soft: #e6f4c2;
+  --danger: #b4443a;
+  --danger-soft: #f7e3e0;
+}
+
+[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #0b120e;
+  --surface: #121b16;
+  --surface-2: #19251e;
+  --line: #26352c;
+  --ink: #e6eee8;
+  --muted: #92a69a;
+  --pitch: #0f2a1d;
+  --pitch-ink: #eef5ec;
+  --pitch-muted: #86a893;
+  --accent: #b8e04a;
+  --accent-ink: #0f1c15;
+  --accent-soft: #263515;
+  --danger: #e07b70;
+  --danger-soft: #3a1d1a;
+}
+
+html {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  min-height: 100dvh;
+}
+
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
