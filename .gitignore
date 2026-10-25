@@ -64,3 +64,4 @@ yarn-error.log\*
 # build output and coverage in any workspace
 **/dist
 **/coverage
+**/node_modules

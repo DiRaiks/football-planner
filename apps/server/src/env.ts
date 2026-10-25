@@ -6,6 +6,10 @@ export type ENVS = {
   LOG_LEVEL: string;
   LOG_FORMAT: string;
   BOT_TOKEN?: string;
+  BOT_MODE: 'polling' | 'webhook';
+  BOT_WEBHOOK_URL?: string;
+  BOT_WEBHOOK_SECRET?: string;
+  TELEGRAM_ADMIN_IDS: string;
   WEATHER_DEFAULT_LAT?: number;
   WEATHER_DEFAULT_LON?: number;
   PUBLIC_URL?: string;
@@ -45,6 +49,18 @@ const ENV_SCHEME = {
     },
     // Telegram notifications are disabled when the token is not set
     BOT_TOKEN: { type: 'string' },
+    // polling for local development, webhook in production (needs a public HTTPS URL)
+    BOT_MODE: {
+      type: 'string',
+      enum: ['polling', 'webhook'],
+      default: 'polling',
+    },
+    // Public base URL of this API; Telegram posts updates to <url>/telegram/webhook
+    BOT_WEBHOOK_URL: { type: 'string' },
+    // Random string (1-256 chars of A-Z, a-z, 0-9, _ and -) that Telegram sends with each update
+    BOT_WEBHOOK_SECRET: { type: 'string', pattern: '^[A-Za-z0-9_-]{16,256}$' },
+    // Comma-separated Telegram user ids allowed to run admin bot commands
+    TELEGRAM_ADMIN_IDS: { type: 'string', default: '' },
     // Weather location for events without coordinates; weather is disabled when unset
     WEATHER_DEFAULT_LAT: { type: 'number', minimum: -90, maximum: 90 },
     WEATHER_DEFAULT_LON: { type: 'number', minimum: -180, maximum: 180 },

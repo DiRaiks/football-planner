@@ -10,6 +10,11 @@ export interface EventEntity {
   eventName: string;
   creatorId: string;
   location?: { lat: number; lon: number };
+  /** Telegram state: pinned announcements to edit, and whether the minimum was announced */
+  telegram?: {
+    announcements: { chatId: number; messageId: number }[];
+    minimumReached: boolean;
+  };
 }
 
 export type EventDocument = HydratedDocument<EventEntity>;
@@ -25,6 +30,18 @@ const EventSchema = new Schema<EventEntity>(
     creatorId: { type: String, required: true },
     location: {
       type: new Schema({ lat: Number, lon: Number }, { _id: false }),
+      required: false,
+    },
+    telegram: {
+      type: new Schema(
+        {
+          announcements: [
+            new Schema({ chatId: Number, messageId: Number }, { _id: false }),
+          ],
+          minimumReached: { type: Boolean, default: false },
+        },
+        { _id: false },
+      ),
       required: false,
     },
   },
@@ -55,10 +72,4 @@ export const toEventDto = (event: EventDocument): Event => ({
     location: { lat: event.location.lat, lon: event.location.lon },
   }),
   ...timestamps(event),
-});
-
-/** Plain event for Telegram messages */
-export const toNotifyEvent = (event: EventDocument) => ({
-  ...event.toObject(),
-  _id: event._id.toString(),
 });

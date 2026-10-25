@@ -6,12 +6,8 @@ import {
   isDuplicateKeyError,
   notFoundError,
 } from '../../lib/errors.js';
-import type { TelegramNotifier } from '../../plugins/telegram_bot/index.js';
-import {
-  EventModel,
-  toEventDto,
-  toNotifyEvent,
-} from '../events/event.model.js';
+import type { TelegramNotifier } from '../../plugins/telegram/index.js';
+import { EventModel, toEventDto } from '../events/event.model.js';
 import { isAdmin, type UserDocument } from '../users/user.model.js';
 import { countPlayers } from './count.js';
 import {
@@ -80,11 +76,7 @@ export class PlayersService {
         throw error;
       },
     );
-    this.notifier.playerAdded(
-      player.toObject(),
-      toNotifyEvent(result.event),
-      result.count,
-    );
+    this.notifier.playersChanged('added', player.toObject(), player.eventId);
     return result;
   }
 
@@ -99,11 +91,7 @@ export class PlayersService {
     await player.save();
 
     const result = await this.syncEvent(player);
-    this.notifier.playerUpdated(
-      player.toObject(),
-      toNotifyEvent(result.event),
-      result.count,
-    );
+    this.notifier.playersChanged('updated', player.toObject(), player.eventId);
     return result;
   }
 
@@ -112,11 +100,7 @@ export class PlayersService {
     await player.deleteOne();
 
     const result = await this.syncEvent(player);
-    this.notifier.playerRemoved(
-      player.toObject(),
-      toNotifyEvent(result.event),
-      result.count,
-    );
+    this.notifier.playersChanged('removed', player.toObject(), player.eventId);
     return result;
   }
 
