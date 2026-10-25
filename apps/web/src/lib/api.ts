@@ -80,6 +80,16 @@ export async function api<T>(
   return data as T;
 }
 
+/**
+ * Retry policy for queries: answers like 404 or 403 will not change on a retry, so only
+ * network failures and server errors are retried, at most twice
+ */
+export const shouldRetry = (failureCount: number, error: unknown) =>
+  failureCount < 2 && !(error instanceof ApiError && error.status < 500);
+
+export const isNotFound = (error: unknown) =>
+  error instanceof ApiError && error.status === 404;
+
 /** Human-readable message for a failed request */
 export const errorMessage = (error: unknown) => {
   if (error instanceof ApiError) return MESSAGES[error.code] ?? error.message;

@@ -1,14 +1,17 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { ReactNode } from 'react';
 import type { Player } from '@football-planner/shared';
 
-import { AuthProvider } from '@/features/auth/auth';
+import { AuthProvider, useAuth } from '@/features/auth/auth';
 import { EventForm } from '@/features/events/EventForm';
 import { Scoreboard } from '@/features/events/Scoreboard';
 import { JoinPanel } from '@/features/players/JoinPanel';
 import { playersKey, usePlayers } from '@/features/players/api';
 import { LoginPage } from '@/routes/AuthPages';
+import { EditEventPage } from '@/routes/EventFormPages';
+import { EventPage } from '@/routes/EventPage';
 import {
   event,
   mockApi,
@@ -200,5 +203,78 @@ describe('LoginPage', () => {
     await waitFor(() =>
       expect(localStorage.getItem('fp.token')).toBe('jwt-token'),
     );
+  });
+});
+
+describe('missing match', () => {
+  // Like Layout: pages under it render once the user is known
+  const SignedIn = ({ children }: { children: ReactNode }) =>
+    useAuth().user ? children : null;
+
+  const signedIn = (eventStatus: number) => {
+    localStorage.setItem('fp.token', 'jwt-token');
+    return mockApi(({ path }) =>
+      path === '/auth/me'
+        ? { body: user }
+        : {
+            status: eventStatus,
+            body: {
+              code: eventStatus === 404 ? 'NOT_FOUND' : 'INTERNAL',
+              message: 'error',
+            },
+          },
+    );
+  };
+
+  it.each([
+    ['/events/:eventId', EventPage],
+    ['/events/:eventId/edit', EditEventPage],
+  ])(
+    'explains that %s is gone and links back to the list',
+    async (path, Page) => {
+      signedIn(404);
+      renderRoutes(
+        [
+          {
+            path,
+            element: (
+              <SignedIn>
+                <Page />
+              </SignedIn>
+            ),
+          },
+        ],
+        path.replace(':eventId', 'gone'),
+        (node) => <AuthProvider>{node}</AuthProvider>,
+      );
+
+      expect(
+        await screen.findByRole('heading', { name: 'Матч не найден' }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('link', { name: 'К списку матчей' }),
+      ).toHaveAttribute('href', '/events');
+    },
+  );
+
+  it('shows other errors as they are', async () => {
+    signedIn(500);
+    renderRoutes(
+      [
+        {
+          path: '/events/:eventId',
+          element: (
+            <SignedIn>
+              <EventPage />
+            </SignedIn>
+          ),
+        },
+      ],
+      '/events/e1',
+      (node) => <AuthProvider>{node}</AuthProvider>,
+    );
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('error');
+    expect(screen.queryByText('Матч не найден')).not.toBeInTheDocument();
   });
 });
