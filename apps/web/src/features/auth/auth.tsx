@@ -9,6 +9,7 @@ import {
 } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
+  AuthProviders,
   LoginBody,
   RegisterBody,
   Session,
@@ -16,6 +17,8 @@ import type {
 } from '@football-planner/shared';
 
 import { api, setUnauthorizedHandler, tokenStorage } from '@/lib/api';
+import { clearOfflineCache } from '@/lib/pwa';
+import { isMiniAppLaunch, loadWebApp } from '@/lib/telegram';
 
 type AuthState = {
   user: User | null;
@@ -25,6 +28,8 @@ type AuthState = {
   logout: () => void;
   /** Stores a new session, e.g. after a password change issues a fresh token */
   setSession: (session: Session) => void;
+  /** Inside Telegram: signing in with the Mini App's data failed */
+  miniAppError: unknown;
 };
 
 const AuthContext = createContext<AuthState | null>(null);
@@ -61,6 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(() => {
     tokenStorage.clear();
     setToken(null);
+    void clearOfflineCache();
     // Drop everything of the previous user, including requests still in flight
     void queryClient.cancelQueries();
     queryClient.getMutationCache().clear();
@@ -71,6 +77,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const setSession = useCallback(
     (session: Session) => {
+      // Saved answers of another user must not show up offline
+      const previous = queryClient.getQueryData<User>(meKey);
+      if (previous && previous._id !== session._id) void clearOfflineCache();
       tokenStorage.set(session.token);
       queryClient.setQueryData(meKey, userFromSession(session));
       setToken(session.token);
@@ -88,8 +97,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     onSuccess: setSession,
   });
 
+  // Inside Telegram the Mini App's data signs in, as whoever opened it, even over an
+  // older session in this webview
+  const [miniApp, setMiniApp] = useState<'pending' | 'done' | 'failed'>(() =>
+    isMiniAppLaunch() ? 'pending' : 'done',
+  );
+  const [miniAppError, setMiniAppError] = useState<unknown>(null);
+  useEffect(() => {
+    if (miniApp !== 'pending') return;
+    let cancelled = false;
+    void loadWebApp()
+      .then(async (app) => {
+        if (!app) return 'done' as const;
+        setSession(
+          await api<Session>('POST', '/auth/telegram/webapp', {
+            initData: app.initData,
+          }),
+        );
+        return 'done' as const;
+      })
+      .catch((error: unknown) => {
+        setMiniAppError(error);
+        return 'failed' as const;
+      })
+      .then((state) => !cancelled && setMiniApp(state));
+    return () => {
+      cancelled = true;
+    };
+  }, [miniApp, setSession]);
+
   const user = token ? (me.data ?? null) : null;
-  const isLoading = Boolean(token) && me.isPending;
+  const isLoading = miniApp === 'pending' || (Boolean(token) && me.isPending);
 
   const value = useMemo<AuthState>(
     () => ({
@@ -99,8 +137,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       register: async (body) => userFromSession(await registerAsync(body)),
       logout,
       setSession,
+      miniAppError,
     }),
-    [user, isLoading, loginAsync, registerAsync, logout, setSession],
+    [
+      user,
+      isLoading,
+      loginAsync,
+      registerAsync,
+      logout,
+      setSession,
+      miniAppError,
+    ],
   );
 
   return <AuthContext value={value}>{children}</AuthContext>;
@@ -118,3 +165,12 @@ export const useUser = () => {
   if (!user) throw new Error('useUser needs a signed-in user');
   return user;
 };
+
+/** Ways to sign in besides email, as the server has them configured */
+export const useAuthProviders = () =>
+  useQuery({
+    queryKey: ['auth', 'providers'] as const,
+    queryFn: () => api<AuthProviders>('GET', '/auth/providers'),
+    staleTime: Infinity,
+    retry: false,
+  });

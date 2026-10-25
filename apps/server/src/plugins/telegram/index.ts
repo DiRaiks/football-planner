@@ -37,6 +37,7 @@ import {
   squadChangedMessage,
   teamsMessage,
   reminderMessage,
+  matchLink,
   rsvpKeyboard,
   type NotifyEvent,
   type NotifyPlayer,
@@ -130,6 +131,7 @@ const telegramPlugin: FastifyPluginAsync<TelegramPluginOptions> = async (
     BOT_WEBHOOK_SECRET,
     TELEGRAM_ADMIN_IDS,
     PUBLIC_URL,
+    TELEGRAM_APP_URL,
     TIME_ZONE,
   } = fastify.config;
 
@@ -175,6 +177,9 @@ const telegramPlugin: FastifyPluginAsync<TelegramPluginOptions> = async (
 
   const { notifier, log } = fastify;
   const publicUrl = PUBLIC_URL?.replace(/\/+$/, '');
+  const appUrl = TELEGRAM_APP_URL?.replace(/\/+$/, '');
+  const keyboard = (event: NotifyEvent) =>
+    rsvpKeyboard(event, matchLink(event._id, { publicUrl, appUrl }));
 
   // Updates of one event run in order, so a slow edit never overwrites a newer one.
   // `isLatest` tells a task whether newer updates of the same event are already waiting.
@@ -217,7 +222,7 @@ const telegramPlugin: FastifyPluginAsync<TelegramPluginOptions> = async (
   const refreshAnnouncements = async (state: State) => {
     const event = toNotifyEvent(state.event);
     const message = announcementMessage(event, state.people, state.count);
-    const replyMarkup = rsvpKeyboard(event, publicUrl);
+    const replyMarkup = keyboard(event);
     const announcements: SentMessage[] =
       state.event.telegram?.announcements ?? [];
 
@@ -325,7 +330,7 @@ const telegramPlugin: FastifyPluginAsync<TelegramPluginOptions> = async (
               await forecastFor(state),
               day,
             ),
-            { replyMarkup: rsvpKeyboard(event, publicUrl) },
+            { replyMarkup: keyboard(event) },
           );
           sent++;
         } catch (err) {
@@ -347,6 +352,20 @@ const telegramPlugin: FastifyPluginAsync<TelegramPluginOptions> = async (
   let reminderTimer: NodeJS.Timeout | undefined;
   if (!test) {
     fastify.addHook('onReady', async () => {
+      // The menu button of private chats opens the site as a Mini App, signed in
+      if (publicUrl?.startsWith('https://')) {
+        fastify.tg.bot.api
+          .setChatMenuButton({
+            menu_button: {
+              type: 'web_app',
+              text: 'Матчи',
+              web_app: { url: publicUrl },
+            },
+          })
+          .catch((err: unknown) =>
+            log.warn({ err }, 'telegram menu button not set'),
+          );
+      }
       reminderTimer = setInterval(() => {
         sendDueReminders().catch((err: unknown) =>
           log.error({ err }, 'telegram reminders failed'),
@@ -366,7 +385,7 @@ const telegramPlugin: FastifyPluginAsync<TelegramPluginOptions> = async (
         const result = await notifier.notify(
           TOPIC,
           announcementMessage(event, state.people, state.count),
-          { pin: true, replyMarkup: rsvpKeyboard(event, publicUrl) },
+          { pin: true, replyMarkup: keyboard(event) },
         );
         const saved = await EventModel.updateOne(
           { _id: eventId },

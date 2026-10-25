@@ -2,13 +2,14 @@ import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router';
 
 import { Button, ErrorNote, Field } from '@/components/ui';
+import { TelegramLoginButton } from '@/features/auth/TelegramLogin';
 import { useAuth } from '@/features/auth/auth';
 import { errorMessage } from '@/lib/api';
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function LoginPage() {
-  const { login } = useAuth();
+  const { login, miniAppError } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -38,6 +39,12 @@ export function LoginPage() {
           Чтобы записываться на матчи и звать друзей.
         </p>
       </div>
+      {miniAppError !== null && (
+        <ErrorNote>
+          Telegram не подтвердил вход: {errorMessage(miniAppError)}
+        </ErrorNote>
+      )}
+      <TelegramLoginButton />
       <Field
         label="Почта"
         type="email"
@@ -109,6 +116,7 @@ export function RegisterPage() {
         <h1 className="text-2xl font-semibold tracking-tight">Регистрация</h1>
         <p className="text-muted">Имя увидят в составе и в чате.</p>
       </div>
+      <TelegramLoginButton />
       <Field
         label="Имя"
         autoComplete="name"

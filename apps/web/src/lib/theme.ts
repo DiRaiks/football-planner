@@ -23,6 +23,11 @@ export const applyTheme = (preference = read()) => {
   document.documentElement.dataset.theme = resolve(preference);
 };
 
+/** Colours of the host app (Telegram), unless the user picked a theme here */
+export const applyHostTheme = (scheme: 'light' | 'dark') => {
+  if (read() === 'system') document.documentElement.dataset.theme = scheme;
+};
+
 export const setThemePreference = (preference: ThemePreference) => {
   try {
     if (preference === 'system') localStorage.removeItem(KEY);

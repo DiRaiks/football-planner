@@ -47,6 +47,31 @@ export const LoginBody = Type.Object(
   { additionalProperties: false },
 );
 
+// The code the browser got back from Telegram's login, and its PKCE verifier
+export const TelegramLoginBody = Type.Object(
+  {
+    code: Type.String({ minLength: 1, maxLength: 1024 }),
+    codeVerifier: Type.String({ pattern: '^[A-Za-z0-9._~-]{43,128}$' }),
+  },
+  { additionalProperties: false },
+);
+
+// Telegram.WebApp.initData of a Mini App, checked by the server
+export const TelegramWebAppBody = Type.Object(
+  { initData: Type.String({ minLength: 1, maxLength: 8192 }) },
+  { additionalProperties: false },
+);
+
+// Ways to sign in besides email; null when not configured
+export const AuthProviders = Type.Object({
+  telegram: Type.Union([
+    Type.Object({ clientId: Type.String(), redirectUri: Type.String() }),
+    Type.Null(),
+  ]),
+  // The server can check Mini App data (the bot is configured)
+  miniApp: Type.Boolean(),
+});
+
 export const RegisterBody = Type.Object(
   {
     email: Type.String({ format: 'email', maxLength: 254 }),
@@ -234,6 +259,9 @@ export type PublicUser = Static<typeof PublicUser>;
 export type Session = Static<typeof Session>;
 export type LoginBody = Static<typeof LoginBody>;
 export type RegisterBody = Static<typeof RegisterBody>;
+export type TelegramLoginBody = Static<typeof TelegramLoginBody>;
+export type TelegramWebAppBody = Static<typeof TelegramWebAppBody>;
+export type AuthProviders = Static<typeof AuthProviders>;
 export type UpdateMeBody = Static<typeof UpdateMeBody>;
 export type ChangePasswordBody = Static<typeof ChangePasswordBody>;
 export type UserStats = Static<typeof UserStats>;

@@ -2,7 +2,7 @@ import { MongoMemoryServer } from 'mongodb-memory-server';
 import mongoose from 'mongoose';
 import { afterAll, beforeAll, beforeEach } from 'vitest';
 
-import { buildApp } from '../src/app.js';
+import { buildApp, type BuildAppOptions } from '../src/app.js';
 import type { TelegramTestOptions } from '../src/plugins/telegram/index.js';
 import { UserModel } from '../src/modules/users/user.model.js';
 
@@ -14,6 +14,7 @@ type App = Awaited<ReturnType<typeof buildApp>>;
 export const setupApp = (
   env: Record<string, unknown> = {},
   telegram?: TelegramTestOptions,
+  options: Pick<BuildAppOptions, 'telegramLogin'> = {},
 ) => {
   const ctx = {} as { app: App; mongo: MongoMemoryServer };
 
@@ -23,6 +24,7 @@ export const setupApp = (
       fastify: { logger: false },
       telegram,
       jobs: false,
+      ...options,
       env: {
         PORT: 0,
         MONGO_URI: ctx.mongo.getUri(),

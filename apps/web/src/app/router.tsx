@@ -2,6 +2,7 @@ import { createBrowserRouter, Navigate } from 'react-router';
 import { SoccerBall } from '@phosphor-icons/react';
 
 import { ButtonLink, EmptyState } from '@/components/ui';
+import { TelegramCallbackPage } from '@/features/auth/TelegramLogin';
 import { AccountPage } from '@/routes/AccountPage';
 import { LoginPage, RegisterPage } from '@/routes/AuthPages';
 import { EditEventPage, NewEventPage } from '@/routes/EventFormPages';
@@ -25,6 +26,8 @@ function NotFound() {
 }
 
 export const router = createBrowserRouter([
+  // Telegram's login returns here; registered in @BotFather as the redirect URI
+  { path: '/auth/telegram', element: <TelegramCallbackPage /> },
   {
     element: <AuthLayout />,
     children: [

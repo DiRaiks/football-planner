@@ -17,6 +17,7 @@ import {
 } from './plugins/index.js';
 import V1Routes from './routes/v1/index.js';
 import type { TelegramTestOptions } from './plugins/telegram/index.js';
+import type { TelegramOidcOptions } from './modules/users/telegram-login.js';
 
 export type BuildAppOptions = {
   /** Environment overrides; when set, `.env` and `process.env` are not read (used in tests) */
@@ -26,6 +27,8 @@ export type BuildAppOptions = {
   telegram?: TelegramTestOptions;
   /** Background jobs such as the next match of a weekly series (default true) */
   jobs?: boolean;
+  /** Fake keys and token endpoint of Telegram's login, for tests */
+  telegramLogin?: Pick<TelegramOidcOptions, 'keys' | 'fetch'>;
 };
 
 export const buildApp = async ({
@@ -33,6 +36,7 @@ export const buildApp = async ({
   fastify: fastifyOptions,
   telegram,
   jobs = true,
+  telegramLogin,
 }: BuildAppOptions = {}) => {
   const fastify = Fastify({
     logger: getLoggerOptions(env),
@@ -107,7 +111,7 @@ export const buildApp = async ({
   await fastify.register(MonitoringPlugin);
   await fastify.register(TelegramPlugin, { test: telegram });
   await fastify.register(AuthPlugin);
-  await fastify.register(ServicesPlugin);
+  await fastify.register(ServicesPlugin, { telegramLogin });
 
   await fastify.register(V1Routes, { prefix: '/v1' });
 

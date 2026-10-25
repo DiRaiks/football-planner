@@ -37,6 +37,8 @@ The Telegram bot keeps a live, pinned announcement in your team chat.
 - **Teams.** The organiser splits the squad into 2–4 random teams in one tap, guests included; the bot posts them to the chat. Pressing again reshuffles.
 - **Payments.** Set a price per person, and the organiser ticks who paid; a player pays for the sure friends they bring. The roster shows what is collected out of the total.
 - **Attendance.** Who played how often over the last month, three months or year, with "maybe" sign-ups and the last match played.
+- **Log in with Telegram**, on the site or inside Telegram as a Mini App, with no password: the same account as the bot's buttons.
+- **Installs on the phone** as an app (PWA), and the match list opens offline.
 - **Phone first**, with light and dark themes, keyboard navigation and screen reader labels.
 
 ### What the bot posts
@@ -93,11 +95,20 @@ Copy `.env.example` to `.env`.
 | `BOT_WEBHOOK_URL`, `BOT_WEBHOOK_SECRET`                            |          | Public HTTPS URL of the API and a random secret, for webhook mode                                          |
 | `TELEGRAM_ADMIN_IDS`                                               |          | Telegram user ids allowed to run admin bot commands                                                        |
 | `PUBLIC_URL`                                                       |          | Site URL for links in bot messages                                                                         |
+| `TELEGRAM_LOGIN_CLIENT_ID`, `TELEGRAM_LOGIN_CLIENT_SECRET`         |          | "Log in with Telegram" on the site, from @BotFather (see below)                                            |
+| `TELEGRAM_APP_URL`                                                 |          | Mini App link, e.g. `https://t.me/<bot>/<app>`: "Открыть" under announcements opens the match there        |
 | `CORS_ORIGINS`                                                     |          | Allowed origins if the app is served from another origin                                                   |
 | `TRUST_PROXY`                                                      |          | Proxy hops (usually `1`) or proxy IPs when running behind a reverse proxy                                  |
 | `TIME_ZONE`                                                        | `UTC`    | IANA time zone of the venues, e.g. `Europe/Moscow`: match times are entered in it                          |
 | `WEATHER_DEFAULT_LAT`, `WEATHER_DEFAULT_LON`                       |          | Weather location for matches without coordinates                                                           |
 | `JWT_EXPIRES_IN`, `AUTH_RATE_LIMIT_MAX`, `LOG_LEVEL`, `LOG_FORMAT` |          | Session length, login attempts per minute, logging                                                         |
+
+### Telegram login and Mini App
+
+Players can sign in without a password, as the same account the bot's buttons make:
+
+- **On the site:** in @BotFather, in the bot's Login Widget settings, register `<PUBLIC_URL>/auth/telegram` as a redirect URI, and put the Client ID and Client Secret into `TELEGRAM_LOGIN_CLIENT_ID` and `TELEGRAM_LOGIN_CLIENT_SECRET`. The site then shows "Войти через Telegram". It is OpenID Connect with PKCE: the server trades the code for an ID token and checks its signature against Telegram's keys.
+- **Inside Telegram:** with `BOT_TOKEN` and an HTTPS `PUBLIC_URL`, the bot's menu button in private chats opens the site as a Mini App, signed in from the data Telegram signs with the bot token. To open matches from group announcements, create a Mini App for `PUBLIC_URL` in @BotFather (`/newapp`, or _Configure Mini App_ for the main one) and set `TELEGRAM_APP_URL` to its link; "Открыть" then opens that match in it.
 
 ### Admins
 
