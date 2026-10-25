@@ -1,8 +1,8 @@
-import * as Winston from "winston";
-import { FastifyPluginAsync } from "fastify";
-import fp from "fastify-plugin";
+import * as Winston from 'winston';
+import { FastifyPluginAsync } from 'fastify';
+import fp from 'fastify-plugin';
 
-declare module "fastify" {
+declare module 'fastify' {
   interface FastifyInstance {
     logger: Winston.Logger;
   }
@@ -13,15 +13,15 @@ const fastifyLogger: FastifyPluginAsync = async (fastify) => {
 
   const logger: Winston.Logger = Winston.createLogger({
     format:
-      LOG_FORMAT === "simple" ? Winston.format.simple() : Winston.format.json(),
+      LOG_FORMAT === 'simple' ? Winston.format.simple() : Winston.format.json(),
     transports: [new Winston.transports.Console()],
   });
 
-  logger.info("Logger plugin initialized");
+  logger.info('Logger plugin initialized');
 
   if (!fastify.logger) {
-    fastify.decorate("logger", logger);
+    fastify.decorate('logger', logger);
   }
 };
 
-export default fp(fastifyLogger, "5.x");
+export default fp(fastifyLogger, { fastify: '5.x', name: 'logger' });

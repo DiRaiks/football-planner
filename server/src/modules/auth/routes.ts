@@ -1,103 +1,110 @@
-import { FastifyInstance } from 'fastify';
-import { pbkdf2Sync, randomBytes } from 'crypto';
-import { UserModel } from '../users/user.model.js';
+import { randomBytes } from 'node:crypto';
+import { Type } from 'typebox';
+import type { FastifyPluginAsyncTypebox } from '@fastify/type-provider-typebox';
 
-export type PasswordHash = { hash: string; salt: string };
+import { hashPassword, verifyPassword } from '../../lib/password.js';
+import { isDuplicateKeyError, sendError } from '../../lib/http.js';
+import {
+  UserModel,
+  findUserByEmail,
+  toPublicUser,
+} from '../users/user.model.js';
 
-export function setPassword(password: string): PasswordHash {
-  const salt = randomBytes(16).toString('hex');
-  const hash = pbkdf2Sync(password, salt, 10000, 512, 'sha512').toString('hex');
-  return { hash, salt };
-}
+const Email = Type.String({ format: 'email', maxLength: 254 });
+const Password = Type.String({ minLength: 8, maxLength: 128 });
 
-export function validatePassword(
-  password: string,
-  user: { hash: string; salt: string },
-): boolean {
-  const hash = pbkdf2Sync(password, user.salt, 10000, 512, 'sha512').toString(
-    'hex',
-  );
-  return user.hash === hash;
-}
+const LoginBody = Type.Object(
+  { email: Email, password: Type.String({ minLength: 1, maxLength: 128 }) },
+  { additionalProperties: false },
+);
 
-const authRoutes = async (fastify: FastifyInstance) => {
-  fastify.post('/login', async (request, reply) => {
-    const { email, password } = request.body as {
-      email?: string;
-      password?: string;
-    };
+const RegistrationBody = Type.Object(
+  {
+    email: Email,
+    name: Type.String({ minLength: 1, maxLength: 50 }),
+    password: Password,
+  },
+  { additionalProperties: false },
+);
 
-    if (!email || !password) {
-      reply.code(400);
-      return { message: 'email and password required' };
-    }
+const authRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
+  // Unknown emails are checked against this hash so they take as long as real accounts
+  const dummyHash = await hashPassword(randomBytes(16).toString('hex'));
 
-    const user = await UserModel.findOne({ email });
-    if (!user) {
-      reply.code(401);
-      return { message: 'invalid credentials' };
-    }
+  const rateLimit = {
+    max: fastify.config.AUTH_RATE_LIMIT_MAX,
+    timeWindow: '1 minute',
+  };
 
-    if (!validatePassword(password, user)) {
-      reply.code(401);
-      return { message: 'invalid credentials' };
-    }
+  fastify.post(
+    '/login',
+    { schema: { body: LoginBody }, config: { rateLimit } },
+    async (request, reply) => {
+      const { email, password } = request.body;
 
-    const token = fastify.jwt.sign({ id: user._id.toString() });
-    return { email: user.email, name: user.name, token };
-  });
+      const user = await findUserByEmail(email).select('+hash +salt');
+      const result = await verifyPassword(
+        password,
+        user ?? { hash: dummyHash },
+      );
 
-  fastify.post('/registration', async (request, reply) => {
-    const { email, name, password } = request.body as {
-      email?: string;
-      name?: string;
-      password?: string;
-    };
+      if (!user || !result.ok) {
+        return sendError(
+          reply,
+          401,
+          'INVALID_CREDENTIALS',
+          'invalid credentials',
+        );
+      }
 
-    if (!email || !name || !password) {
-      reply.code(400);
-      return { message: 'email, name and password required' };
-    }
+      if (result.needsRehash) {
+        user.hash = await hashPassword(password);
+        user.salt = undefined;
+        await user.save();
+      }
 
-    const existingUser = await UserModel.findOne({ email });
-    if (existingUser) {
-      reply.code(409);
-      return { message: 'user already exists' };
-    }
-
-    const { hash, salt } = setPassword(password);
-    const user = await UserModel.create({ email, name, hash, salt });
-
-    const token = fastify.jwt.sign({ id: user._id.toString() });
-    return {
-      _id: user._id.toString(),
-      email: user.email,
-      name: user.name,
-      token,
-    };
-  });
-
-  fastify.get(
-    '/profile',
-    { onRequest: [fastify.authenticate] },
-    async (request) => {
-      const { id } = request.user as { id: string };
-      const user = await UserModel.findById(id);
-      if (!user) return null;
-      return { _id: user._id.toString(), email: user.email, name: user.name };
+      const token = fastify.issueToken(user);
+      return { ...toPublicUser(user), token };
     },
   );
 
-  fastify.get(
-    '/check',
-    { onRequest: [fastify.authenticate] },
-    async (request) => {
-      const { id } = request.user as { id: string };
-      const user = await UserModel.findById(id);
-      if (!user) return null;
-      return { _id: user._id.toString(), email: user.email, name: user.name };
+  fastify.post(
+    '/registration',
+    { schema: { body: RegistrationBody }, config: { rateLimit } },
+    async (request, reply) => {
+      const { email, name, password } = request.body;
+
+      if (await findUserByEmail(email)) {
+        return sendError(reply, 409, 'USER_EXISTS', 'user already exists');
+      }
+
+      const hash = await hashPassword(password);
+      let user;
+      try {
+        user = await UserModel.create({ email, name, hash });
+      } catch (error) {
+        // Concurrent registration of the same email hits the unique index
+        if (isDuplicateKeyError(error)) {
+          return sendError(reply, 409, 'USER_EXISTS', 'user already exists');
+        }
+        throw error;
+      }
+
+      const token = fastify.issueToken(user);
+      return { ...toPublicUser(user), token };
     },
   );
+
+  const profile = {
+    onRequest: [fastify.authenticate],
+    handler: async (request: {
+      currentUser: Parameters<typeof toPublicUser>[0] | null;
+    }) => (request.currentUser ? toPublicUser(request.currentUser) : null),
+  };
+
+  fastify.get('/profile', profile);
+  // Kept for the current frontend, which checks the session via /auth/check
+  fastify.get('/check', profile);
 };
 
 export default authRoutes;

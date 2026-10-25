@@ -1,4 +1,4 @@
-import { Schema, model } from "mongoose";
+import { Schema, model, type HydratedDocument } from 'mongoose';
 
 export interface FriendEntity {
   name: string;
@@ -14,6 +14,8 @@ export interface PlayerEntity {
   userId: string;
 }
 
+export type PlayerDocument = HydratedDocument<PlayerEntity>;
+
 export const FriendSchema = new Schema<FriendEntity>({
   name: { type: String, required: true },
   status: { type: Boolean, required: true },
@@ -25,10 +27,13 @@ const PlayerSchema = new Schema<PlayerEntity>(
     name: { type: String, required: true },
     date: { type: String, required: true },
     status: { type: Boolean, required: true },
-    eventId: { type: String, required: true },
-    userId: { type: String, required: true },
+    eventId: { type: String, required: true, index: true },
+    userId: { type: String, required: true, index: true },
   },
   { timestamps: true },
 );
 
-export const PlayerModel = model<PlayerEntity>("Player", PlayerSchema);
+// One sign-up per user and event
+PlayerSchema.index({ eventId: 1, userId: 1 }, { unique: true });
+
+export const PlayerModel = model<PlayerEntity>('Player', PlayerSchema);

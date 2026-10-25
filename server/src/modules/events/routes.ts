@@ -1,75 +1,105 @@
-import { EventModel, EventEntity } from './event.model.js';
-import { FastifyInstance } from 'fastify';
+import { Type, type Static } from 'typebox';
+import type { FastifyPluginAsyncTypebox } from '@fastify/type-provider-typebox';
+import type { FastifyReply, FastifyRequest } from 'fastify';
 
-const eventsRoutes = async (fastify: FastifyInstance) => {
-  fastify.get('/all', { onRequest: [fastify.authenticate] }, async () => {
-    return EventModel.find();
-  });
+import { ObjectId, forbidden, notFound } from '../../lib/http.js';
+import { PlayerModel } from '../players/player.model.js';
+import { EventModel, type EventDocument } from './event.model.js';
+
+// Unknown fields (e.g. `_id`, `playersAmount`, `creatorId` sent by the client) are stripped by Ajv
+const EventFields = {
+  place: Type.String({ minLength: 1, maxLength: 200 }),
+  time: Type.String({ minLength: 1, maxLength: 20 }),
+  date: Type.String({ minLength: 1, maxLength: 40 }),
+  minimum: Type.Integer({ minimum: 0, maximum: 100 }),
+  eventName: Type.String({ minLength: 1, maxLength: 100 }),
+};
+
+const CreateEventBody = Type.Object(EventFields, {
+  additionalProperties: false,
+});
+const ChangeEventBody = Type.Partial(Type.Object(EventFields), {
+  additionalProperties: false,
+});
+const EventIdQuery = Type.Object({ eventID: ObjectId });
+
+const eventsRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
+  fastify.addHook('onRequest', fastify.authenticate);
+
+  const canManage = (request: FastifyRequest, event: EventDocument) => {
+    const user = request.currentUser!;
+    return event.creatorId === user._id.toString() || fastify.isAdmin(user);
+  };
+
+  const getEvent = (eventID: string) => EventModel.findById(eventID);
+
+  const changeEvent = async (
+    request: FastifyRequest,
+    reply: FastifyReply,
+    eventID: string,
+    data: Static<typeof ChangeEventBody>,
+  ) => {
+    const event = await getEvent(eventID);
+    if (!event) return notFound(reply, 'event');
+    if (!canManage(request, event)) return forbidden(reply);
+
+    event.set(data);
+    return event.save();
+  };
+
+  const deleteEvent = async (
+    request: FastifyRequest,
+    reply: FastifyReply,
+    eventID: string,
+  ) => {
+    const event = await getEvent(eventID);
+    if (!event) return notFound(reply, 'event');
+    if (!canManage(request, event)) return forbidden(reply);
+
+    await PlayerModel.deleteMany({ eventId: eventID });
+    await event.deleteOne();
+    return event;
+  };
+
+  fastify.get('/all', async () => EventModel.find());
 
   fastify.post(
     '/save',
-    { onRequest: [fastify.authenticate] },
+    { schema: { body: CreateEventBody } },
     async (request) => {
-      const { id } = request.user as { id: string };
-      const body = request.body as EventEntity;
-      const event = await EventModel.create({ ...body, creatorId: id });
-      await fastify.telegramBot.sendMessageAddEvent(
-        {
-          ...event.toObject(),
-          _id: event._id.toString(),
-        },
-        fastify.telegramBot.bot,
-      );
+      const event = await EventModel.create({
+        ...request.body,
+        playersAmount: 0,
+        creatorId: request.currentUser!._id.toString(),
+      });
+      fastify.telegramBot.eventCreated({
+        ...event.toObject(),
+        _id: event._id.toString(),
+      });
+
       return event;
-    },
-  );
-
-  fastify.delete(
-    '/delete',
-    { onRequest: [fastify.authenticate] },
-    async (request) => {
-      const { eventID } = request.query as { eventID: string };
-      return EventModel.findByIdAndDelete(eventID);
-    },
-  );
-
-  fastify.get(
-    '/get',
-    { onRequest: [fastify.authenticate] },
-    async (request) => {
-      const { eventID } = request.query as { eventID: string };
-      return EventModel.findById(eventID);
     },
   );
 
   fastify.get(
     '/get/:eventID',
-    { onRequest: [fastify.authenticate] },
-    async (request) => {
-      const { eventID } = request.params as { eventID: string };
-      return EventModel.findById(eventID);
-    },
-  );
-
-  fastify.put(
-    '/change',
-    { onRequest: [fastify.authenticate] },
-    async (request) => {
-      const { eventID, ...data } = request.body as Partial<EventEntity> & {
-        eventID: string;
-      };
-      return EventModel.findByIdAndUpdate(eventID, data, { new: true });
-    },
+    { schema: { params: EventIdQuery } },
+    async (request, reply) =>
+      (await getEvent(request.params.eventID)) ?? notFound(reply, 'event'),
   );
 
   fastify.put(
     '/change/:eventID',
-    { onRequest: [fastify.authenticate] },
-    async (request) => {
-      const { eventID } = request.params as { eventID: string };
-      const data = request.body as Partial<EventEntity>;
-      return EventModel.findByIdAndUpdate(eventID, data, { new: true });
-    },
+    { schema: { params: EventIdQuery, body: ChangeEventBody } },
+    async (request, reply) =>
+      changeEvent(request, reply, request.params.eventID, request.body),
+  );
+
+  fastify.delete(
+    '/delete',
+    { schema: { querystring: EventIdQuery } },
+    async (request, reply) =>
+      deleteEvent(request, reply, request.query.eventID),
   );
 };
 

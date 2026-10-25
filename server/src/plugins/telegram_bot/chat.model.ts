@@ -1,4 +1,4 @@
-import { Schema, model, type Document } from "mongoose";
+import { Schema, model, type Document } from 'mongoose';
 
 export interface Chat extends Document {
   readonly chatId: number;
@@ -15,4 +15,4 @@ export const ChatSchema = new Schema<Chat>(
   { timestamps: true },
 );
 
-export const ChatModel = model<Chat>("Chat", ChatSchema);
+export const ChatModel = model<Chat>('Chat', ChatSchema);
