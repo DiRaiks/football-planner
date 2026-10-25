@@ -197,7 +197,12 @@ describe('http', () => {
     const res = await ctx.app.inject({ method: 'GET', url: '/health' });
 
     expect(res.statusCode).toBe(200);
-    expect(res.json()).toMatchObject({ status: 'ok', dbState: 'connected' });
+    expect(res.json()).toEqual({
+      status: 'ok',
+      dbState: 'connected',
+      // No BOT_TOKEN in these tests
+      telegram: null,
+    });
     expect(res.headers['x-content-type-options']).toBe('nosniff');
   });
 });

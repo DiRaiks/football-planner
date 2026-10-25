@@ -17,6 +17,8 @@ export interface PlayerEntity {
   userId: string;
   /** When the player became sure: their turn for a place, not the sign-up time */
   sureSince?: Date;
+  /** Paid for the pitch; marked by the organiser */
+  paid?: boolean;
 }
 
 export type PlayerDocument = HydratedDocument<PlayerEntity>;
@@ -36,6 +38,7 @@ const PlayerSchema = new Schema<PlayerEntity>(
     eventId: { type: String, required: true, index: true },
     userId: { type: String, required: true, index: true },
     sureSince: { type: Date },
+    paid: { type: Boolean, default: false },
   },
   { timestamps: true },
 );
@@ -57,4 +60,5 @@ export const toPlayerDto = (
   userId: player.userId,
   date: player.date,
   waitlisted,
+  paid: player.paid ?? false,
 });

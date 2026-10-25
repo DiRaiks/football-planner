@@ -54,7 +54,7 @@ gh run watch
 
 - The run reaches "server is healthy" and "web is healthy".
 - `https://<DOMAIN>` opens the app; Caddy issued the certificate.
-- `https://<DOMAIN>/health` returns `{"status":"ok","dbState":"connected"}`.
+- `https://<DOMAIN>/health` returns `"status":"ok"` with `"dbState":"connected"` and, with a bot token, a `telegram` report with `"ok":true`.
 - `https://<DOMAIN>/metrics` returns 404.
 - With a bot token: the logs show "telegram webhook set", and `/subscribe` in a chat answers.
 

@@ -5,6 +5,7 @@ import {
   Event,
   EventWeather,
   ObjectId,
+  SplitTeamsBody,
   UpdateEventBody,
 } from '@football-planner/shared';
 
@@ -65,6 +66,25 @@ const eventsRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       await events.remove(request.params.id, request.currentUser!);
       return reply.code(204).send();
     },
+  );
+
+  fastify.post(
+    '/:id/teams',
+    {
+      schema: {
+        params: Params,
+        body: SplitTeamsBody,
+        response: { 200: Event },
+      },
+    },
+    async (request) =>
+      toEventDto(
+        await events.splitTeams(
+          request.params.id,
+          request.currentUser!,
+          request.body.count ?? 2,
+        ),
+      ),
   );
 
   fastify.get(

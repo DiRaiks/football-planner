@@ -1,3 +1,4 @@
+import { randomInt } from 'node:crypto';
 import type {
   CreateEventBody,
   UpdateEventBody,
@@ -10,9 +11,36 @@ import { computeRoster, squadChanges } from '../players/count.js';
 import type { TelegramNotifier } from '../../plugins/telegram/index.js';
 import { PlayerModel } from '../players/player.model.js';
 import { isAdmin, type UserDocument } from '../users/user.model.js';
-import { EventModel } from './event.model.js';
+import { EventModel, type EventDocument } from './event.model.js';
+
+const WEEK_MS = 7 * 86_400_000;
+/** Weeks a series may skip at once; beyond that it stops */
+const MAX_CATCH_UP_WEEKS = 520;
+const DUPLICATE_KEY = 11000;
 
 const SCHEDULE_FIELDS = ['date', 'time', 'place'] as const;
+
+/** The calendar day `days` after a YYYY-MM-DD day */
+const addDays = (date: string, days: number) => {
+  const [year, month, day] = date.split('-').map(Number) as [
+    number,
+    number,
+    number,
+  ];
+  return new Date(Date.UTC(year, month - 1, day + days))
+    .toISOString()
+    .slice(0, 10);
+};
+
+/** Fisher-Yates with a cryptographic source: nobody can predict or tilt the teams */
+const shuffle = <T>(items: T[]) => {
+  const result = [...items];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = randomInt(i + 1);
+    [result[i], result[j]] = [result[j]!, result[i]!];
+  }
+  return result;
+};
 
 /** A limit of places below the minimum could never be met */
 const assertPlaces = (minimum: number, maximum: number) => {
@@ -104,6 +132,121 @@ export class EventsService {
       this.notifier.squadChanged(id, { promoted, demoted });
     }
     this.notifier.eventUpdated(id, scheduleChanged);
+    return event;
+  }
+
+  /**
+   * Weekly series: once a match has started, the next one appears a week later at the
+   * same time and place, with the same settings, and is announced like any new match.
+   * Each match makes its successor once, also across restarts and instances.
+   */
+  async createDueRepeats(now = new Date()) {
+    const due = await EventModel.find({
+      repeat: 'weekly',
+      // Only ever set to true; $exists matches the partial index
+      nextCreated: { $exists: false },
+      startsAt: { $lte: now },
+    });
+    const created = [];
+    const errors: unknown[] = [];
+    for (const event of due) {
+      try {
+        const next = await this.createNext(event, now);
+        if (next) created.push(next);
+      } catch (error) {
+        // One broken match must not hold up the others
+        errors.push(error);
+      }
+    }
+    if (errors.length)
+      throw new AggregateError(errors, 'weekly matches failed');
+    return created;
+  }
+
+  /**
+   * The next match of a weekly series: the first week still ahead, so a series that
+   * missed weeks (downtime, a match moved into the past) catches up in one step. The
+   * unique `repeatOf` makes creation the claim: a crash before `nextCreated` is set
+   * only means the next run finds the match made and marks the series done.
+   */
+  private async createNext(event: EventDocument, now: Date) {
+    let date = event.date;
+    let startsAt = event.startsAt!;
+    for (let week = 0; week < MAX_CATCH_UP_WEEKS && startsAt <= now; week++) {
+      const previous = startsAt;
+      date = addDays(date, 7);
+      // A time that does not exist that day (a DST gap): a week to the hour instead
+      startsAt =
+        zonedToInstant(date, event.time, this.timeZone) ??
+        new Date(previous.getTime() + WEEK_MS);
+    }
+
+    let next: EventDocument | null = null;
+    if (startsAt > now) {
+      try {
+        next = await EventModel.create({
+          eventName: event.eventName,
+          place: event.place,
+          date,
+          time: event.time,
+          startsAt,
+          minimum: event.minimum,
+          maximum: event.maximum ?? 0,
+          price: event.price ?? 0,
+          repeat: 'weekly',
+          repeatOf: event._id.toString(),
+          ...(event.location && { location: event.location }),
+          creatorId: event.creatorId,
+          playersAmount: 0,
+        });
+      } catch (error) {
+        if ((error as { code?: number }).code !== DUPLICATE_KEY) throw error;
+      }
+    }
+    await EventModel.updateOne(
+      { _id: event._id },
+      { $set: { nextCreated: true } },
+    );
+    if (next) this.notifier.eventCreated(next._id.toString());
+    return next;
+  }
+
+  /**
+   * Splits the squad into teams at random, evenly, and announces them. Friends play too;
+   * people on the waitlist or "maybe" do not.
+   */
+  async splitTeams(id: string, user: UserDocument, count = 2) {
+    await this.getManageable(id, user);
+    // The same lock as sign-ups: the squad must not change while it is split
+    return withEventLock(id, () => this.splitLocked(id, user, count));
+  }
+
+  private async splitLocked(id: string, user: UserDocument, count: number) {
+    const event = await this.getManageable(id, user);
+    const players = await PlayerModel.find({ eventId: id }).sort({
+      createdAt: 1,
+      _id: 1,
+    });
+    const squad = computeRoster(players, event.maximum ?? 0).people.filter(
+      (person) => person.place === 'squad',
+    );
+    if (squad.length < count) {
+      throw new AppError(
+        409,
+        'NOT_ENOUGH_PLAYERS',
+        'not enough sure players for teams',
+      );
+    }
+
+    const names = shuffle(
+      squad.map((p) => (p.from ? `${p.name} (от ${p.from})` : p.name)),
+    );
+    const teams = Array.from({ length: count }, (_, team) =>
+      names.filter((_, index) => index % count === team),
+    );
+    event.teams = teams;
+    await event.save();
+    this.notifier.teamsSplit(id);
     return event;
   }
 

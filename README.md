@@ -33,6 +33,10 @@ The Telegram bot keeps a live, pinned announcement in your team chat.
 - **Telegram bot** with a pinned announcement per match that is edited on every change, quiet notes for sign-ups, and a loud message only when the minimum is reached, the time or place changes, or the match is cancelled.
 - **Sign up from the chat.** Buttons under every announcement: "Иду", "Возможно", "Не иду", "+ Друг". The first press makes an account from the Telegram profile, no site needed; `/link` in the profile joins it with a site account.
 - **Reminders** the day before and two hours before the start, with the score, who is missing and the weather.
+- **Weekly matches.** Mark a match as weekly, and once it starts the same match a week later is created and announced in the chat.
+- **Teams.** The organiser splits the squad into 2–4 random teams in one tap, guests included; the bot posts them to the chat. Pressing again reshuffles.
+- **Payments.** Set a price per person, and the organiser ticks who paid; a player pays for the sure friends they bring. The roster shows what is collected out of the total.
+- **Attendance.** Who played how often over the last month, three months or year, with "maybe" sign-ups and the last match played.
 - **Log in with Telegram**, on the site or inside Telegram as a Mini App, with no password: the same account as the bot's buttons.
 - **Installs on the phone** as an app (PWA), and the match list opens offline.
 - **Phone first**, with light and dark themes, keyboard navigation and screen reader labels.
@@ -165,7 +169,7 @@ npm run lighthouse --workspace football-planner-web # reports in apps/web/lighth
 
 ## Monitoring
 
-`GET /health` reports the API and its database. `GET /metrics` serves Prometheus metrics: request durations by route, the MongoDB connection, and Node.js process metrics. Caddy does not expose `/metrics` publicly; scrape it inside the Docker network.
+`GET /health` reports the API, its database and the Telegram bot (polling or webhook state, the subscriptions store, the send queue). It answers 200 while the process runs; `status` is `degraded` when the database is down or the bot cannot receive updates. The route is public, so Telegram's error texts stay in the logs, and it is rate limited. `GET /metrics` serves Prometheus metrics: request durations by route, the MongoDB connection, Node.js process metrics, and the bot's `tg_*` metrics from [tg-kit](https://github.com/DiRaiks/tg-bot-kit): updates received, handler failures, commands, messages sent or failed, and the notifier queue. Caddy does not expose `/metrics` publicly; scrape it inside the Docker network.
 
 ## License
 

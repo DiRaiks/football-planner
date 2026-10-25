@@ -178,6 +178,18 @@ export const squadChangedMessage = (
     html`«${event.eventName}», ${formatWhen(event)}`,
   ]);
 
+const TEAM_MARKS = ['🟢', '🔵', '🟠', '🟣'];
+
+/** The teams the organiser split, one line per team */
+export const teamsMessage = (event: NotifyEvent, teams: string[][]) =>
+  joinHtml([
+    html`⚽ Составы на «${event.eventName}», ${formatWhen(event)}`,
+    ...teams.map(
+      (team, index) =>
+        html`${TEAM_MARKS[index] ?? '⚪'} <b>Команда ${index + 1}</b> (${team.length}): ${team.join(', ')}`,
+    ),
+  ]);
+
 export type ReminderKind = 'day' | 'soon';
 
 const forecastLine = (forecast: DailyForecast | null) => {

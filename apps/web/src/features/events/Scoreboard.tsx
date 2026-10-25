@@ -1,5 +1,5 @@
 import type { Event } from '@football-planner/shared';
-import { MapPin } from '@phosphor-icons/react';
+import { ArrowsClockwise, MapPin, Wallet } from '@phosphor-icons/react';
 
 import { cn } from '@/components/ui';
 import { formatDay, plural, PLAYERS } from '@/lib/format';
@@ -85,6 +85,23 @@ export function Scoreboard({ event, count }: { event: Event; count: Count }) {
               <MapPin className="size-4 shrink-0" aria-hidden />
               {event.place}
             </p>
+            {((event.price ?? 0) > 0 || event.repeat === 'weekly') && (
+              <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-pitch-muted">
+                {(event.price ?? 0) > 0 && (
+                  <span className="flex items-center gap-1.5">
+                    <Wallet className="size-4 shrink-0" aria-hidden />
+                    <span className="tabular-nums">{event.price} ₽</span> с
+                    человека
+                  </span>
+                )}
+                {event.repeat === 'weekly' && (
+                  <span className="flex items-center gap-1.5">
+                    <ArrowsClockwise className="size-4 shrink-0" aria-hidden />
+                    каждую неделю
+                  </span>
+                )}
+              </p>
+            )}
           </div>
           <WeatherBadge eventId={event._id} />
         </div>

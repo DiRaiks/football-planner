@@ -25,6 +25,8 @@ export type BuildAppOptions = {
   fastify?: FastifyServerOptions;
   /** Fake Telegram API for tests */
   telegram?: TelegramTestOptions;
+  /** Background jobs such as the next match of a weekly series (default true) */
+  jobs?: boolean;
   /** Fake keys and token endpoint of Telegram's login, for tests */
   telegramLogin?: Pick<TelegramOidcOptions, 'keys' | 'fetch'>;
 };
@@ -33,6 +35,7 @@ export const buildApp = async ({
   env,
   fastify: fastifyOptions,
   telegram,
+  jobs = true,
   telegramLogin,
 }: BuildAppOptions = {}) => {
   const fastify = Fastify({
@@ -104,15 +107,36 @@ export const buildApp = async ({
   await fastify.register(rateLimit, { global: false });
 
   await fastify.register(DatabasePlugin);
+  // Before Telegram: the bot adds its metrics to the same registry
+  await fastify.register(MonitoringPlugin);
   await fastify.register(TelegramPlugin, { test: telegram });
   await fastify.register(AuthPlugin);
   await fastify.register(ServicesPlugin, { telegramLogin });
-  await fastify.register(MonitoringPlugin);
 
   await fastify.register(V1Routes, { prefix: '/v1' });
 
+  if (jobs) {
+    // Once a minute: weekly series get their next match when one starts
+    let timer: NodeJS.Timeout | undefined;
+    fastify.addHook('onReady', async () => {
+      timer = setInterval(() => {
+        fastify.services.events
+          .createDueRepeats()
+          .catch((err: unknown) =>
+            fastify.log.error({ err }, 'weekly matches failed'),
+          );
+      }, 60_000);
+    });
+    fastify.addHook('onClose', async () => clearInterval(timer));
+  }
+
   fastify.get('/metrics', fastify.metrics.routeHandler);
-  fastify.get('/health', fastify.healthChecker.routeHandler);
+  // Public through Caddy, and each call reads the database
+  fastify.get(
+    '/health',
+    { config: { rateLimit: { max: 120, timeWindow: '1 minute' } } },
+    fastify.healthChecker.routeHandler,
+  );
 
   return fastify;
 };

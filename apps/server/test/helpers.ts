@@ -23,6 +23,7 @@ export const setupApp = (
     ctx.app = await buildApp({
       fastify: { logger: false },
       telegram,
+      jobs: false,
       ...options,
       env: {
         PORT: 0,

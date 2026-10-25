@@ -34,6 +34,7 @@ export const player = (overrides: Partial<Player> = {}): Player => ({
   userId: 'u2',
   date: '2026-11-03',
   waitlisted: false,
+  paid: false,
   ...overrides,
 });
 

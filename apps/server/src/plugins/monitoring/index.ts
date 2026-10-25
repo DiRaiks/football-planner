@@ -57,13 +57,30 @@ const monitoringPlugin: FastifyPluginAsync = async (fastify) => {
     },
   });
 
+  // Always 200 while the process runs: a Telegram outage should not restart the
+  // container; the status says what is wrong
   fastify.decorate('healthChecker', {
     routeHandler: async (_request, reply) => {
       const dbState =
         fastify?.mongoose?.connection?.readyState === 1
           ? 'connected'
           : 'disconnected';
-      reply.send({ status: 'ok', dbState });
+      // Without BOT_TOKEN there is no bot to check
+      const report = fastify.hasDecorator('tgHealth')
+        ? await fastify.tgHealth.check()
+        : null;
+      // The route is public: Telegram's error text and the webhook host stay in the logs
+      const telegram = report && {
+        ...report,
+        webhook: report.webhook && {
+          set: report.webhook.set,
+          pendingUpdates: report.webhook.pendingUpdates,
+          lastErrorAt: report.webhook.lastErrorAt,
+        },
+      };
+      const degraded =
+        dbState !== 'connected' || (report !== null && !report.ok);
+      reply.send({ status: degraded ? 'degraded' : 'ok', dbState, telegram });
     },
   });
 };

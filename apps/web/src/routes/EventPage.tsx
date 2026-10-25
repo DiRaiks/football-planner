@@ -11,10 +11,11 @@ import {
 import { useUser } from '@/features/auth/auth';
 import { EventUnavailable } from '@/features/events/EventUnavailable';
 import { Scoreboard } from '@/features/events/Scoreboard';
+import { Teams } from '@/features/events/Teams';
 import { useDeleteEvent, useEvent } from '@/features/events/api';
 import { JoinPanel } from '@/features/players/JoinPanel';
 import { Roster } from '@/features/players/Roster';
-import { countPeople, usePlayers } from '@/features/players/api';
+import { countPeople, usePlayers, useSetPaid } from '@/features/players/api';
 import { errorMessage } from '@/lib/api';
 import { todayIso } from '@/lib/format';
 
@@ -25,6 +26,7 @@ export function EventPage() {
   const event = useEvent(eventId);
   const players = usePlayers(eventId);
   const remove = useDeleteEvent(eventId);
+  const setPaid = useSetPaid(eventId);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   // An error first: the players may still be loading when the match is already gone
@@ -44,6 +46,7 @@ export function EventPage() {
   const count = countPeople(players.data, event.data.maximum ?? 0);
   const canManage = event.data.creatorId === user._id || user.role === 'admin';
   const isPast = event.data.date < todayIso();
+  const price = event.data.price ?? 0;
 
   return (
     <div className="mx-auto grid max-w-4xl gap-6">
@@ -87,7 +90,22 @@ export function EventPage() {
             players={players.data}
             myUserId={user._id}
             maximum={event.data.maximum ?? 0}
+            payments={
+              price > 0
+                ? {
+                    price,
+                    ...(canManage && {
+                      onToggle: (playerId, paid) =>
+                        setPaid.mutate({ playerId, paid }),
+                    }),
+                  }
+                : undefined
+            }
           />
+          {setPaid.error && (
+            <ErrorNote>{errorMessage(setPaid.error)}</ErrorNote>
+          )}
+          <Teams key={eventId} event={event.data} canManage={canManage} />
         </section>
       </div>
 

@@ -17,7 +17,11 @@ const register = async (page: Page, name = 'Ильдар Сафин') => {
 const unique = (name: string) =>
   `${name} ${Math.random().toString(36).slice(2, 7)}`;
 
-const createMatch = async (page: Page, name: string) => {
+const createMatch = async (
+  page: Page,
+  name: string,
+  more?: () => Promise<void>,
+) => {
   await page.goto('/events/new');
   await page.getByLabel('Название').fill(name);
   await page.getByLabel('Место').fill('Стадион «Динамо», поле 2');
@@ -25,6 +29,7 @@ const createMatch = async (page: Page, name: string) => {
   const day = new Date(Date.now() + 7 * 86_400_000).toISOString().slice(0, 10);
   await page.getByLabel('Дата').fill(day);
   await page.getByLabel('Время').fill('20:00');
+  await more?.();
   await page.getByRole('button', { name: 'Создать матч' }).click();
   await expect(page.getByRole('heading', { name })).toBeVisible();
 };
@@ -58,6 +63,48 @@ test('a player signs up for a match and leaves it', async ({ page }) => {
   await page.goto('/events');
   await page.getByRole('heading', { name: match }).click();
   await expect(page).toHaveURL(/\/events\/[a-f0-9]{24}$/);
+});
+
+test('the organiser runs a weekly paid match: payments and teams', async ({
+  page,
+}) => {
+  await register(page);
+  await createMatch(page, unique('Пятничный футбол'), async () => {
+    await page.getByRole('radio', { name: 'Каждую неделю' }).click();
+    await page.getByLabel('Цена с человека, ₽').fill('300');
+  });
+  const board = page.getByRole('region', { name: 'Табло матча' });
+  await expect(board).toContainText('300 ₽ с человека');
+  await expect(board).toContainText('каждую неделю');
+
+  await page
+    .getByRole('region', { name: 'Запись на матч' })
+    .getByRole('button', { name: 'Иду' })
+    .click();
+  await page.getByRole('button', { name: 'Привести друга' }).click();
+  await page.getByLabel('Имя друга').fill('Артём');
+  await page.getByRole('button', { name: 'Добавить' }).click();
+
+  const roster = page.getByRole('region', { name: 'Состав' });
+  await expect(roster).toContainText('Собрано 0 ₽ из 600 ₽');
+  await roster
+    .getByRole('button', { name: 'Ильдар Сафин: не оплатил, изменить' })
+    .click();
+  await expect(roster).toContainText('Собрано 600 ₽ из 600 ₽');
+
+  await page.getByRole('button', { name: 'Разбить на команды' }).click();
+  const teams = page.getByRole('region', { name: 'Команды' });
+  await expect(teams).toContainText('Команда 2');
+  await expect(teams).toContainText('Артём (от Ильдар Сафин)');
+
+  // Survives a reload: the payment and the teams are on the server
+  await page.reload();
+  await expect(page.getByRole('region', { name: 'Состав' })).toContainText(
+    'Собрано 600 ₽ из 600 ₽',
+  );
+  await expect(page.getByRole('region', { name: 'Команды' })).toContainText(
+    'Команда 1',
+  );
 });
 
 test('installs as an app and shows the match list offline', async ({
@@ -125,7 +172,20 @@ test('key screens have no accessibility violations', async ({ page }) => {
   await check();
   await register(page, 'Тимур Ахмедов');
   await check();
-  await createMatch(page, unique('Субботняя игра'));
+  await createMatch(page, unique('Субботняя игра'), async () => {
+    await page.getByLabel('Цена с человека, ₽').fill('250');
+  });
+  await page
+    .getByRole('region', { name: 'Запись на матч' })
+    .getByRole('button', { name: 'Иду' })
+    .click();
+  await expect(page.getByText('Собрано 0 ₽ из 250 ₽')).toBeVisible();
+  await check();
+  await page.goto('/stats');
+  await expect(
+    page.getByRole('heading', { name: 'Посещаемость' }),
+  ).toBeVisible();
+  await check();
   await page.goto('/events');
   await expect(page.getByRole('heading', { name: 'Матчи' })).toBeVisible();
   await check();

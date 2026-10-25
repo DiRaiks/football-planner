@@ -11,6 +11,16 @@ export interface EventEntity {
   minimum: number;
   /** Places on the pitch; 0 means no limit */
   maximum: number;
+  /** weekly: the next match is created a week later when this one starts */
+  repeat: 'none' | 'weekly';
+  /** What each person pays for the pitch, whole roubles; 0 means free */
+  price: number;
+  /** Teams split by the organiser, names per team */
+  teams?: string[][];
+  /** Set once the next match of a weekly series exists */
+  nextCreated?: boolean;
+  /** The weekly match this one follows */
+  repeatOf?: string;
   playersAmount: number;
   eventName: string;
   creatorId: string;
@@ -37,6 +47,12 @@ const EventSchema = new Schema<EventEntity>(
     startsAt: { type: Date, required: false, index: true },
     minimum: { type: Number, required: true },
     maximum: { type: Number, default: 0 },
+    repeat: { type: String, enum: ['none', 'weekly'], default: 'none' },
+    price: { type: Number, default: 0 },
+    teams: { type: [[String]], default: undefined },
+    nextCreated: { type: Boolean },
+    // Unique: each weekly match has at most one next match
+    repeatOf: { type: String, unique: true, sparse: true },
     playersAmount: { type: Number, required: true },
     eventName: { type: String, required: true },
     creatorId: { type: String, required: true },
@@ -65,6 +81,18 @@ const EventSchema = new Schema<EventEntity>(
   { timestamps: true },
 );
 
+// Weekly matches waiting for their next one, looked up every minute
+EventSchema.index(
+  { startsAt: 1 },
+  {
+    name: 'weekly_due',
+    partialFilterExpression: {
+      repeat: 'weekly',
+      nextCreated: { $exists: false },
+    },
+  },
+);
+
 export const EventModel = model<EventEntity>('Event', EventSchema);
 
 const timestamps = (doc: { get: (path: string) => unknown }) => {
@@ -85,6 +113,9 @@ export const toEventDto = (event: EventDocument): Event => ({
   ...(event.startsAt && { startsAt: event.startsAt.toISOString() }),
   minimum: event.minimum,
   maximum: event.maximum ?? 0,
+  repeat: event.repeat ?? 'none',
+  price: event.price ?? 0,
+  ...(event.teams?.length && { teams: event.teams.map((team) => [...team]) }),
   playersAmount: event.playersAmount,
   creatorId: event.creatorId,
   ...(event.location && {

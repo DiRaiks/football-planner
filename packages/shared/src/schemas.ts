@@ -116,6 +116,12 @@ const EventFields = {
   minimum: Type.Integer({ minimum: 0, maximum: 100 }),
   // Places on the pitch; later sure sign-ups wait in line. 0: no limit
   maximum: Type.Optional(Type.Integer({ minimum: 0, maximum: 100 })),
+  // weekly: when the match starts, the next one a week later is created
+  repeat: Type.Optional(
+    Type.Union([Type.Literal('none'), Type.Literal('weekly')]),
+  ),
+  // What each person pays for the pitch, in whole roubles. 0: free
+  price: Type.Optional(Type.Integer({ minimum: 0, maximum: 100_000 })),
   // Coordinates of the venue, used for the weather forecast
   location: Type.Optional(Location),
 };
@@ -142,6 +148,8 @@ export const Event = Type.Object({
   creatorId: Type.String(),
   // The start as an instant; missing on events not yet migrated (scripts/migrate-dates.mjs)
   startsAt: Type.Optional(Type.String({ format: 'date-time' })),
+  // Teams split by the organiser: names per team
+  teams: Type.Optional(Type.Array(Type.Array(Type.String()))),
   createdAt: Type.Optional(Type.String({ format: 'date-time' })),
   updatedAt: Type.Optional(Type.String({ format: 'date-time' })),
 });
@@ -179,6 +187,32 @@ export const Player = Type.Object({
   date: Type.String(),
   // Sure, but signed up after the places ran out
   waitlisted: Type.Boolean(),
+  // Paid for the pitch, for themselves and the sure friends they bring
+  paid: Type.Boolean(),
+});
+
+export const SetPaidBody = Type.Object(
+  { paid: Type.Boolean() },
+  { additionalProperties: false },
+);
+
+export const SplitTeamsBody = Type.Object(
+  { count: Type.Optional(Type.Integer({ minimum: 2, maximum: 4 })) },
+  { additionalProperties: false },
+);
+
+export const AttendanceQuery = Type.Object(
+  { days: Type.Optional(Type.Integer({ minimum: 7, maximum: 365 })) },
+  { additionalProperties: false },
+);
+
+export const AttendanceRow = Type.Object({
+  userId: Type.String(),
+  name: Type.String(),
+  // Matches played: sure and with a place
+  played: Type.Integer(),
+  maybe: Type.Integer(),
+  lastPlayed: Type.Union([Type.String(), Type.Null()]),
 });
 
 export const PlayersCount = Type.Object({
@@ -241,5 +275,9 @@ export type UpdatePlayerBody = Static<typeof UpdatePlayerBody>;
 export type Player = Static<typeof Player>;
 export type PlayersCount = Static<typeof PlayersCount>;
 export type PlayersChange = Static<typeof PlayersChange>;
+export type SetPaidBody = Static<typeof SetPaidBody>;
+export type SplitTeamsBody = Static<typeof SplitTeamsBody>;
+export type AttendanceQuery = Static<typeof AttendanceQuery>;
+export type AttendanceRow = Static<typeof AttendanceRow>;
 export type DailyForecast = Static<typeof DailyForecast>;
 export type EventWeather = Static<typeof EventWeather>;

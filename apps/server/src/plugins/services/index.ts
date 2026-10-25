@@ -11,6 +11,7 @@ import {
   TelegramOidc,
   type TelegramOidcOptions,
 } from '../../modules/users/telegram-login.js';
+import { StatsService } from '../../modules/stats/stats.service.js';
 import { WeatherService } from '../../modules/weather/weather.service.js';
 
 export type Services = {
@@ -18,6 +19,7 @@ export type Services = {
   players: PlayersService;
   users: UsersService;
   telegramAccounts: TelegramAccounts;
+  stats: StatsService;
   /** "Log in with Telegram" on the site; null until configured */
   telegramLogin: TelegramOidc | null;
   weather: WeatherService;
@@ -58,6 +60,7 @@ const servicesPlugin: FastifyPluginAsync<ServicesOptions> = async (
     players,
     users: new UsersService(),
     telegramAccounts: new TelegramAccounts(players),
+    stats: new StatsService(),
     telegramLogin:
       clientId && clientSecret && publicUrl
         ? new TelegramOidc({

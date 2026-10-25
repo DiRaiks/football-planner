@@ -110,6 +110,7 @@ const MESSAGES: Record<string, string> = {
   TELEGRAM_AUTH_FAILED: 'Telegram не подтвердил вход. Попробуйте ещё раз',
   TELEGRAM_UNAVAILABLE: 'Telegram не отвечает, попробуйте позже',
   TELEGRAM_ONLY: 'Аккаунт создан из Telegram: без него войти будет нельзя',
+  NOT_ENOUGH_PLAYERS: 'Для команд нужно больше игроков в составе',
   VALIDATION_ERROR: 'Проверьте заполнение полей',
   INVALID_PASSWORD: 'Текущий пароль указан неверно',
   WEATHER_UNAVAILABLE: 'Прогноз сейчас недоступен',

@@ -5,6 +5,7 @@ import {
   html,
   mongoStore,
   tgBot,
+  tgHealth,
   tgNotifier,
   tgSubscriptions,
   type SentMessage,
@@ -34,6 +35,7 @@ import {
   minimumReachedMessage,
   playersChangeMessage,
   squadChangedMessage,
+  teamsMessage,
   reminderMessage,
   matchLink,
   rsvpKeyboard,
@@ -64,6 +66,8 @@ export type TelegramNotifier = {
     eventId: string,
     moves: { promoted: RosterPerson[]; demoted: RosterPerson[] },
   ) => void;
+  /** The organiser split the squad into teams */
+  teamsSplit: (eventId: string) => void;
   /** Sends the reminders due at `now`; resolves with how many went out */
   sendDueReminders: (now?: Date) => Promise<number>;
   /** The bot's username, for t.me links; null while the bot is off or not started */
@@ -101,6 +105,7 @@ const disabledNotifier: TelegramNotifier = {
   eventCancelled: noop,
   playersChanged: noop,
   squadChanged: noop,
+  teamsSplit: noop,
   sendDueReminders: async () => 0,
   botUsername: () => null,
 };
@@ -161,6 +166,14 @@ const telegramPlugin: FastifyPluginAsync<TelegramPluginOptions> = async (
     topics: [TOPIC],
   });
   await fastify.register(tgNotifier);
+  // Bot metrics (tg_*) go to the app's /metrics, the bot's state to its /health
+  await fastify.register(tgHealth, {
+    registry: fastify.metrics.registry,
+    healthPath: false,
+    metricsPath: false,
+    // Well inside the 5 s of the Docker health check (Dockerfile)
+    timeoutMs: 2000,
+  });
 
   const { notifier, log } = fastify;
   const publicUrl = PUBLIC_URL?.replace(/\/+$/, '');
@@ -493,6 +506,16 @@ const telegramPlugin: FastifyPluginAsync<TelegramPluginOptions> = async (
         }
       }),
 
+    teamsSplit: (eventId) =>
+      void serial(eventId, async () => {
+        const state = await load(eventId);
+        if (!state?.event.teams?.length) return;
+        await notifier.notify(
+          TOPIC,
+          teamsMessage(toNotifyEvent(state.event), state.event.teams),
+        );
+      }),
+
     sendDueReminders,
     botUsername: () =>
       fastify.tg.bot.isInited() ? fastify.tg.bot.botInfo.username : null,
@@ -504,5 +527,5 @@ const telegramPlugin: FastifyPluginAsync<TelegramPluginOptions> = async (
 export default fp(telegramPlugin, {
   fastify: '5.x',
   name: 'telegram',
-  dependencies: ['database'],
+  dependencies: ['database', 'monitoring'],
 });

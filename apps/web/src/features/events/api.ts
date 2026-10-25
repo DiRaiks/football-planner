@@ -57,6 +57,15 @@ export const useUpdateEvent = (id: string) => {
   });
 };
 
+export const useSplitTeams = (id: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (count: number) =>
+      api<Event>('POST', `/events/${id}/teams`, { count }),
+    onSuccess: (event) => queryClient.setQueryData(eventKey(id), event),
+  });
+};
+
 export const useDeleteEvent = (id: string) => {
   const queryClient = useQueryClient();
   return useMutation({

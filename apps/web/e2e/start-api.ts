@@ -10,6 +10,7 @@ const port = Number(process.env.E2E_API_PORT ?? 3101);
 const mongo = await MongoMemoryServer.create();
 const app = await buildApp({
   fastify: { logger: false },
+  jobs: false,
   env: {
     PORT: port,
     MONGO_URI: mongo.getUri(),
