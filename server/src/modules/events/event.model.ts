@@ -1,4 +1,4 @@
-import { Schema, model } from "mongoose";
+import { Schema, model, type HydratedDocument } from 'mongoose';
 
 export interface EventEntity {
   place: string;
@@ -9,6 +9,8 @@ export interface EventEntity {
   eventName: string;
   creatorId: string;
 }
+
+export type EventDocument = HydratedDocument<EventEntity>;
 
 const EventSchema = new Schema<EventEntity>(
   {
@@ -22,4 +24,5 @@ const EventSchema = new Schema<EventEntity>(
   },
   { timestamps: true },
 );
-export const EventModel = model<EventEntity>("Event", EventSchema);
+
+export const EventModel = model<EventEntity>('Event', EventSchema);

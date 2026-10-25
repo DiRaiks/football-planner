@@ -1,35 +1,36 @@
-import fp from "fastify-plugin";
-import { FastifyPluginAsync } from "fastify";
+import fp from 'fastify-plugin';
+import { FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify';
 
-declare module "fastify" {
+type RouteHandler = (
+  request: FastifyRequest,
+  reply: FastifyReply,
+) => Promise<void>;
+
+declare module 'fastify' {
   interface FastifyInstance {
-    metrics: {
-      routeHandler: (req: any, reply: any) => Promise<void>;
-    };
-    healthChecker: {
-      routeHandler: (req: any, reply: any) => Promise<void>;
-    };
+    metrics: { routeHandler: RouteHandler };
+    healthChecker: { routeHandler: RouteHandler };
   }
 }
 
 const monitoringPlugin: FastifyPluginAsync = async (fastify) => {
-  fastify.decorate("metrics", {
-    routeHandler: async (_request: any, reply: any) => {
+  fastify.decorate('metrics', {
+    routeHandler: async (_request, reply) => {
       const memoryUsage = process.memoryUsage();
       const uptime = process.uptime();
       reply.send({ uptime, memoryUsage });
     },
   });
 
-  fastify.decorate("healthChecker", {
-    routeHandler: async (_request: any, reply: any) => {
+  fastify.decorate('healthChecker', {
+    routeHandler: async (_request, reply) => {
       const dbState =
         fastify?.mongoose?.connection?.readyState === 1
-          ? "connected"
-          : "disconnected";
-      reply.send({ status: "ok", dbState });
+          ? 'connected'
+          : 'disconnected';
+      reply.send({ status: 'ok', dbState });
     },
   });
 };
 
-export default fp(monitoringPlugin, "5.x");
+export default fp(monitoringPlugin, { fastify: '5.x', name: 'monitoring' });

@@ -1,28 +1,50 @@
-import { Schema, model, type Document } from "mongoose";
+import { Schema, model, type HydratedDocument } from 'mongoose';
 
-export class CreateUserDTO {
-  readonly email!: string;
-  readonly name!: string;
-  readonly hash!: string;
-  readonly salt!: string;
+export type UserRole = 'user' | 'admin';
+
+export interface User {
+  email: string;
+  name: string;
+  hash: string;
+  // Only set for accounts that still use the legacy PBKDF2 hash
+  salt?: string | null;
+  role: UserRole;
+  // Bumped to revoke all previously issued tokens (e.g. on password change)
+  tokenVersion: number;
 }
 
-export interface User extends Document {
-  readonly _id: string;
-  readonly email: string;
-  readonly name: string;
-  readonly hash: string;
-  readonly salt: string;
-}
+export type UserDocument = HydratedDocument<User>;
 
 const UserSchema = new Schema<User>(
   {
-    email: { type: String, required: true },
-    name: { type: String, required: true },
-    hash: { type: String, required: true },
-    salt: { type: String, required: true },
+    email: { type: String, required: true, trim: true, lowercase: true },
+    name: { type: String, required: true, trim: true },
+    // Never returned from queries unless explicitly requested with `.select('+hash +salt')`
+    hash: { type: String, required: true, select: false },
+    salt: { type: String, select: false },
+    role: { type: String, enum: ['user', 'admin'], default: 'user' },
+    tokenVersion: { type: Number, default: 0 },
   },
   { timestamps: true },
 );
 
-export const UserModel = model<User>("User", UserSchema);
+UserSchema.index(
+  { email: 1 },
+  { unique: true, collation: { locale: 'en', strength: 2 } },
+);
+
+export const UserModel = model<User>('User', UserSchema);
+
+// Case-insensitive lookup that also matches legacy accounts stored with mixed-case emails
+export const findUserByEmail = (email: string) =>
+  UserModel.findOne({ email: email.trim() }).collation({
+    locale: 'en',
+    strength: 2,
+  });
+
+export const toPublicUser = (user: UserDocument) => ({
+  _id: user._id.toString(),
+  email: user.email,
+  name: user.name,
+  role: user.role,
+});

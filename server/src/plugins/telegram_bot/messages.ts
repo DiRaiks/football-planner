@@ -1,13 +1,14 @@
 import { Telegraf } from 'telegraf';
+import { Logger } from 'winston';
 import { ChatModel } from './chat.model.js';
 
-type Player = {
+export type NotifyPlayer = {
   name: string;
   friends: { name: string }[];
   status: boolean;
 };
 
-type Event = {
+export type NotifyEvent = {
   date: string;
   eventName: string;
   playersAmount: number;
@@ -16,120 +17,85 @@ type Event = {
   _id: string;
 };
 
-export const sendMessageAddPlayer = async <P extends Player, E extends Event>(
-  player: P,
-  event: E,
-  exactly: number,
-  maybe: number,
-  bot: Telegraf,
+export type PlayersCount = { exactly: number; maybe: number };
+
+type Context = { bot: Telegraf; logger: Logger; publicUrl?: string };
+
+const broadcast = async (
+  { bot, logger }: Context,
+  message: string,
+  { pin = false } = {},
 ) => {
   const chats = await ChatModel.find();
 
-  let message = `Игрок ${player.name} пойдёт на матч "${event.eventName}",`;
-  if (player.friends.length) {
-    const friends = player.friends.map((friend) => friend.name);
-    message += `\nДрузья: ${friends.toString()}`;
-  }
-
-  message +=
-    `\nДата: ${event.date},` +
-    `\nТекущее количество игроков: ${event.playersAmount} (точно: ${exactly}, возможно: ${maybe})`;
-
-  if (!player.status) {
-    message += '\nНо это не точно.';
-  }
-
   for (const chat of chats) {
     try {
-      await bot.telegram.sendMessage(chat.chatId, message);
+      const sent = await bot.telegram.sendMessage(chat.chatId, message);
+      if (pin) await bot.telegram.pinChatMessage(chat.chatId, sent.message_id);
     } catch (error) {
-      console.error(error);
+      logger.error(
+        `Failed to send message to chat ${chat.chatId}: ${(error as Error).message}`,
+      );
     }
   }
 };
 
-export const sendMessageRemovePlayer = async <
-  P extends Player,
-  E extends Event,
->(
-  player: P,
-  event: E,
-  exactly: number,
-  maybe: number,
-  bot: Telegraf,
+const playerMessage = (
+  action: string,
+  player: NotifyPlayer,
+  event: NotifyEvent,
+  { exactly, maybe }: PlayersCount,
 ) => {
-  const chats = await ChatModel.find();
-
-  let message = `Игрок ${player.name} не пойдет на матч "${event.eventName}",`;
+  let message = `Игрок ${player.name} ${action} "${event.eventName}",`;
   if (player.friends.length) {
-    const friends = player.friends.map((friend) => friend.name);
-    message += `\nДрузья: ${friends.toString()}`;
+    message += `\nДрузья: ${player.friends.map((friend) => friend.name).toString()}`;
   }
-  message +=
-    `\nДата: ${event.date},` +
-    `\nТекущее количество игроков: ${event.playersAmount} (точно: ${exactly}, возможно: ${maybe})`;
 
-  for (const chat of chats) {
-    try {
-      await bot.telegram.sendMessage(chat.chatId, message);
-    } catch (error) {
-      console.error(error);
-    }
-  }
+  return (
+    message +
+    `\nДата: ${event.date},` +
+    `\nТекущее количество игроков: ${event.playersAmount} (точно: ${exactly}, возможно: ${maybe})`
+  );
 };
 
-export const sendMessageUpdatePlayer = async <
-  P extends Player,
-  E extends Event,
->(
-  player: P,
-  event: E,
-  exactly: number,
-  maybe: number,
-  bot: Telegraf,
+export const sendMessageAddPlayer = (
+  ctx: Context,
+  player: NotifyPlayer,
+  event: NotifyEvent,
+  count: PlayersCount,
 ) => {
-  const chats = await ChatModel.find();
+  let message = playerMessage('пойдёт на матч', player, event, count);
+  if (!player.status) message += '\nНо это не точно.';
 
-  let message = `Игрок ${player.name} изменил свою запись на матч "${event.eventName}",`;
-  if (player.friends.length) {
-    const friends = player.friends.map((friend) => friend.name);
-    message += `\nДрузья: ${friends.toString()}`;
-  }
-  message +=
-    `\nДата: ${event.date},` +
-    `\nТекущее количество игроков: ${event.playersAmount} (точно: ${exactly}, возможно: ${maybe})`;
-
-  for (const chat of chats) {
-    try {
-      await bot.telegram.sendMessage(chat.chatId, message);
-    } catch (error) {
-      console.error(error);
-    }
-  }
+  return broadcast(ctx, message);
 };
 
-export const sendMessageAddEvent = async <E extends Event>(
-  event: E,
-  bot: Telegraf,
-) => {
-  const chats = await ChatModel.find();
+export const sendMessageRemovePlayer = (
+  ctx: Context,
+  player: NotifyPlayer,
+  event: NotifyEvent,
+  count: PlayersCount,
+) => broadcast(ctx, playerMessage('не пойдет на матч', player, event, count));
 
-  const message =
+export const sendMessageUpdatePlayer = (
+  ctx: Context,
+  player: NotifyPlayer,
+  event: NotifyEvent,
+  count: PlayersCount,
+) =>
+  broadcast(
+    ctx,
+    playerMessage('изменил свою запись на матч', player, event, count),
+  );
+
+export const sendMessageAddEvent = (ctx: Context, event: NotifyEvent) => {
+  let message =
     `Создан матч "${event.eventName}",` +
     `\nДата: ${event.date},` +
     `\nВремя: ${event.time},` +
-    `\nМесто: ${event.place},` +
-    `\nЗапись: https://football-planner.ru/events/${event._id},`;
+    `\nМесто: ${event.place},`;
+  if (ctx.publicUrl)
+    message += `\nЗапись: ${ctx.publicUrl}/events/${event._id}`;
 
-  for (const chat of chats) {
-    try {
-      const currentMessage = await bot.telegram.sendMessage(
-        chat.chatId,
-        message,
-      );
-      await bot.telegram.pinChatMessage(chat.chatId, currentMessage.message_id);
-    } catch (error) {
-      console.error(error);
-    }
-  }
+  return broadcast(ctx, message, { pin: true });
 };

@@ -6,10 +6,10 @@
   "private": true,
   "scripts": {
     "test": "npm --workspace server test",
-    "lint": "eslint . --ext .js,.ts,.tsx",
+    "lint": "eslint .",
     "format": "prettier . --check",
     "commitlint": "commitlint --from=HEAD~1",
-    "prepare": "husky install"
+    "prepare": "husky"
   },
   "repository": {
     "type": "git",
@@ -22,28 +22,30 @@
   },
   "homepage": "https://github.com/DiRaiks/football-planner#readme",
   "workspaces": [
-    "./server",
-    "./client"
+    "./server"
   ],
   "devDependencies": {
-    "@commitlint/cli": "^18.4.2",
-    "@commitlint/config-conventional": "^18.4.2",
-    "@typescript-eslint/eslint-plugin": "^8.5.0",
-    "@typescript-eslint/parser": "^8.5.0",
-    "eslint": "^8.57.0",
-    "eslint-config-prettier": "^10.1.5",
-    "eslint-plugin-react": "^7.35.2",
-    "eslint-plugin-react-hooks": "^4.6.2",
-    "husky": "^9.0.11",
-    "lint-staged": "^15.2.10",
-    "prettier": "^3.3.3"
+    "@commitlint/cli": "^21.2.4",
+    "@commitlint/config-conventional": "^21.2.4",
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.13.0",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.13.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.6.0",
+    "prettier": "^3.9.10",
+    "typescript-eslint": "^8.72.0"
   },
   "lint-staged": {
-    "*.{js,ts,tsx}": [
+    "*.{js,mjs,cjs,ts}": [
       "eslint --max-warnings 0 --fix",
       "prettier --write"
     ],
-    "*.{json,md}": "prettier --write"
+    "*.{json,md,yml,yaml}": "prettier --write"
   },
-  "packageManager": "npm@11.4.0"
+  "packageManager": "npm@11.4.0",
+  "engines": {
+    "node": ">=24"
+  },
+  "type": "module"
 }

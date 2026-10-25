@@ -1,111 +1,45 @@
-import Fastify from 'fastify';
-import cors from '@fastify/cors';
 import fs from 'fs';
 import path from 'path';
-import fastifyEnv from '@fastify/env';
 
-import { ENV_OPTIONS } from './env.js';
-import {
-  TelegramBotPlugin,
-  LoggerPlugin,
-  DatabasePlugin,
-  AuthPlugin,
-  MonitoringPlugin,
-} from './plugins/index.js';
-import EventsRoutes from './modules/events/routes.js';
-import PlayersRoutes from './modules/players/routes.js';
-import UsersRoutes from './modules/users/routes.js';
-import AuthRoutes from './modules/auth/routes.js';
-import WeatherRoutes from './modules/weather/routes.js';
+import { buildApp } from './app.js';
+import { parseTrustProxy } from './env.js';
 
-const httpsKeyPath = process.env.HTTPS_PRIVKEY_PATH
-  ? path.resolve(process.env.HTTPS_PRIVKEY_PATH)
-  : undefined;
-const httpsCertPath = process.env.HTTPS_FULLCHAIN_PATH
-  ? path.resolve(process.env.HTTPS_FULLCHAIN_PATH)
-  : undefined;
+const readHttpsOptions = () => {
+  const { HTTPS_PRIVKEY_PATH, HTTPS_FULLCHAIN_PATH } = process.env;
+  if (!HTTPS_PRIVKEY_PATH || !HTTPS_FULLCHAIN_PATH) return {};
 
-console.log(process.env.HTTPS_PRIVKEY_PATH, process.env.HTTPS_FULLCHAIN_PATH);
+  const keyPath = path.resolve(HTTPS_PRIVKEY_PATH);
+  const certPath = path.resolve(HTTPS_FULLCHAIN_PATH);
+  if (!fs.existsSync(keyPath) || !fs.existsSync(certPath)) return {};
 
-const httpsOptions =
-  httpsKeyPath &&
-  httpsCertPath &&
-  fs.existsSync(httpsKeyPath) &&
-  fs.existsSync(httpsCertPath)
-    ? {
-        https: {
-          key: fs.readFileSync(httpsKeyPath),
-          cert: fs.readFileSync(httpsCertPath),
-        },
-      }
-    : {};
-
-const fastify = Fastify({
-  logger: true,
-  ...httpsOptions,
-  ajv: {
-    customOptions: {
-      allowUnionTypes: true,
-    },
-  },
-});
-
-// TODO: Remove this hook after fixing the issue with empty body
-fastify.addHook('preParsing', (request, _reply, _payload, done) => {
-  if (
-    ['POST', 'DELETE'].includes(request.method) &&
-    request.headers['content-type'] == 'application/json; charset=utf-8' &&
-    !request.headers['content-length']
-  ) {
-    delete request.headers['content-type'];
-  }
-
-  done();
-});
-
-const fastifyInit = async () => {
-  await Promise.all([
-    fastify.register(cors, {
-      origin: '*',
-      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization'],
-      credentials: true,
-    }),
-    fastify.register(fastifyEnv, ENV_OPTIONS),
-    fastify.register(LoggerPlugin),
-    fastify.register(DatabasePlugin),
-    fastify.register(TelegramBotPlugin),
-    fastify.register(AuthPlugin),
-    fastify.register(MonitoringPlugin),
-  ]);
-
-  fastify.register(EventsRoutes, { prefix: '/events' });
-  fastify.register(PlayersRoutes, { prefix: '/players' });
-  fastify.register(UsersRoutes, { prefix: '/users' });
-  fastify.register(AuthRoutes, { prefix: '/auth' });
-  fastify.register(WeatherRoutes, { prefix: '/weather' });
-
-  await fastify.register(async (instance) => {
-    instance.get('/metrics', instance.metrics.routeHandler);
-    instance.get('/health', instance.healthChecker.routeHandler);
-  });
+  return {
+    https: { key: fs.readFileSync(keyPath), cert: fs.readFileSync(certPath) },
+  };
 };
 
 const start = async () => {
-  try {
-    await fastifyInit();
+  const fastify = await buildApp({
+    fastify: {
+      ...readHttpsOptions(),
+      trustProxy: parseTrustProxy(process.env.TRUST_PROXY),
+    },
+  });
 
-    const { PORT } = fastify.config;
-    await fastify.listen({ port: PORT, host: '0.0.0.0' });
+  process.on('unhandledRejection', (reason) => {
+    fastify.log.error({ reason }, 'unhandledRejection');
+  });
 
-    fastify.log.info(`server listening on ${PORT}`);
-  } catch (err) {
-    fastify.log.error(err);
-    process.exit(1);
+  for (const signal of ['SIGINT', 'SIGTERM'] as const) {
+    process.once(signal, () => {
+      void fastify.close().then(() => process.exit(0));
+    });
   }
-};
-process.on('unhandledRejection', function (reason) {
-  fastify.logger.error('unhandledRejection', reason);
-});
 
-void start();
+  const { PORT } = fastify.config;
+  await fastify.listen({ port: PORT, host: '0.0.0.0' });
+};
+
+start().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

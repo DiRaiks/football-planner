@@ -1,34 +1,42 @@
-import mongoose from "mongoose";
-import { FastifyPluginAsync } from "fastify";
-import fp from "fastify-plugin";
+import mongoose from 'mongoose';
+import { FastifyPluginAsync } from 'fastify';
+import fp from 'fastify-plugin';
 
-declare module "fastify" {
+declare module 'fastify' {
   interface FastifyInstance {
     mongoose: typeof mongoose;
   }
 }
 
 const databasePlugin: FastifyPluginAsync = async (fastify) => {
-  const { DATABASE_USER, DATABASE_PASSWORD, DATABASE_NAME } = fastify.config;
+  const { MONGO_URI } = fastify.config;
   const { logger } = fastify;
 
-  const uri = `mongodb+srv://${DATABASE_USER}:${DATABASE_PASSWORD}@cluster0-nuyru.mongodb.net/${DATABASE_NAME}?retryWrites=true&w=majority`;
+  // Fail fast: the API is useless without a database, so a connection error aborts startup
+  await mongoose.connect(MONGO_URI, { serverSelectionTimeoutMS: 5000 });
+  logger.info('Database connected');
 
-  try {
-    await mongoose.connect(uri, { serverSelectionTimeoutMS: 5000 });
-    logger.info("Database connected");
+  // Build indexes before serving requests; unique indexes back the duplicate checks.
+  // A failure (e.g. existing duplicates) is logged instead of aborting startup.
+  await Promise.all(
+    mongoose.modelNames().map((name) =>
+      mongoose
+        .model(name)
+        .init()
+        .catch((err: Error) =>
+          logger.error(`Index build failed for ${name}: ${err.message}`),
+        ),
+    ),
+  );
 
-    if (!fastify.mongoose) {
-      fastify.decorate("mongoose", mongoose);
-    }
-
-    fastify.addHook("onClose", async () => {
-      await mongoose.disconnect();
-      logger.info("Database disconnected");
-    });
-  } catch (err) {
-    logger.error(`Database connection error: ${(err as Error).message}`);
+  if (!fastify.mongoose) {
+    fastify.decorate('mongoose', mongoose);
   }
+
+  fastify.addHook('onClose', async () => {
+    await mongoose.disconnect();
+    logger.info('Database disconnected');
+  });
 };
 
-export default fp(databasePlugin, "5.x");
+export default fp(databasePlugin, { fastify: '5.x', name: 'database' });
