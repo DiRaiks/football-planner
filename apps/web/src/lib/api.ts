@@ -54,7 +54,11 @@ export async function api<T>(
   body?: unknown,
 ): Promise<T> {
   // Login and registration never send an old token, and their 401 is not a session expiry
-  const isPublic = path === '/auth/login' || path === '/auth/register';
+  const isPublic =
+    path === '/auth/login' ||
+    path === '/auth/register' ||
+    path.startsWith('/auth/telegram') ||
+    path === '/auth/providers';
   const token = isPublic ? null : tokenStorage.get();
   const response = await fetch(`${API_BASE}${path}`, {
     method,
@@ -103,6 +107,8 @@ const MESSAGES: Record<string, string> = {
   FORBIDDEN: 'Недостаточно прав',
   NOT_FOUND: 'Не найдено',
   TELEGRAM_DISABLED: 'Бот сейчас выключен',
+  TELEGRAM_AUTH_FAILED: 'Telegram не подтвердил вход. Попробуйте ещё раз',
+  TELEGRAM_UNAVAILABLE: 'Telegram не отвечает, попробуйте позже',
   TELEGRAM_ONLY: 'Аккаунт создан из Telegram: без него войти будет нельзя',
   VALIDATION_ERROR: 'Проверьте заполнение полей',
   INVALID_PASSWORD: 'Текущий пароль указан неверно',

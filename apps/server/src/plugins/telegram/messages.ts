@@ -231,7 +231,19 @@ export const eventChangedMessage = (event: NotifyEvent) =>
 export type RsvpAction = 'yes' | 'maybe' | 'no' | 'friend';
 
 /** Sign-up buttons under announcements and reminders, and a link to the match page */
-export const rsvpKeyboard = (event: NotifyEvent, publicUrl?: string) => {
+/**
+ * Where "Открыть" leads: the Mini App when it is set up (`startapp` carries the match),
+ * otherwise the site
+ */
+export const matchLink = (
+  eventId: string,
+  { publicUrl, appUrl }: { publicUrl?: string; appUrl?: string },
+) =>
+  appUrl
+    ? `${appUrl}?startapp=${eventId}`
+    : publicUrl && `${publicUrl}/events/${eventId}`;
+
+export const rsvpKeyboard = (event: NotifyEvent, openUrl?: string) => {
   const button = (text: string, action: RsvpAction) => ({
     text,
     callback_data: `rsvp:${event._id}:${action}`,
@@ -245,9 +257,7 @@ export const rsvpKeyboard = (event: NotifyEvent, publicUrl?: string) => {
       ],
       [
         button('➕ Друг', 'friend'),
-        ...(publicUrl
-          ? [{ text: '🔗 Открыть', url: `${publicUrl}/events/${event._id}` }]
-          : []),
+        ...(openUrl ? [{ text: '🔗 Открыть', url: openUrl }] : []),
       ],
     ],
   };

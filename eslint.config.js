@@ -27,5 +27,9 @@ export default tseslint.config(
     ...reactHooks.configs.flat['recommended-latest'],
     languageOptions: { globals: { ...globals.browser } },
   },
+  {
+    files: ['apps/web/public/sw.js'],
+    languageOptions: { globals: { ...globals.serviceworker } },
+  },
   prettier,
 );

@@ -30,6 +30,8 @@
 		Strict-Transport-Security "max-age=31536000; includeSubDomains"
 		X-Content-Type-Options nosniff
 		Referrer-Policy strict-origin-when-cross-origin
+		# Only Telegram Web may frame the site, to run it as a Mini App
+		Content-Security-Policy "frame-ancestors https://web.telegram.org"
 		-Server
 	}
 }

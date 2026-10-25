@@ -60,6 +60,31 @@ test('a player signs up for a match and leaves it', async ({ page }) => {
   await expect(page).toHaveURL(/\/events\/[a-f0-9]{24}$/);
 });
 
+test('installs as an app and shows the match list offline', async ({
+  page,
+  context,
+}) => {
+  const manifest = await page.request.get('/manifest.webmanifest');
+  expect(await manifest.json()).toMatchObject({
+    display: 'standalone',
+    start_url: '/events',
+  });
+
+  await register(page);
+  const match = unique('Офлайн-матч');
+  await createMatch(page, match);
+  await page.goto('/events');
+  await page.evaluate(() => navigator.serviceWorker.ready);
+  // Under the service worker now: the list is saved on the way
+  await page.reload();
+  await expect(page.getByRole('heading', { name: match })).toBeVisible();
+
+  await context.setOffline(true);
+  await page.reload();
+  await expect(page.getByRole('heading', { name: match })).toBeVisible();
+  await context.setOffline(false);
+});
+
 test('signing out returns to the login page and protects the app', async ({
   page,
 }) => {

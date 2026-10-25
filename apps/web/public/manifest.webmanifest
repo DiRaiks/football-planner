@@ -1,0 +1,21 @@
+{
+  "name": "Football Planner",
+  "short_name": "Футбол",
+  "description": "Запись на любительские футбольные матчи: кто идёт, сколько не хватает, какая будет погода.",
+  "lang": "ru",
+  "start_url": "/events",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f3f6f2",
+  "theme_color": "#123d2a",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    {
+      "src": "/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

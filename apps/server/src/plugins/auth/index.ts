@@ -25,7 +25,8 @@ declare module 'fastify' {
       request: FastifyRequest,
       reply: FastifyReply,
     ) => Promise<void>;
-    issueToken: (user: UserDocument) => string;
+    /** `expiresIn` shortens the session, e.g. for one opened from a Mini App */
+    issueToken: (user: UserDocument, expiresIn?: string) => string;
   }
   interface FastifyRequest {
     currentUser: UserDocument | null;
@@ -42,8 +43,11 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
 
   fastify.decorateRequest('currentUser', null);
 
-  fastify.decorate('issueToken', (user: UserDocument) =>
-    fastify.jwt.sign({ id: user._id.toString(), v: user.tokenVersion ?? 0 }),
+  fastify.decorate('issueToken', (user: UserDocument, expiresIn?: string) =>
+    fastify.jwt.sign(
+      { id: user._id.toString(), v: user.tokenVersion ?? 0 },
+      expiresIn ? { expiresIn } : {},
+    ),
   );
 
   fastify.decorate(

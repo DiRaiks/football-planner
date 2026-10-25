@@ -13,6 +13,9 @@ export type ENVS = {
   WEATHER_DEFAULT_LAT?: number;
   WEATHER_DEFAULT_LON?: number;
   PUBLIC_URL?: string;
+  TELEGRAM_LOGIN_CLIENT_ID?: string;
+  TELEGRAM_LOGIN_CLIENT_SECRET?: string;
+  TELEGRAM_APP_URL?: string;
   CORS_ORIGINS: string;
   TRUST_PROXY: string;
   AUTH_RATE_LIMIT_MAX: number;
@@ -65,6 +68,16 @@ const ENV_SCHEME = {
     WEATHER_DEFAULT_LON: { type: 'number', minimum: -180, maximum: 180 },
     // Public site URL used in links sent by the bot, e.g. https://football-planner.ru
     PUBLIC_URL: { type: 'string' },
+    // "Log in with Telegram" on the site: Client ID and Secret from @BotFather (Login
+    // Widget), with <PUBLIC_URL>/auth/telegram registered there as a redirect URI
+    TELEGRAM_LOGIN_CLIENT_ID: { type: 'string', pattern: '^[0-9]+$' },
+    TELEGRAM_LOGIN_CLIENT_SECRET: { type: 'string', minLength: 1 },
+    // Link that opens the site as a Mini App, e.g. https://t.me/<bot>/<app> or
+    // https://t.me/<bot> for the main Mini App; announcements open matches through it
+    TELEGRAM_APP_URL: {
+      type: 'string',
+      pattern: '^https://t\\.me/[A-Za-z0-9_/]+$',
+    },
     // Comma-separated list of allowed origins; empty means cross-origin requests are rejected
     CORS_ORIGINS: { type: 'string', default: '' },
     // Proxy hops (e.g. 1) or comma-separated proxy IPs/CIDRs; empty disables trusting X-Forwarded-For

@@ -7,6 +7,10 @@ import {
   TelegramAccounts,
   UsersService,
 } from '../../modules/users/users.service.js';
+import {
+  TelegramOidc,
+  type TelegramOidcOptions,
+} from '../../modules/users/telegram-login.js';
 import { WeatherService } from '../../modules/weather/weather.service.js';
 
 export type Services = {
@@ -14,6 +18,8 @@ export type Services = {
   players: PlayersService;
   users: UsersService;
   telegramAccounts: TelegramAccounts;
+  /** "Log in with Telegram" on the site; null until configured */
+  telegramLogin: TelegramOidc | null;
   weather: WeatherService;
 };
 
@@ -23,8 +29,27 @@ declare module 'fastify' {
   }
 }
 
-const servicesPlugin: FastifyPluginAsync = async (fastify) => {
-  const { WEATHER_DEFAULT_LAT: lat, WEATHER_DEFAULT_LON: lon } = fastify.config;
+type ServicesOptions = {
+  telegramLogin?: Pick<TelegramOidcOptions, 'keys' | 'fetch'>;
+};
+
+const servicesPlugin: FastifyPluginAsync<ServicesOptions> = async (
+  fastify,
+  options,
+) => {
+  const {
+    WEATHER_DEFAULT_LAT: lat,
+    WEATHER_DEFAULT_LON: lon,
+    TELEGRAM_LOGIN_CLIENT_ID: clientId,
+    TELEGRAM_LOGIN_CLIENT_SECRET: clientSecret,
+    PUBLIC_URL,
+  } = fastify.config;
+  const publicUrl = PUBLIC_URL?.replace(/\/+$/, '');
+  if (clientId && clientSecret && !publicUrl) {
+    fastify.log.warn(
+      'PUBLIC_URL is not set, so "Log in with Telegram" is disabled',
+    );
+  }
   const notifier = fastify.telegramBot;
 
   const players = new PlayersService(notifier);
@@ -33,6 +58,15 @@ const servicesPlugin: FastifyPluginAsync = async (fastify) => {
     players,
     users: new UsersService(),
     telegramAccounts: new TelegramAccounts(players),
+    telegramLogin:
+      clientId && clientSecret && publicUrl
+        ? new TelegramOidc({
+            clientId,
+            clientSecret,
+            redirectUri: `${publicUrl}/auth/telegram`,
+            ...options.telegramLogin,
+          })
+        : null,
     weather: new WeatherService(
       lat !== undefined && lon !== undefined ? { lat, lon } : undefined,
     ),
