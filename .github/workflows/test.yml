@@ -20,6 +20,31 @@ jobs:
       - run: npm test
       - run: npm run build
 
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+        working-directory: apps/web
+      - run: npm run build --workspace football-planner-web
+      # Sign-up flow on desktop and phone against the real API on an in-memory MongoDB
+      - run: npm run test:e2e --workspace football-planner-web
+      # Accessibility and best practices of the public pages
+      - run: npm run lighthouse --workspace football-planner-web
+      - if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-reports
+          path: |
+            apps/web/playwright-report
+            apps/web/lighthouse-report
+          retention-days: 7
+
   docker:
     runs-on: ubuntu-latest
     steps:
