@@ -1,0 +1,29 @@
+{
+  "name": "@football-planner/shared",
+  "version": "1.0.0",
+  "description": "API schemas and types shared by the server and the web app",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "rimraf dist && tsc -p tsconfig.json",
+    "types": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "typebox": "^1.4.3"
+  },
+  "devDependencies": {
+    "fastify-tsconfig": "^3.0.0",
+    "rimraf": "^6.1.3",
+    "typescript": "^6.0.3"
+  }
+}

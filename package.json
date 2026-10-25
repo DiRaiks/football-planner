@@ -5,11 +5,14 @@
   "main": "index.js",
   "private": true,
   "scripts": {
-    "test": "npm --workspace server test",
+    "test": "npm test --workspaces --if-present",
     "lint": "eslint .",
     "format": "prettier . --check",
     "commitlint": "commitlint --from=HEAD~1",
-    "prepare": "husky"
+    "prepare": "husky",
+    "build": "npm run build --workspaces --if-present",
+    "types": "npm run types --workspaces --if-present",
+    "dev": "npm run dev --workspace apps/server"
   },
   "repository": {
     "type": "git",
@@ -22,7 +25,8 @@
   },
   "homepage": "https://github.com/DiRaiks/football-planner#readme",
   "workspaces": [
-    "./server"
+    "apps/*",
+    "packages/*"
   ],
   "devDependencies": {
     "@commitlint/cli": "^21.2.4",

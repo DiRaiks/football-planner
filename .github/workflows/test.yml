@@ -15,5 +15,13 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - run: npm run types --workspace server
+      - run: npm run lint
+      - run: npm run types
       - run: npm test
+      - run: npm run build
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: docker build -f apps/server/Dockerfile -t football-planner-server .
