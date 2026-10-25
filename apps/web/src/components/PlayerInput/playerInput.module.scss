@@ -1,0 +1,36 @@
+.wrapper {
+  display: flex;
+  align-items: baseline;
+
+  .input {
+    flex: 3;
+    margin-right: 4px;
+  }
+
+  .status {
+    display: flex;
+    background-color: #fff;
+    border-radius: 5px;
+    padding: 5px;
+    font-size: 14px;
+    transition: all 0.2s;
+    width: auto;
+    color: #444;
+    vertical-align: top;
+    cursor: pointer;
+
+    .option {
+      padding: 4px 8px;
+      border-radius: 3px;
+      line-height: 14px;
+
+      &.active.true {
+        background-color: var(--color-accent);
+      }
+
+      &.active.maybe {
+        background-color: var(--color-orange-light);
+      }
+    }
+  }
+}

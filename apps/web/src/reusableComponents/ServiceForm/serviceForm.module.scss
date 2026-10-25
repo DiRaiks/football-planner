@@ -1,0 +1,15 @@
+.body {
+  background: var(--color-cold-gray-ultralight);
+}
+
+.wrapper {
+  background: var(--color-white);
+  border-radius: 8px;
+  box-shadow: var(--shadow-s);
+  padding: 48px 48px 56px 48px;
+  margin: 40px 0;
+
+  @media (max-width: 1250px) {
+    padding: 24px 24px 32px 24px;
+  }
+}

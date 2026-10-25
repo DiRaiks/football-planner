@@ -1,0 +1,14 @@
+.footer {
+  text-align: right;
+  margin: 0 -16px -8px;
+  padding-top: 8px;
+  flex: 1 0 100%;
+}
+
+.footer button {
+  margin-right: 4px;
+}
+
+.footer button:last-child {
+  margin-right: 0;
+}

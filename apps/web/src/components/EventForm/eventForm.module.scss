@@ -1,0 +1,33 @@
+.form {
+  margin-top: 16px;
+  max-width: 400px;
+  box-shadow: var(--shadow-l);
+  position: relative;
+}
+
+.input {
+  width: 100%;
+}
+
+.dateTime {
+  display: flex;
+
+  & .date {
+    flex: 3;
+    margin-right: 10px;
+  }
+
+  & .time {
+    flex: 1;
+  }
+}
+
+.createButton {
+  margin-top: 24px;
+}
+
+.closeIcon {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+}

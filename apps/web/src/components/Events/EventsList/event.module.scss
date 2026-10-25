@@ -1,0 +1,15 @@
+.eventBox {
+  margin-top: 16px;
+
+  .header {
+    display: flex;
+
+    .icon {
+      margin: -16px -16px 0 auto;
+    }
+  }
+
+  .fieldName {
+    color: var(--color-black-60);
+  }
+}

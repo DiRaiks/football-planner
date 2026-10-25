@@ -1,0 +1,57 @@
+.header {
+  display: flex;
+  align-items: center;
+}
+
+.signInButton {
+  padding: 4px 16px;
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--color-cold-gray-dark);
+  border-radius: 4px;
+  font-size: 14px;
+  color: var(--color-blue-steel);
+  cursor: pointer;
+}
+
+.signInButton:hover {
+  background-color: var(--color-cold-gray-ultralight);
+}
+
+.haveAccountWr {
+  font-size: 14px;
+  color: var(--color-black-60);
+  margin-right: 16px;
+}
+
+.offerWr {
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+}
+
+.offerCheckbox {
+  color: var(--color-primary);
+  margin-right: 8px;
+}
+
+.offerLink {
+  text-decoration: none;
+  font-size: 14px;
+  color: var(--color-blue-steel);
+}
+
+.signUpButton {
+  width: 100%;
+}
+
+.successHeader {
+  margin: 32px 0;
+}
+
+.success {
+  padding-top: 24px;
+  border-top: 1px solid var(--color-table-border);
+  font-size: 14px;
+  color: var(--color-black-60);
+}
