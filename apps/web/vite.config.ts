@@ -10,8 +10,9 @@ export default defineConfig({
   },
   server: {
     port: 5173,
-    // The API runs on :3000 in development (npm run dev in apps/server)
-    proxy: { '/v1': 'http://localhost:3000' },
+    // The API runs on :3000 in development (npm run dev in apps/server);
+    // the end-to-end tests point the preview server at their own API
+    proxy: { '/v1': process.env.API_PROXY ?? 'http://localhost:3000' },
   },
   test: {
     environment: 'happy-dom',
