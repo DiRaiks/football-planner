@@ -1,28 +1,10 @@
-import fs from 'fs';
-import path from 'path';
-
 import { buildApp } from './app.js';
 import { parseTrustProxy } from './env.js';
 
-const readHttpsOptions = () => {
-  const { HTTPS_PRIVKEY_PATH, HTTPS_FULLCHAIN_PATH } = process.env;
-  if (!HTTPS_PRIVKEY_PATH || !HTTPS_FULLCHAIN_PATH) return {};
-
-  const keyPath = path.resolve(HTTPS_PRIVKEY_PATH);
-  const certPath = path.resolve(HTTPS_FULLCHAIN_PATH);
-  if (!fs.existsSync(keyPath) || !fs.existsSync(certPath)) return {};
-
-  return {
-    https: { key: fs.readFileSync(keyPath), cert: fs.readFileSync(certPath) },
-  };
-};
-
+// TLS terminates at the reverse proxy (Caddy); the API speaks plain HTTP inside the network
 const start = async () => {
   const fastify = await buildApp({
-    fastify: {
-      ...readHttpsOptions(),
-      trustProxy: parseTrustProxy(process.env.TRUST_PROXY),
-    },
+    fastify: { trustProxy: parseTrustProxy(process.env.TRUST_PROXY) },
   });
 
   process.on('unhandledRejection', (reason) => {

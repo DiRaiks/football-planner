@@ -99,6 +99,10 @@ npm run set-role --workspace apps/server -- user@example.com admin
 
 The script reads `MONGO_URI` from `.env` and signs the user out everywhere so the new role applies at once.
 
+## Deployment
+
+Each push to `main` builds Docker images and, once a server is configured, deploys them with Docker Compose behind Caddy (automatic HTTPS). See [deploy/README.md](deploy/README.md).
+
 ## Project layout
 
 ```text
@@ -107,6 +111,7 @@ apps/
   web/       React app
 packages/
   shared/    API schemas and types
+deploy/      production compose file, Caddy config, deployment guide
 docs/        screenshots
 ```
 

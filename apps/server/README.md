@@ -1,15 +1,13 @@
 # server
 
-## HTTPS support
+Fastify API (`/v1`) and the Telegram bot. See the [repository README](../../README.md) for configuration and the [deployment guide](../../deploy/README.md).
 
-Set environment variables `HTTPS_PRIVKEY_PATH` and `HTTPS_FULLCHAIN_PATH` to
-enable HTTPS. They must contain paths to `privkey.pem` and `fullchain.pem`
-certificates which will be loaded during server startup.
+The server speaks plain HTTP; TLS terminates at the reverse proxy (Caddy in production).
 
-## Running tests
-
-Tests are written with the built-in Node.js runner. Run them with:
+## Tests
 
 ```bash
 npm test
 ```
+
+Vitest with an in-memory MongoDB; the bot is tested against a fake Telegram API.

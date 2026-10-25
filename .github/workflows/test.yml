@@ -25,3 +25,4 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - run: docker build -f apps/server/Dockerfile -t football-planner-server .
+      - run: docker build -f apps/web/Dockerfile -t football-planner-web .
