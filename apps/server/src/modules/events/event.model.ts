@@ -3,8 +3,11 @@ import { Schema, model, type HydratedDocument } from 'mongoose';
 
 export interface EventEntity {
   place: string;
+  /** Wall-clock time and day at the venue, as entered */
   time: string;
   date: string;
+  /** The moment the match starts: date and time in the venue's time zone (TIME_ZONE) */
+  startsAt?: Date;
   minimum: number;
   playersAmount: number;
   eventName: string;
@@ -24,6 +27,8 @@ const EventSchema = new Schema<EventEntity>(
     place: { type: String, required: true },
     time: { type: String, required: true },
     date: { type: String, required: true },
+    // Optional until scripts/migrate-dates.mjs fills it for events saved before it existed
+    startsAt: { type: Date, required: false, index: true },
     minimum: { type: Number, required: true },
     playersAmount: { type: Number, required: true },
     eventName: { type: String, required: true },
@@ -65,6 +70,7 @@ export const toEventDto = (event: EventDocument): Event => ({
   place: event.place,
   date: event.date,
   time: event.time,
+  ...(event.startsAt && { startsAt: event.startsAt.toISOString() }),
   minimum: event.minimum,
   playersAmount: event.playersAmount,
   creatorId: event.creatorId,

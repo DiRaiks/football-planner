@@ -86,6 +86,7 @@ Copy `.env.example` to `.env`.
 | `PUBLIC_URL`                                                       |          | Site URL for links in bot messages                                                                         |
 | `CORS_ORIGINS`                                                     |          | Allowed origins if the app is served from another origin                                                   |
 | `TRUST_PROXY`                                                      |          | Proxy hops (usually `1`) or proxy IPs when running behind a reverse proxy                                  |
+| `TIME_ZONE`                                                        | `UTC`    | IANA time zone of the venues, e.g. `Europe/Moscow`: match times are entered in it                          |
 | `WEATHER_DEFAULT_LAT`, `WEATHER_DEFAULT_LON`                       |          | Weather location for matches without coordinates                                                           |
 | `JWT_EXPIRES_IN`, `AUTH_RATE_LIMIT_MAX`, `LOG_LEVEL`, `LOG_FORMAT` |          | Session length, login attempts per minute, logging                                                         |
 
@@ -98,6 +99,18 @@ npm run set-role --workspace apps/server -- user@example.com admin
 ```
 
 The script reads `MONGO_URI` from `.env` and signs the user out everywhere so the new role applies at once.
+
+### Match start times
+
+Every match stores the date and time entered for the venue, and the instant it starts (`startsAt`) in `TIME_ZONE`, used for sorting and reminders. Matches saved by older versions get it from a one-off migration, which also tidies free-text dates and times (`03.11.2026`, `20.00`):
+
+```bash
+npm run build --workspace apps/server
+npm run migrate-dates --workspace apps/server -- --dry-run   # what would change
+npm run migrate-dates --workspace apps/server                # apply
+```
+
+Matches it cannot read are listed; fix them in the app and run it again. After changing `TIME_ZONE`, `-- --all` recomputes every match.
 
 ## Deployment
 

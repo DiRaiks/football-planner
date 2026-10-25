@@ -78,7 +78,8 @@ const EventFields = {
   place: Type.String({ minLength: 1, maxLength: 200 }),
   // Calendar day of the match as produced by <input type="date">
   date: Type.String({ pattern: '^\\d{4}-\\d{2}-\\d{2}$' }),
-  time: Type.String({ minLength: 1, maxLength: 20 }),
+  // Start time at the venue, as produced by <input type="time">
+  time: Type.String({ pattern: '^([01]\\d|2[0-3]):[0-5]\\d$' }),
   minimum: Type.Integer({ minimum: 0, maximum: 100 }),
   // Coordinates of the venue, used for the weather forecast
   location: Type.Optional(Location),
@@ -104,6 +105,8 @@ export const Event = Type.Object({
   ...EventFields,
   playersAmount: Type.Integer(),
   creatorId: Type.String(),
+  // The start as an instant; missing on events not yet migrated (scripts/migrate-dates.mjs)
+  startsAt: Type.Optional(Type.String({ format: 'date-time' })),
   createdAt: Type.Optional(Type.String({ format: 'date-time' })),
   updatedAt: Type.Optional(Type.String({ format: 'date-time' })),
 });

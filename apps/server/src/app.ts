@@ -6,6 +6,7 @@ import fastifyEnv from '@fastify/env';
 import type { TypeBoxTypeProvider } from '@fastify/type-provider-typebox';
 
 import { getEnvOptions, getLoggerOptions, splitList } from './env.js';
+import { isTimeZone } from './lib/time.js';
 import { AppError } from './lib/errors.js';
 import {
   AuthPlugin,
@@ -43,6 +44,11 @@ export const buildApp = async ({
   }).withTypeProvider<TypeBoxTypeProvider>();
 
   await fastify.register(fastifyEnv, getEnvOptions(env));
+  if (!isTimeZone(fastify.config.TIME_ZONE)) {
+    throw new Error(
+      `TIME_ZONE "${fastify.config.TIME_ZONE}" is not a known time zone, use e.g. Europe/Moscow`,
+    );
+  }
 
   // Clients often send `Content-Type: application/json` with an empty body on DELETE
   const parseJson = fastify.getDefaultJsonParser('error', 'error');
