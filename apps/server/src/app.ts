@@ -100,15 +100,21 @@ export const buildApp = async ({
   await fastify.register(rateLimit, { global: false });
 
   await fastify.register(DatabasePlugin);
+  // Before Telegram: the bot adds its metrics to the same registry
+  await fastify.register(MonitoringPlugin);
   await fastify.register(TelegramPlugin, { test: telegram });
   await fastify.register(AuthPlugin);
   await fastify.register(ServicesPlugin);
-  await fastify.register(MonitoringPlugin);
 
   await fastify.register(V1Routes, { prefix: '/v1' });
 
   fastify.get('/metrics', fastify.metrics.routeHandler);
-  fastify.get('/health', fastify.healthChecker.routeHandler);
+  // Public through Caddy, and each call reads the database
+  fastify.get(
+    '/health',
+    { config: { rateLimit: { max: 120, timeWindow: '1 minute' } } },
+    fastify.healthChecker.routeHandler,
+  );
 
   return fastify;
 };

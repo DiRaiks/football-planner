@@ -154,7 +154,7 @@ npm run lighthouse --workspace football-planner-web # reports in apps/web/lighth
 
 ## Monitoring
 
-`GET /health` reports the API and its database. `GET /metrics` serves Prometheus metrics: request durations by route, the MongoDB connection, and Node.js process metrics. Caddy does not expose `/metrics` publicly; scrape it inside the Docker network.
+`GET /health` reports the API, its database and the Telegram bot (polling or webhook state, the subscriptions store, the send queue). It answers 200 while the process runs; `status` is `degraded` when the database is down or the bot cannot receive updates. The route is public, so Telegram's error texts stay in the logs, and it is rate limited. `GET /metrics` serves Prometheus metrics: request durations by route, the MongoDB connection, Node.js process metrics, and the bot's `tg_*` metrics from [tg-kit](https://github.com/DiRaiks/tg-bot-kit): updates received, handler failures, commands, messages sent or failed, and the notifier queue. Caddy does not expose `/metrics` publicly; scrape it inside the Docker network.
 
 ## License
 
