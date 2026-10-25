@@ -1,0 +1,40 @@
+# DOMAIN may list several names, e.g. "football-planner.ru, www.football-planner.ru".
+# Caddy obtains and renews their TLS certificates automatically.
+{$DOMAIN} {
+	encode zstd gzip
+
+	# Process metrics stay inside the docker network
+	handle /metrics {
+		respond 404
+	}
+
+	# API and the Telegram webhook
+	@api path /v1/* /telegram/* /health
+	handle @api {
+		reverse_proxy server:3000
+	}
+
+	# The single-page app; unknown paths fall back to index.html for client routing
+	handle {
+		root * /srv
+		# Hashed assets never change; everything else (index.html) is revalidated
+		@assets path /assets/*
+		header @assets Cache-Control "public, max-age=31536000, immutable"
+		@pages not path /assets/*
+		header @pages Cache-Control "no-cache"
+		try_files {path} /index.html
+		file_server
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+}
+
+# Container health check, not published
+:8080 {
+	respond /healthz 200
+}

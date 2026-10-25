@@ -20,8 +20,10 @@ COPY --from=build /app/packages/shared/package.json packages/shared/
 COPY --from=build /app/packages/shared/dist packages/shared/dist
 COPY --from=build /app/apps/server/package.json apps/server/
 COPY --from=build /app/apps/server/dist apps/server/dist
-# TODO(A4): switch to `USER node` once TLS terminates at Caddy; the app reads root-owned
-# certificates mounted from the host while it still serves HTTPS itself.
+COPY --from=build /app/apps/server/scripts apps/server/scripts
+USER node
 WORKDIR /app/apps/server
 EXPOSE 3000
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s \
+  CMD wget -qO- http://127.0.0.1:3000/health || exit 1
 CMD ["node", "dist/index.js"]
