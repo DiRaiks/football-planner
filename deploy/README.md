@@ -69,6 +69,8 @@ $compose logs -f server
 
 **Rollback:** set `IMAGE_TAG=<sha of an earlier commit>` in `images.env`, then `$compose up -d`.
 
+**Start times of old matches** (once, after the first deploy of this version): `$compose exec server node scripts/migrate-dates.mjs --dry-run`, then without `--dry-run`. It uses the container's `MONGO_URI` and `TIME_ZONE`.
+
 **Admin role:** `$compose exec server node scripts/set-role.mjs user@example.com admin` (uses the container's `MONGO_URI`).
 
 **Restore a backup** (local MongoDB profile):

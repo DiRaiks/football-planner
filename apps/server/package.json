@@ -17,7 +17,8 @@
     "predev": "npm run build --workspace @football-planner/shared",
     "prebuild": "npm run build --workspace @football-planner/shared",
     "pretypes": "npm run build --workspace @football-planner/shared",
-    "pretest": "npm run build --workspace @football-planner/shared"
+    "pretest": "npm run build --workspace @football-planner/shared",
+    "migrate-dates": "node --env-file-if-exists=../../.env scripts/migrate-dates.mjs"
   },
   "repository": {
     "type": "git",

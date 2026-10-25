@@ -24,7 +24,7 @@ const servicesPlugin: FastifyPluginAsync = async (fastify) => {
   const notifier = fastify.telegramBot;
 
   fastify.decorate('services', {
-    events: new EventsService(notifier),
+    events: new EventsService(notifier, fastify.config.TIME_ZONE),
     players: new PlayersService(notifier),
     users: new UsersService(),
     weather: new WeatherService(

@@ -16,6 +16,7 @@ export type ENVS = {
   CORS_ORIGINS: string;
   TRUST_PROXY: string;
   AUTH_RATE_LIMIT_MAX: number;
+  TIME_ZONE: string;
 };
 
 declare module 'fastify' {
@@ -69,6 +70,8 @@ const ENV_SCHEME = {
     // Proxy hops (e.g. 1) or comma-separated proxy IPs/CIDRs; empty disables trusting X-Forwarded-For
     TRUST_PROXY: { type: 'string', default: '' },
     AUTH_RATE_LIMIT_MAX: { type: 'number', default: 10 },
+    // IANA time zone of the venues, e.g. Europe/Moscow: match times are entered in it
+    TIME_ZONE: { type: 'string', default: 'UTC' },
   },
 };
 
