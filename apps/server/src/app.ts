@@ -12,19 +12,23 @@ import {
   DatabasePlugin,
   MonitoringPlugin,
   ServicesPlugin,
-  TelegramBotPlugin,
+  TelegramPlugin,
 } from './plugins/index.js';
 import V1Routes from './routes/v1/index.js';
+import type { TelegramTestOptions } from './plugins/telegram/index.js';
 
 export type BuildAppOptions = {
   /** Environment overrides; when set, `.env` and `process.env` are not read (used in tests) */
   env?: Record<string, unknown>;
   fastify?: FastifyServerOptions;
+  /** Fake Telegram API for tests */
+  telegram?: TelegramTestOptions;
 };
 
 export const buildApp = async ({
   env,
   fastify: fastifyOptions,
+  telegram,
 }: BuildAppOptions = {}) => {
   const fastify = Fastify({
     logger: getLoggerOptions(env),
@@ -90,7 +94,7 @@ export const buildApp = async ({
   await fastify.register(rateLimit, { global: false });
 
   await fastify.register(DatabasePlugin);
-  await fastify.register(TelegramBotPlugin);
+  await fastify.register(TelegramPlugin, { test: telegram });
   await fastify.register(AuthPlugin);
   await fastify.register(ServicesPlugin);
   await fastify.register(MonitoringPlugin);

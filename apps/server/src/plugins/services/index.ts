@@ -36,5 +36,5 @@ const servicesPlugin: FastifyPluginAsync = async (fastify) => {
 export default fp(servicesPlugin, {
   fastify: '5.x',
   name: 'services',
-  dependencies: ['telegram-bot'],
+  dependencies: ['telegram'],
 });

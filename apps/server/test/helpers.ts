@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import { afterAll, beforeAll, beforeEach } from 'vitest';
 
 import { buildApp } from '../src/app.js';
+import type { TelegramTestOptions } from '../src/plugins/telegram/index.js';
 import { UserModel } from '../src/modules/users/user.model.js';
 
 export const JWT_SECRET = 'test-secret-that-is-long-enough-1234567890';
@@ -10,13 +11,17 @@ export const JWT_SECRET = 'test-secret-that-is-long-enough-1234567890';
 type App = Awaited<ReturnType<typeof buildApp>>;
 
 /** Starts an in-memory MongoDB and the app once per test file, clears collections before each test */
-export const setupApp = (env: Record<string, unknown> = {}) => {
+export const setupApp = (
+  env: Record<string, unknown> = {},
+  telegram?: TelegramTestOptions,
+) => {
   const ctx = {} as { app: App; mongo: MongoMemoryServer };
 
   beforeAll(async () => {
     ctx.mongo = await MongoMemoryServer.create();
     ctx.app = await buildApp({
       fastify: { logger: false },
+      telegram,
       env: {
         PORT: 0,
         MONGO_URI: ctx.mongo.getUri(),
