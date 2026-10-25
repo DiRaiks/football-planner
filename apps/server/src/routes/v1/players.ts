@@ -4,6 +4,7 @@ import {
   ObjectId,
   Player,
   PlayersChange,
+  SetPaidBody,
   SignUpBody,
   UpdatePlayerBody,
 } from '@football-planner/shared';
@@ -80,6 +81,26 @@ const playersRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
           request.params.eventId,
         ),
       ),
+  );
+
+  fastify.patch(
+    '/:playerId/paid',
+    {
+      schema: {
+        params: PlayerParams,
+        body: SetPaidBody,
+        response: { 200: Player },
+      },
+    },
+    async (request) => {
+      const { player, waitlisted } = await players.setPaid(
+        request.params.eventId,
+        request.params.playerId,
+        request.body.paid,
+        request.currentUser!,
+      );
+      return toPlayerDto(player, waitlisted);
+    },
   );
 
   fastify.delete(

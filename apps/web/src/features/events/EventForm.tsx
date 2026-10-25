@@ -2,7 +2,13 @@ import { useState, type FormEvent } from 'react';
 import type { CreateEventBody, Event } from '@football-planner/shared';
 import { Minus, Plus } from '@phosphor-icons/react';
 
-import { Button, ErrorNote, Field, IconButton } from '@/components/ui';
+import {
+  Button,
+  ErrorNote,
+  Field,
+  IconButton,
+  Segmented,
+} from '@/components/ui';
 import { todayIso } from '@/lib/format';
 
 type Values = Omit<CreateEventBody, 'location'>;
@@ -17,6 +23,10 @@ const validate = (values: Values): Errors => {
   const maximum = values.maximum ?? 0;
   if (maximum > 0 && maximum < values.minimum) {
     errors.maximum = 'Мест не может быть меньше минимума';
+  }
+  const price = values.price ?? 0;
+  if (!Number.isInteger(price) || price < 0 || price > 100_000) {
+    errors.price = 'Цена — целое число рублей до 100 000';
   }
   return errors;
 };
@@ -113,7 +123,13 @@ export function EventForm({
     time: initial?.time ?? '20:00',
     minimum: initial?.minimum ?? 10,
     maximum: initial?.maximum ?? 0,
+    repeat: initial?.repeat ?? 'none',
+    price: initial?.price ?? 0,
   });
+  // The price as typed, so an empty field stays empty while editing
+  const [priceText, setPriceText] = useState(
+    initial?.price ? String(initial.price) : '',
+  );
   const [errors, setErrors] = useState<Errors>({});
 
   const set =
@@ -195,6 +211,40 @@ export function EventForm({
         }
         hint="Кто запишется сверх, встанет в лист ожидания и попадёт в состав, когда место освободится. ∞ — без ограничения."
         error={errors.maximum}
+      />
+
+      <div className="grid gap-1.5">
+        <span className="text-sm font-medium">Повтор</span>
+        <Segmented
+          label="Повтор"
+          className="justify-self-start"
+          value={values.repeat ?? 'none'}
+          onChange={set('repeat')}
+          options={[
+            { value: 'none', label: 'Один раз' },
+            { value: 'weekly', label: 'Каждую неделю' },
+          ]}
+        />
+        <p className="text-sm text-pretty text-muted">
+          {values.repeat === 'weekly'
+            ? 'Когда матч начнётся, такой же появится через неделю, и бот объявит его в чате.'
+            : 'Матч пройдёт один раз.'}
+        </p>
+      </div>
+
+      <Field
+        label="Цена с человека, ₽"
+        inputMode="numeric"
+        placeholder="0 — бесплатно"
+        className="max-w-60"
+        value={priceText}
+        onChange={(event) => {
+          const text = event.target.value.replace(/\D/g, '').slice(0, 6);
+          setPriceText(text);
+          set('price')(text ? Number(text) : 0);
+        }}
+        hint="Организатор отмечает в составе, кто заплатил."
+        error={errors.price}
       />
 
       {error && <ErrorNote>{error}</ErrorNote>}

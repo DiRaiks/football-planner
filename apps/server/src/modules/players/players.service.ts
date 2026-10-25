@@ -12,7 +12,11 @@ import {
 } from '../../lib/errors.js';
 import { withEventLock } from '../../lib/event-lock.js';
 import type { TelegramNotifier } from '../../plugins/telegram/index.js';
-import { EventModel, toEventDto } from '../events/event.model.js';
+import {
+  EventModel,
+  toEventDto,
+  type EventDocument,
+} from '../events/event.model.js';
 import { isAdmin, type UserDocument } from '../users/user.model.js';
 import { computeRoster, squadChanges, type RosterPerson } from './count.js';
 import {
@@ -204,10 +208,33 @@ export class PlayersService {
       if (!before) return;
       const after = await this.roster(eventId);
       after.event.playersAmount = after.count.all;
+      dropStaleTeams(after.event, before.people, after.people);
       await after.event.save();
       this.announceMoves(eventId, before.people, after.people);
       this.notifier.eventUpdated(eventId, false);
     });
+  }
+
+  /** Marks a player as paid for the pitch; the match's organiser and admins only */
+  async setPaid(
+    eventId: string,
+    playerId: string,
+    paid: boolean,
+    user: UserDocument,
+  ) {
+    const event = await EventModel.findById(eventId);
+    if (!event) throw notFoundError('event');
+    if (event.creatorId !== user._id.toString() && !isAdmin(user)) {
+      throw forbiddenError();
+    }
+    const player = await PlayerModel.findOneAndUpdate(
+      { _id: playerId, eventId },
+      { $set: { paid } },
+      { returnDocument: 'after' },
+    );
+    if (!player) throw notFoundError('player');
+    const { waitlisted } = await this.roster(eventId);
+    return { player, waitlisted: waitlisted.has(player._id.toString()) };
   }
 
   async countEventsOfUser(userId: string) {
@@ -248,12 +275,31 @@ export class PlayersService {
       event.maximum ?? 0,
     );
     event.playersAmount = count.all;
+    dropStaleTeams(event, before, people);
     await event.save();
     this.announceMoves(player.eventId, before, people);
 
     return { player, players, event, count, waitlisted };
   }
 }
+
+const squadKeys = (people: RosterPerson[]) =>
+  people
+    .filter((person) => person.place === 'squad')
+    .map((person) => person.key)
+    .sort()
+    .join();
+
+/** Teams were split from the old squad: once someone leaves or gets a place, they go */
+const dropStaleTeams = (
+  event: EventDocument,
+  before: RosterPerson[],
+  after: RosterPerson[],
+) => {
+  if (event.teams && squadKeys(before) !== squadKeys(after)) {
+    event.teams = undefined;
+  }
+};
 
 type PlayersChangeResult = Awaited<ReturnType<PlayersService['signUp']>>;
 

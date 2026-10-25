@@ -1,7 +1,7 @@
-import { Link, Navigate, Outlet, useLocation } from 'react-router';
-import { UserCircle } from '@phosphor-icons/react';
+import { Link, NavLink, Navigate, Outlet, useLocation } from 'react-router';
+import { ChartBar, UserCircle } from '@phosphor-icons/react';
 
-import { Skeleton } from '@/components/ui';
+import { Skeleton, cn } from '@/components/ui';
 import { useAuth } from '@/features/auth/auth';
 
 /** Only same-site paths are followed after login; "//evil.com" and absolute URLs are not */
@@ -63,19 +63,34 @@ export function AppLayout() {
       <header className="sticky top-0 z-40 border-b border-line/60 bg-bg/85 backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4">
           <Logo />
-          <Link
-            to="/account"
-            className="flex h-11 items-center gap-2 rounded-control px-2 text-sm text-muted transition-colors duration-150 hover:bg-surface-2 hover:text-ink"
-          >
-            <span className="hidden max-w-[16ch] truncate sm:inline">
-              {user.name}
-            </span>
-            <UserCircle
-              className="size-7"
-              weight="duotone"
-              aria-label="Профиль"
-            />
-          </Link>
+          <nav aria-label="Разделы" className="flex items-center gap-1">
+            <NavLink
+              to="/stats"
+              className={({ isActive }) =>
+                cn(
+                  'flex h-11 items-center gap-2 rounded-control px-2 text-sm transition-colors duration-150 hover:bg-surface-2 hover:text-ink',
+                  isActive ? 'text-ink' : 'text-muted',
+                )
+              }
+            >
+              <ChartBar className="size-6" weight="duotone" aria-hidden />
+              <span className="hidden sm:inline">Статистика</span>
+              <span className="sr-only sm:hidden">Статистика</span>
+            </NavLink>
+            <Link
+              to="/account"
+              className="flex h-11 items-center gap-2 rounded-control px-2 text-sm text-muted transition-colors duration-150 hover:bg-surface-2 hover:text-ink"
+            >
+              <span className="hidden max-w-[16ch] truncate sm:inline">
+                {user.name}
+              </span>
+              <UserCircle
+                className="size-7"
+                weight="duotone"
+                aria-label="Профиль"
+              />
+            </Link>
+          </nav>
         </div>
       </header>
       <main id="main" className="mx-auto max-w-5xl px-4 pt-6 pb-24">

@@ -22,6 +22,7 @@ export const setupApp = (
     ctx.app = await buildApp({
       fastify: { logger: false },
       telegram,
+      jobs: false,
       env: {
         PORT: 0,
         MONGO_URI: ctx.mongo.getUri(),

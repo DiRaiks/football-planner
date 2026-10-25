@@ -147,6 +147,8 @@ describe('waitlist', () => {
     const { sure, maybe, waiting } = rosterGroups(players, 'u3', 2);
     expect(sure.map((p) => p.name)).toEqual(['Аня', 'Гость']);
     expect(maybe.map((p) => p.name)).toEqual(['Боря']);
-    expect(waiting).toEqual([{ key: 'c', name: 'Вера', isMe: true }]);
+    expect(waiting).toEqual([
+      { key: 'c', name: 'Вера', isMe: true, payerId: 'c', paid: false },
+    ]);
   });
 });
