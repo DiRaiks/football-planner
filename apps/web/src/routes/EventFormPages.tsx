@@ -1,6 +1,7 @@
 import { useNavigate, useParams } from 'react-router';
 
 import { Skeleton } from '@/components/ui';
+import { EventUnavailable } from '@/features/events/EventUnavailable';
 import { EventForm } from '@/features/events/EventForm';
 import {
   useCreateEvent,
@@ -37,6 +38,8 @@ export function EditEventPage() {
   const navigate = useNavigate();
   const event = useEvent(eventId);
   const update = useUpdateEvent(eventId);
+
+  if (event.error) return <EventUnavailable error={event.error} />;
 
   return (
     <div className="mx-auto grid max-w-lg gap-6">

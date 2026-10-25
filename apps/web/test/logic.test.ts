@@ -13,6 +13,7 @@ import {
   todayIso,
 } from '@/lib/format';
 import { CloudRain, CloudSnow, Sun } from '@phosphor-icons/react';
+import { ApiError, shouldRetry } from '@/lib/api';
 import { player } from './helpers';
 
 describe('format', () => {
@@ -98,5 +99,23 @@ describe('weather', () => {
     expect(weatherIcon(0)).toBe(Sun);
     expect(weatherIcon(63)).toBe(CloudRain);
     expect(weatherIcon(75)).toBe(CloudSnow);
+  });
+});
+
+describe('shouldRetry', () => {
+  it('does not retry answers that will not change', () => {
+    expect(
+      shouldRetry(0, new ApiError(404, 'NOT_FOUND', 'event not found')),
+    ).toBe(false);
+    expect(shouldRetry(0, new ApiError(403, 'FORBIDDEN', 'forbidden'))).toBe(
+      false,
+    );
+  });
+
+  it('retries server and network failures twice', () => {
+    const serverError = new ApiError(503, 'INTERNAL', 'unavailable');
+    expect(shouldRetry(0, serverError)).toBe(true);
+    expect(shouldRetry(1, new TypeError('Failed to fetch'))).toBe(true);
+    expect(shouldRetry(2, serverError)).toBe(false);
   });
 });

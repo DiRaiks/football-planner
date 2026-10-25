@@ -5,6 +5,7 @@ import { RouterProvider } from 'react-router';
 
 import { router } from '@/app/router';
 import { AuthProvider } from '@/features/auth/auth';
+import { shouldRetry } from '@/lib/api';
 import { applyTheme, useSystemThemeSync } from '@/lib/theme';
 import './styles.css';
 
@@ -12,7 +13,11 @@ applyTheme();
 
 const queryClient = new QueryClient({
   defaultOptions: {
-    queries: { staleTime: 15_000, refetchOnWindowFocus: true },
+    queries: {
+      staleTime: 15_000,
+      refetchOnWindowFocus: true,
+      retry: shouldRetry,
+    },
   },
 });
 

@@ -3,13 +3,13 @@ import { Link, useNavigate, useParams } from 'react-router';
 import { ArrowLeft, PencilSimple, Trash } from '@phosphor-icons/react';
 
 import {
-  ButtonLink,
   ConfirmDialog,
   ErrorNote,
   IconButton,
   Skeleton,
 } from '@/components/ui';
 import { useUser } from '@/features/auth/auth';
+import { EventUnavailable } from '@/features/events/EventUnavailable';
 import { Scoreboard } from '@/features/events/Scoreboard';
 import { useDeleteEvent, useEvent } from '@/features/events/api';
 import { JoinPanel } from '@/features/players/JoinPanel';
@@ -27,26 +27,16 @@ export function EventPage() {
   const remove = useDeleteEvent(eventId);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
+  // An error first: the players may still be loading when the match is already gone
+  if (event.error || players.error) {
+    return <EventUnavailable error={event.error ?? players.error} />;
+  }
+
   if (event.isPending || players.isPending) {
     return (
       <div className="mx-auto grid max-w-4xl gap-4 lg:grid-cols-[1.1fr_1fr]">
         <Skeleton className="h-64 rounded-panel" />
         <Skeleton className="h-64 rounded-panel" />
-      </div>
-    );
-  }
-
-  if (event.error || players.error) {
-    return (
-      <div className="mx-auto grid max-w-2xl gap-4">
-        <ErrorNote>{errorMessage(event.error ?? players.error)}</ErrorNote>
-        <ButtonLink
-          to="/events"
-          variant="secondary"
-          className="justify-self-start"
-        >
-          К списку матчей
-        </ButtonLink>
       </div>
     );
   }
