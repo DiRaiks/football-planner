@@ -1,4 +1,4 @@
-import { html, joinHtml, type Html } from '@diraiks/tg-kit';
+import { html, joinHtml, type Html } from '@dirai/tg-kit';
 
 export type NotifyFriend = { name: string; status: boolean };
 

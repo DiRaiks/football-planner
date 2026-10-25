@@ -4,6 +4,7 @@
 
 - `apps/server` — Fastify API and Telegram bot
 - `packages/shared` — API schemas and types (TypeBox) shared by the server and clients
+- Telegram bot plumbing comes from [`@dirai/tg-kit`](https://www.npmjs.com/package/@dirai/tg-kit) ([source](https://github.com/DiRaiks/tg-bot-kit))
 
 The API lives under `/v1`.
 
