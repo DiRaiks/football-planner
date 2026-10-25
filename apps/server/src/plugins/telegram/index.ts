@@ -8,7 +8,7 @@ import {
   tgSubscriptions,
   type SentMessage,
   type TgBotOptions,
-} from '@diraiks/tg-kit';
+} from '@dirai/tg-kit';
 
 import { splitList } from '../../env.js';
 import {
