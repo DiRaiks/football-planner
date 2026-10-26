@@ -13,13 +13,13 @@ import { AppError } from '../../lib/errors.js';
 import { verifyInitData } from '../../modules/users/telegram-login.js';
 import {
   toPublicUser,
-  type UserDocument,
+  type UserRecord,
 } from '../../modules/users/user.model.js';
 
 const authRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
   const { users, telegramAccounts, telegramLogin } = fastify.services;
   const { BOT_TOKEN } = fastify.config;
-  const session = (user: UserDocument, expiresIn?: string) => ({
+  const session = (user: UserRecord, expiresIn?: string) => ({
     ...toPublicUser(user),
     token: fastify.issueToken(user, expiresIn),
   });

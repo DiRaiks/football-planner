@@ -4,8 +4,10 @@ import { beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { verifyInitData } from '../src/modules/users/telegram-login.js';
 import { matchLink } from '../src/plugins/telegram/messages.js';
-import { UserModel } from '../src/modules/users/user.model.js';
-import { register, setupApp } from './helpers.js';
+import { eq } from 'drizzle-orm';
+
+import { users } from '../src/db/index.js';
+import { countRows, register, setupApp } from './helpers.js';
 
 const BOT_TOKEN = '123:test';
 const CLIENT_ID = '123456789';
@@ -196,7 +198,7 @@ describe('Telegram login', () => {
 
     const second = await login('code-2');
     expect(second.json()._id).toBe(first.json()._id);
-    expect(await UserModel.countDocuments({ telegramId: 4242 })).toBe(1);
+    expect(await countRows(ctx.app, users, eq(users.telegramId, 4242))).toBe(1);
 
     const me = await ctx.app.inject({
       url: '/v1/auth/me',
@@ -207,7 +209,10 @@ describe('Telegram login', () => {
 
   it('signs in to the site account that Telegram is linked to', async () => {
     const site = await register(ctx.app, { name: 'Андрей' });
-    await UserModel.updateOne({ _id: site._id }, { telegramId: 4242 });
+    await ctx.app.db
+      .update(users)
+      .set({ telegramId: 4242 })
+      .where(eq(users._id, site._id));
     expect((await login()).json()._id).toBe(site._id);
   });
 
@@ -258,7 +263,7 @@ describe('Telegram login', () => {
       Response.json({ id_token: await idToken({ id: '1e3' }) });
     expect((await login()).statusCode).toBe(401);
 
-    expect(await UserModel.countDocuments()).toBe(0);
+    expect(await countRows(ctx.app, users)).toBe(0);
     tokenAnswer = async () => Response.json({ id_token: await idToken() });
   });
 
@@ -303,6 +308,6 @@ describe('Mini App sign-in', () => {
       signInitData({ auth_date: now(), user: tgUser }, '999:other'),
     );
     expect(response.statusCode).toBe(401);
-    expect(await UserModel.countDocuments()).toBe(0);
+    expect(await countRows(ctx.app, users)).toBe(0);
   });
 });

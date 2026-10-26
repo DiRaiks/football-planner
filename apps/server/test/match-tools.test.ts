@@ -1,8 +1,15 @@
-import mongoose from 'mongoose';
+import { eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { EventModel } from '../src/modules/events/event.model.js';
-import { createEvent, register, setupApp } from './helpers.js';
+import { events as eventsTable } from '../src/db/index.js';
+import {
+  addChat,
+  countRows,
+  createEvent,
+  getEvent,
+  register,
+  setupApp,
+} from './helpers.js';
 
 const calls: { method: string; payload: Record<string, unknown> }[] = [];
 let messageId = 0;
@@ -70,9 +77,7 @@ const join = (
 
 beforeEach(async () => {
   calls.length = 0;
-  await mongoose.connection
-    .collection('chats')
-    .insertOne({ chatId: CHAT, topics: ['events'] });
+  await addChat(ctx.app, CHAT);
 });
 
 describe('weekly matches', () => {
@@ -87,7 +92,7 @@ describe('weekly matches', () => {
       price: 300,
       repeat: 'weekly',
     });
-    const startsAt = (await EventModel.findById(event._id))!.startsAt!;
+    const startsAt = (await getEvent(ctx.app, event._id))!.startsAt!;
     const { events } = ctx.app.services;
 
     expect(
@@ -133,7 +138,13 @@ describe('weekly matches', () => {
       events.createDueRepeats(now),
     ]);
     expect(runs.flat().map((next) => next.date)).toEqual(['2026-10-06']);
-    expect(await EventModel.countDocuments({ repeatOf: event._id })).toBe(1);
+    expect(
+      await countRows(
+        ctx.app,
+        eventsTable,
+        eq(eventsTable.repeatOf, event._id),
+      ),
+    ).toBe(1);
     expect(await events.createDueRepeats(now)).toHaveLength(0);
   });
 
@@ -143,9 +154,9 @@ describe('weekly matches', () => {
       date: '2026-11-03',
       repeat: 'weekly',
     });
-    const startsAt = (await EventModel.findById(event._id))!.startsAt!;
+    const startsAt = (await getEvent(ctx.app, event._id))!.startsAt!;
     // The next match exists, but the series was not marked done
-    await EventModel.create({
+    await ctx.app.db.insert(eventsTable).values({
       eventName: 'x',
       place: 'x',
       date: '2026-11-10',
@@ -160,8 +171,14 @@ describe('weekly matches', () => {
     expect(await ctx.app.services.events.createDueRepeats(after)).toHaveLength(
       0,
     );
-    expect(await EventModel.countDocuments({ repeatOf: event._id })).toBe(1);
-    expect((await EventModel.findById(event._id))!.nextCreated).toBe(true);
+    expect(
+      await countRows(
+        ctx.app,
+        eventsTable,
+        eq(eventsTable.repeatOf, event._id),
+      ),
+    ).toBe(1);
+    expect((await getEvent(ctx.app, event._id))!.nextCreated).toBe(true);
   });
 
   it('leaves one-off matches alone', async () => {
@@ -169,7 +186,7 @@ describe('weekly matches', () => {
     const event = await createEvent(ctx.app, owner.auth, {
       date: '2026-11-03',
     });
-    const startsAt = (await EventModel.findById(event._id))!.startsAt!;
+    const startsAt = (await getEvent(ctx.app, event._id))!.startsAt!;
     expect(
       await ctx.app.services.events.createDueRepeats(
         new Date(startsAt.getTime() + 1000),

@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { and, asc, eq, gt, isNotNull, sql } from 'drizzle-orm';
 import type {
   ChangePasswordBody,
   LoginBody,
@@ -6,31 +7,31 @@ import type {
   UpdateMeBody,
 } from '@football-planner/shared';
 
+import { players, users, type Db, type UserRecord } from '../../db/index.js';
 import { AppError, isDuplicateKeyError } from '../../lib/errors.js';
 import { hashPassword, verifyPassword } from '../../lib/password.js';
-import { PlayerModel } from '../players/player.model.js';
 import type { PlayersService } from '../players/players.service.js';
-import { UserModel, findUserByEmail, type UserDocument } from './user.model.js';
+import { findUserByEmail, findUserById, normalizeEmail } from './user.model.js';
 
 export class UsersService {
   // Unknown emails are checked against this hash so they take as long as real accounts
   private readonly dummyHash: Promise<string>;
 
-  constructor() {
+  constructor(private readonly db: Db) {
     this.dummyHash = hashPassword(crypto.randomUUID());
   }
 
   async listPublic() {
     // Accounts made from Telegram buttons stay out of the site's list of people
-    const users = await UserModel.find(
-      { email: { $exists: true } },
-      { name: 1 },
-    );
-    return users.map((user) => ({ _id: user._id.toString(), name: user.name }));
+    return this.db
+      .select({ _id: users._id, name: users.name })
+      .from(users)
+      .where(isNotNull(users.email))
+      .orderBy(asc(users.createdAt), asc(users._id));
   }
 
   async login({ email, password }: LoginBody) {
-    const user = await findUserByEmail(email).select('+hash +salt');
+    const user = await findUserByEmail(this.db, email);
     const result = await verifyPassword(
       password,
       user?.hash
@@ -43,20 +44,27 @@ export class UsersService {
     }
 
     if (result.needsRehash) {
-      user.hash = await hashPassword(password);
-      user.salt = undefined;
-      await user.save();
+      const [upgraded] = await this.db
+        .update(users)
+        .set({ hash: await hashPassword(password), salt: null })
+        .where(eq(users._id, user._id))
+        .returning();
+      return upgraded ?? user;
     }
 
     return user;
   }
 
   async register({ email, name, password }: RegisterBody) {
-    if (await findUserByEmail(email)) throw userExists();
+    if (await findUserByEmail(this.db, email)) throw userExists();
 
     const hash = await hashPassword(password);
     try {
-      return await UserModel.create({ email, name, hash });
+      const [user] = (await this.db
+        .insert(users)
+        .values({ email: normalizeEmail(email), name: name.trim(), hash })
+        .returning()) as [UserRecord];
+      return user;
     } catch (error) {
       // Concurrent registration of the same email hits the unique index
       if (isDuplicateKeyError(error)) throw userExists();
@@ -64,13 +72,17 @@ export class UsersService {
     }
   }
 
-  async updateMe(user: UserDocument, { name }: UpdateMeBody) {
-    user.name = name;
-    return user.save();
+  async updateMe(user: UserRecord, { name }: UpdateMeBody) {
+    const [updated] = await this.db
+      .update(users)
+      .set({ name: name.trim() })
+      .where(eq(users._id, user._id))
+      .returning();
+    return updated ?? { ...user, name: name.trim() };
   }
 
-  async changePassword(user: UserDocument, input: ChangePasswordBody) {
-    const stored = await UserModel.findById(user._id).select('+hash +salt');
+  async changePassword(user: UserRecord, input: ChangePasswordBody) {
+    const stored = await findUserById(this.db, user._id);
     if (
       !stored?.hash ||
       !(
@@ -87,11 +99,17 @@ export class UsersService {
       );
     }
 
-    stored.hash = await hashPassword(input.newPassword);
-    stored.salt = undefined;
-    // Revokes all previously issued tokens
-    stored.tokenVersion = (stored.tokenVersion ?? 0) + 1;
-    return stored.save();
+    const [updated] = (await this.db
+      .update(users)
+      .set({
+        hash: await hashPassword(input.newPassword),
+        salt: null,
+        // Revokes all previously issued tokens
+        tokenVersion: sql`${users.tokenVersion} + 1`,
+      })
+      .where(eq(users._id, stored._id))
+      .returning()) as [UserRecord];
+    return updated;
   }
 }
 
@@ -118,7 +136,7 @@ const telegramName = (from: TelegramUser) =>
   `Telegram ${from.id}`;
 
 export type LinkResult =
-  | { status: 'linked'; user: UserDocument }
+  | { status: 'linked'; user: UserRecord }
   | { status: 'expired' }
   | { status: 'taken' };
 
@@ -126,22 +144,37 @@ const hashCode = (code: string) =>
   createHash('sha256').update(code.trim().toUpperCase()).digest('hex');
 
 export class TelegramAccounts {
-  constructor(private readonly players: PlayersService) {}
+  constructor(
+    private readonly db: Db,
+    private readonly players: PlayersService,
+  ) {}
+
+  private async findByTelegramId(telegramId: number) {
+    const [user] = await this.db
+      .select()
+      .from(users)
+      .where(eq(users.telegramId, telegramId));
+    return user ?? null;
+  }
 
   /** The account of a Telegram user; made on their first button press, without email */
   async findOrCreate(from: TelegramUser) {
-    const existing = await UserModel.findOne({ telegramId: from.id });
+    const existing = await this.findByTelegramId(from.id);
     if (existing) return existing;
     try {
-      return await UserModel.create({
-        name: telegramName(from),
-        telegramId: from.id,
-        ...(from.username && { telegramUsername: from.username }),
-      });
+      const [created] = (await this.db
+        .insert(users)
+        .values({
+          name: telegramName(from).trim(),
+          telegramId: from.id,
+          telegramUsername: from.username ?? null,
+        })
+        .returning()) as [UserRecord];
+      return created;
     } catch (error) {
       // Two quick presses: the other one created it
       if (isDuplicateKeyError(error)) {
-        const created = await UserModel.findOne({ telegramId: from.id });
+        const created = await this.findByTelegramId(from.id);
         if (created) return created;
       }
       throw error;
@@ -149,31 +182,27 @@ export class TelegramAccounts {
   }
 
   /** A one-time code the user sends to the bot as /link CODE; only its hash is stored */
-  async createLinkCode(user: UserDocument) {
+  async createLinkCode(user: UserRecord) {
     const bytes = crypto.getRandomValues(new Uint8Array(CODE_LENGTH));
     const code = [...bytes]
       .map((byte) => CODE_ALPHABET[byte % CODE_ALPHABET.length])
       .join('');
-    await UserModel.updateOne(
-      { _id: user._id },
-      {
-        $set: {
-          telegramLink: {
-            token: hashCode(code),
-            expiresAt: new Date(Date.now() + CODE_TTL_MS),
-          },
-        },
-      },
-    );
+    await this.db
+      .update(users)
+      .set({
+        telegramLinkToken: hashCode(code),
+        telegramLinkExpiresAt: new Date(Date.now() + CODE_TTL_MS),
+      })
+      .where(eq(users._id, user._id));
     return code;
   }
 
   /** A code seen where others can read it (a group chat) must not work any more */
   async revokeCode(code: string) {
-    await UserModel.updateOne(
-      { 'telegramLink.token': hashCode(code) },
-      { $unset: { telegramLink: 1 } },
-    );
+    await this.db
+      .update(users)
+      .set({ telegramLinkToken: null, telegramLinkExpiresAt: null })
+      .where(eq(users.telegramLinkToken, hashCode(code)));
   }
 
   /**
@@ -183,40 +212,40 @@ export class TelegramAccounts {
    * matches are recounted.
    */
   async link(code: string, from: TelegramUser): Promise<LinkResult> {
-    const user = await UserModel.findOneAndUpdate(
-      {
-        'telegramLink.token': hashCode(code),
-        'telegramLink.expiresAt': { $gt: new Date() },
-      },
-      { $unset: { telegramLink: 1 } },
-      { returnDocument: 'after' },
-    );
+    const [user] = await this.db
+      .update(users)
+      .set({ telegramLinkToken: null, telegramLinkExpiresAt: null })
+      .where(
+        and(
+          eq(users.telegramLinkToken, hashCode(code)),
+          gt(users.telegramLinkExpiresAt, new Date()),
+        ),
+      )
+      .returning();
     if (!user) return { status: 'expired' };
     if (user.telegramId === from.id) return { status: 'linked', user };
 
     // Accounts made from this Telegram user by button presses, even during the merge
     const merged: string[] = [];
     for (let attempt = 0; attempt < 3; attempt++) {
-      const other = await UserModel.findOne({ telegramId: from.id });
-      if (other && !other._id.equals(user._id)) {
+      const other = await this.findByTelegramId(from.id);
+      if (other && other._id !== user._id) {
         // Another account with an email owns this Telegram user: nothing to merge
         if (other.email) return { status: 'taken' };
-        await UserModel.updateOne(
-          { _id: other._id },
-          { $unset: { telegramId: 1, telegramUsername: 1 } },
-        );
-        merged.push(other._id.toString());
+        await this.db
+          .update(users)
+          .set({ telegramId: null, telegramUsername: null })
+          .where(eq(users._id, other._id));
+        merged.push(other._id);
       }
       try {
-        await UserModel.updateOne(
-          { _id: user._id },
-          {
-            $set: {
-              telegramId: from.id,
-              ...(from.username && { telegramUsername: from.username }),
-            },
-          },
-        );
+        await this.db
+          .update(users)
+          .set({
+            telegramId: from.id,
+            ...(from.username && { telegramUsername: from.username }),
+          })
+          .where(eq(users._id, user._id));
         break;
       } catch (error) {
         // A button press made a new account in between: merge that one too
@@ -226,13 +255,13 @@ export class TelegramAccounts {
 
     for (const otherId of merged) {
       await this.moveSignUps(otherId, user);
-      await UserModel.deleteOne({ _id: otherId });
+      await this.db.delete(users).where(eq(users._id, otherId));
     }
-    const linked = await UserModel.findById(user._id);
+    const linked = await findUserById(this.db, user._id);
     return { status: 'linked', user: linked ?? user };
   }
 
-  async unlink(user: UserDocument) {
+  async unlink(user: UserRecord) {
     if (!user.email) {
       throw new AppError(
         409,
@@ -240,26 +269,37 @@ export class TelegramAccounts {
         'an account without email cannot be unlinked from Telegram',
       );
     }
-    user.telegramId = undefined;
-    user.telegramUsername = undefined;
-    return user.save();
+    const [updated] = await this.db
+      .update(users)
+      .set({ telegramId: null, telegramUsername: null })
+      .where(eq(users._id, user._id))
+      .returning();
+    return updated ?? { ...user, telegramId: null, telegramUsername: null };
   }
 
-  private async moveSignUps(fromUserId: string, to: UserDocument) {
-    const toUserId = to._id.toString();
-    const signUps = await PlayerModel.find({ userId: fromUserId });
+  private async moveSignUps(fromUserId: string, to: UserRecord) {
+    const signUps = await this.db
+      .select()
+      .from(players)
+      .where(eq(players.userId, fromUserId));
     for (const player of signUps) {
-      await this.players.resync(player.eventId, async () => {
-        const duplicate = await PlayerModel.exists({
-          eventId: player.eventId,
-          userId: toUserId,
-        });
-        if (duplicate) await player.deleteOne();
-        else {
-          await PlayerModel.updateOne(
-            { _id: player._id },
-            { userId: toUserId, name: to.name },
+      await this.players.resync(player.eventId, async (tx) => {
+        const [duplicate] = await tx
+          .select({ _id: players._id })
+          .from(players)
+          .where(
+            and(
+              eq(players.eventId, player.eventId),
+              eq(players.userId, to._id),
+            ),
           );
+        if (duplicate) {
+          await tx.delete(players).where(eq(players._id, player._id));
+        } else {
+          await tx
+            .update(players)
+            .set({ userId: to._id, name: to.name })
+            .where(eq(players._id, player._id));
         }
       });
     }

@@ -1,12 +1,22 @@
-import type { PlayerEntity } from './player.model.js';
+type RosterFriend = {
+  name: string;
+  status: boolean;
+  /** A Date, or the ISO string stored in the friends list */
+  sureSince?: Date | string | null;
+};
 
-type RosterPlayer = Pick<PlayerEntity, 'status' | 'friends'> & {
+type RosterPlayer = {
   _id: { toString(): string };
+  status: boolean;
+  friends: RosterFriend[];
   name?: string;
   userId?: string;
   sureSince?: Date | null;
   createdAt?: Date;
 };
+
+const timeOf = (value?: Date | string | null) =>
+  value ? new Date(value).getTime() : undefined;
 
 /** A person in the roster: a player, or a friend they bring */
 export type RosterPerson = {
@@ -45,7 +55,7 @@ export const computeRoster = (players: RosterPlayer[], maximum = 0) => {
       ...(player.userId && { userId: player.userId }),
       isPlayer: true,
       sure: player.status,
-      since: player.sureSince?.getTime() ?? base,
+      since: timeOf(player.sureSince) ?? base,
     });
     player.friends.forEach((friend, position) =>
       entries.push({
@@ -54,7 +64,7 @@ export const computeRoster = (players: RosterPlayer[], maximum = 0) => {
         from: name,
         isPlayer: false,
         sure: friend.status,
-        since: friend.sureSince?.getTime() ?? base,
+        since: timeOf(friend.sureSince) ?? base,
       }),
     );
   });
@@ -110,7 +120,7 @@ export const squadChanges = (before: RosterPerson[], after: RosterPerson[]) => {
 
 /** Counts players including their friends, without a limit of places */
 export const countPlayers = (
-  players: Pick<PlayerEntity, 'status' | 'friends'>[],
+  players: Pick<RosterPlayer, 'status' | 'friends'>[],
 ) =>
   computeRoster(
     players.map((player, i) => ({ ...player, _id: String(i) })),

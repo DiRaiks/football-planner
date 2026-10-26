@@ -3,8 +3,8 @@ import fastifyJwt from '@fastify/jwt';
 import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify';
 
 import {
-  UserModel,
-  type UserDocument,
+  findUserById,
+  type UserRecord,
 } from '../../modules/users/user.model.js';
 
 const unauthorized = (reply: FastifyReply, message: string) =>
@@ -26,10 +26,10 @@ declare module 'fastify' {
       reply: FastifyReply,
     ) => Promise<void>;
     /** `expiresIn` shortens the session, e.g. for one opened from a Mini App */
-    issueToken: (user: UserDocument, expiresIn?: string) => string;
+    issueToken: (user: UserRecord, expiresIn?: string) => string;
   }
   interface FastifyRequest {
-    currentUser: UserDocument | null;
+    currentUser: UserRecord | null;
   }
 }
 
@@ -43,9 +43,9 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
 
   fastify.decorateRequest('currentUser', null);
 
-  fastify.decorate('issueToken', (user: UserDocument, expiresIn?: string) =>
+  fastify.decorate('issueToken', (user: UserRecord, expiresIn?: string) =>
     fastify.jwt.sign(
-      { id: user._id.toString(), v: user.tokenVersion ?? 0 },
+      { id: user._id, v: user.tokenVersion },
       expiresIn ? { expiresIn } : {},
     ),
   );
@@ -65,11 +65,15 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
         return unauthorized(reply, 'token expired, please log in again');
       }
 
-      const user = await UserModel.findById(payload.id);
+      // Tokens carry the 24-hex id, also those issued before the move from MongoDB
+      const user =
+        typeof payload.id === 'string' && /^[a-f0-9]{24}$/i.test(payload.id)
+          ? await findUserById(fastify.db, payload.id.toLowerCase())
+          : null;
       if (!user) return unauthorized(reply, 'user not found');
 
       // Tokens issued before the last password change carry an outdated version
-      if ((payload.v ?? 0) !== (user.tokenVersion ?? 0)) {
+      if ((payload.v ?? 0) !== user.tokenVersion) {
         return unauthorized(reply, 'token revoked, please log in again');
       }
 

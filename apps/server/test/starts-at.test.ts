@@ -1,9 +1,7 @@
-import mongoose from 'mongoose';
 import { describe, expect, it } from 'vitest';
 
 import { buildApp } from '../src/app.js';
 import { normalizeDate, normalizeTime } from '../src/lib/legacy-dates.js';
-import { migrateDates } from '../src/lib/migrate-dates.js';
 import { isTimeZone, zonedToInstant } from '../src/lib/time.js';
 import { createEvent, JWT_SECRET, register, setupApp } from './helpers.js';
 
@@ -154,7 +152,7 @@ describe('events with a start instant', () => {
         fastify: { logger: false },
         env: {
           PORT: 0,
-          MONGO_URI: 'mongodb://127.0.0.1:1/never',
+          DATABASE_URL: 'postgres://127.0.0.1:1/never',
           JWT_SECRET,
           TIME_ZONE: 'Mars/Olympus',
         },
@@ -163,103 +161,23 @@ describe('events with a start instant', () => {
   });
 });
 
-describe('migrateDates', () => {
-  const insertLegacy = async () => {
-    const events = mongoose.connection.collection('events');
-    const players = mongoose.connection.collection('players');
-    const { insertedIds } = await events.insertMany([
-      {
-        eventName: 'A',
-        place: 'P',
-        date: '03.11.2026',
-        time: '20.00',
-        minimum: 10,
-        playersAmount: 0,
-        creatorId: 'u',
-      },
-      {
-        eventName: 'B',
-        place: 'P',
-        date: '2026-11-04',
-        time: '19:00',
-        minimum: 10,
-        playersAmount: 0,
-        creatorId: 'u',
-      },
-      {
-        eventName: 'C',
-        place: 'P',
-        date: 'someday',
-        time: 'вечером',
-        minimum: 10,
-        playersAmount: 0,
-        creatorId: 'u',
-      },
-    ]);
-    await players.insertOne({
-      eventId: insertedIds[0]!.toString(),
-      date: '03.11.2026',
-      name: 'X',
+describe('database settings', () => {
+  const start = (env: Record<string, unknown>) =>
+    buildApp({
+      fastify: { logger: false },
+      env: { PORT: 0, JWT_SECRET, ...env },
     });
-    return { events, players, ids: insertedIds };
-  };
 
-  it('shows the changes on a dry run without writing', async () => {
-    const { events } = await insertLegacy();
-    const result = await migrateDates(mongoose.connection.db!, {
-      timeZone: 'Europe/Moscow',
-      dryRun: true,
-    });
-    expect(
-      result.changed.map((c) => [
-        c.date,
-        c.time,
-        c.startsAt.toISOString(),
-        c.was,
-      ]),
-    ).toEqual([
-      ['2026-11-03', '20:00', '2026-11-03T17:00:00.000Z', '03.11.2026 20.00'],
-      ['2026-11-04', '19:00', '2026-11-04T16:00:00.000Z', undefined],
-    ]);
-    expect(result.failed).toEqual([
-      expect.objectContaining({ date: 'someday', time: 'вечером' }),
-    ]);
-    expect(await events.countDocuments({ startsAt: { $exists: true } })).toBe(
-      0,
-    );
+  it('explains that MONGO_URI was replaced by DATABASE_URL', async () => {
+    await expect(
+      start({ MONGO_URI: 'mongodb://127.0.0.1:1/football' }),
+    ).rejects.toThrow(/MONGO_URI is no longer used.*DATABASE_URL/);
   });
 
-  it('applies the changes, fixes players and skips migrated events next time', async () => {
-    const { events, players, ids } = await insertLegacy();
-    const db = mongoose.connection.db!;
-    const result = await migrateDates(db, {
-      timeZone: 'Europe/Moscow',
-      dryRun: false,
-    });
-    expect(result.players).toBe(1);
-    expect(await events.findOne({ _id: ids[0] })).toMatchObject({
-      date: '2026-11-03',
-      time: '20:00',
-      startsAt: new Date('2026-11-03T17:00:00.000Z'),
-    });
-    expect(await players.findOne({})).toMatchObject({ date: '2026-11-03' });
-
-    const again = await migrateDates(db, {
-      timeZone: 'Europe/Moscow',
-      dryRun: false,
-    });
-    expect(again.changed).toEqual([]);
-    expect(again.failed).toHaveLength(1);
-
-    // --all recomputes after a time zone change
-    const recomputed = await migrateDates(db, {
-      timeZone: 'UTC',
-      dryRun: false,
-      all: true,
-    });
-    expect(recomputed.changed).toHaveLength(2);
-    expect((await events.findOne({ _id: ids[1] }))?.startsAt).toEqual(
-      new Date('2026-11-04T19:00:00.000Z'),
-    );
+  it('refuses to start without DATABASE_URL or with another database', async () => {
+    await expect(start({})).rejects.toThrow('DATABASE_URL is not set');
+    await expect(
+      start({ DATABASE_URL: 'mongodb://127.0.0.1:1/football' }),
+    ).rejects.toThrow('DATABASE_URL must start with postgres://');
   });
 });

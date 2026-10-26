@@ -1,8 +1,17 @@
 import { describe, expect, it } from 'vitest';
 
-import { EventModel } from '../src/modules/events/event.model.js';
-import { PlayerModel } from '../src/modules/players/player.model.js';
-import { createEvent, register, registerAdmin, setupApp } from './helpers.js';
+import { eq } from 'drizzle-orm';
+
+import { players } from '../src/db/index.js';
+import {
+  countRows,
+  createEvent,
+  getEvent,
+  getPlayer,
+  register,
+  registerAdmin,
+  setupApp,
+} from './helpers.js';
 
 const ctx = setupApp({ AUTH_RATE_LIMIT_MAX: 1000 });
 
@@ -56,7 +65,7 @@ describe('events', () => {
     });
 
     expect(res.statusCode).toBe(200);
-    expect(await EventModel.findById(event._id)).toMatchObject({
+    expect(await getEvent(ctx.app, event._id)).toMatchObject({
       eventName: 'Renamed',
       creatorId: alice._id,
       playersAmount: 0,
@@ -78,7 +87,9 @@ describe('events', () => {
 
     expect((await del(bob.auth)).statusCode).toBe(403);
     expect((await del(alice.auth)).statusCode).toBe(204);
-    expect(await PlayerModel.countDocuments({ eventId: event._id })).toBe(0);
+    expect(
+      await countRows(ctx.app, players, eq(players.eventId, event._id)),
+    ).toBe(0);
   });
 
   it('returns 400 for malformed ids', async () => {
@@ -139,7 +150,7 @@ describe('players', () => {
     });
     expect(own.statusCode).toBe(200);
     expect(own.json().event.playersAmount).toBe(2);
-    expect(await PlayerModel.findById(player._id)).toMatchObject({
+    expect(await getPlayer(ctx.app, player._id)).toMatchObject({
       userId: alice._id,
       eventId: event._id,
     });

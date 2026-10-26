@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { UserModel } from '../src/modules/users/user.model.js';
-import { register, setupApp } from './helpers.js';
+import { eq } from 'drizzle-orm';
+
+import { users } from '../src/db/index.js';
+import { findUser, register, setupApp } from './helpers.js';
 
 const ctx = setupApp({ AUTH_RATE_LIMIT_MAX: 1000 });
 
@@ -51,14 +53,16 @@ describe('users', () => {
     });
 
     expect(res.statusCode).toBe(200);
-    const stored = await UserModel.findById(alice._id).select('+hash');
+    const stored = await findUser(ctx.app, eq(users._id, alice._id));
     expect(stored).toMatchObject({
       name: 'Alice 2',
       email: 'a@example.com',
       role: 'user',
     });
     expect(stored?.hash).toMatch(/^scrypt\$/);
-    expect(await UserModel.findById(bob._id)).toMatchObject({ name: 'Bob' });
+    expect(await findUser(ctx.app, eq(users._id, bob._id))).toMatchObject({
+      name: 'Bob',
+    });
   });
 
   it('no longer exposes the account takeover endpoint', async () => {
@@ -73,7 +77,7 @@ describe('users', () => {
     });
 
     expect(res.statusCode).toBe(404);
-    expect(await UserModel.findById(bob._id)).toMatchObject({
+    expect(await findUser(ctx.app, eq(users._id, bob._id))).toMatchObject({
       email: 'b@example.com',
     });
   });

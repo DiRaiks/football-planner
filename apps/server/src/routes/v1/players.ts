@@ -27,7 +27,7 @@ const playersRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
     async (request) => {
       const roster = await players.roster(request.params.eventId);
       return roster.players.map((player) =>
-        toPlayerDto(player, roster.waitlisted.has(player._id.toString())),
+        toPlayerDto(player, roster.waitlisted.has(player._id)),
       );
     },
   );
