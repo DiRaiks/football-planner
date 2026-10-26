@@ -22,6 +22,11 @@ jobs:
 
   e2e:
     runs-on: ubuntu-latest
+    # Chromium and its system libraries come with the image: no apt step to wait on.
+    # Keep the tag equal to @playwright/test (Renovate updates them together).
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.1-noble
+      options: --ipc=host
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -29,13 +34,14 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
-        working-directory: apps/web
       - run: npm run build --workspace football-planner-web
       # Sign-up flow on desktop and phone against the real API on Postgres in memory (PGlite)
       - run: npm run test:e2e --workspace football-planner-web
       # Accessibility and best practices of the public pages
-      - run: npm run lighthouse --workspace football-planner-web
+      # The image has no Google Chrome: Lighthouse runs Playwright's Chromium
+      - run: |
+          CHROME_PATH=$(node -p "require('@playwright/test').chromium.executablePath()") \
+            npm run lighthouse --workspace football-planner-web
       - if: failure()
         uses: actions/upload-artifact@v7
         with:
