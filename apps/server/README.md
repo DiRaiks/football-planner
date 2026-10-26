@@ -10,4 +10,8 @@ The server speaks plain HTTP; TLS terminates at the reverse proxy (Caddy in prod
 npm test
 ```
 
-Vitest with an in-memory MongoDB; the bot is tested against a fake Telegram API.
+Vitest with Postgres in memory (PGlite), or a real server with `TEST_DATABASE_URL`; the bot is tested against a fake Telegram API.
+
+## Database
+
+The schema is in `src/db/schema.ts`. After changing it, `npm run db:generate` writes the next SQL migration to `drizzle/`; the server applies pending migrations on startup.
