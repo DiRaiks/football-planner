@@ -97,37 +97,43 @@ Versions before Postgres kept their data in MongoDB (`MONGO_URI`). The server no
 - matches saved without a start time get one from their date and time in `TIME_ZONE`, with free-text dates such as `03.11.2026 20.00` normalised (this replaces the old `migrate-dates` script);
 - chats saved by the first bot, without topics, get the `events` topic they used to receive;
 - an account whose email (or Telegram id) repeats an earlier one, in any letter case, is not copied: its sign-ups move to the earlier account. A second next match of one weekly series stays, without the link to the series. Sign-ups of deleted matches or users are skipped. All of it is listed in the report;
-- it can run again: rows already in Postgres stay as they are, only new ones are added. A row that clashes with a different row already in Postgres (the same email under another id) counts as already there, and its sign-ups are listed as skipped.
+- it runs once, into an empty database, before the new server takes requests. **Do not run it again once the new server is live:** it would bring back rows deleted in Postgres since. A real run into a database that has data refuses, unless `--force` is given; `--force` only adds the rows that are missing (a row clashing with another under a different id counts as already there).
 
-It needs the repository's dev dependencies, so it runs from a checkout in a one-off Node container on the stack's network. In a quiet hour:
+It needs the repository's dev dependencies, so it runs from a checkout in a one-off Node container on the stack's network. Plan a short downtime: the site is off from step 4 to step 7.
 
 1. Back up MongoDB: an Atlas snapshot, or `$compose exec -T mongo mongodump --archive --gzip > backups/before-postgres.archive.gz`.
 2. In `.env`, keep `MONGO_URI` and add `POSTGRES_PASSWORD`, `DATABASE_URL=postgres://football:<POSTGRES_PASSWORD>@postgres:5432/football` and `COMPOSE_PROFILES=postgres` (`postgres,mongo` when MongoDB runs on this host). `TIME_ZONE` must be the venues' time zone.
-3. Put the new `compose.yml` next to `.env` and start only Postgres; the running server is not touched:
+3. Put the new `compose.yml` next to `.env` and start only Postgres; the running server is not touched yet:
 
    ```bash
    git clone --depth 1 https://github.com/DiRaiks/football-planner.git src
    cp src/deploy/compose.yml compose.yml
    $compose up -d postgres
+   docker network ls   # the stack's network: <compose project>_default
    ```
 
-4. Dry run: reads MongoDB, prints the counts and every problem, writes nothing:
+   The commands below use `football-planner_default`, the network of the project name in `compose.yml`. Use the name `docker network ls` shows if yours differs.
+
+4. Stop the old server, so nothing is written to MongoDB any more: `$compose stop server`.
+5. Dry run: reads MongoDB, prints the counts and every problem, writes nothing:
 
    ```bash
    migrate="docker run --rm --network football-planner_default --env-file .env -v $PWD/src:/app -w /app node:24-alpine sh -c"
    $migrate 'npm ci --ignore-scripts && npm run migrate-from-mongo --workspace apps/server -- --dry-run'
    ```
 
-   With MongoDB in this stack, `MONGO_URI` is `mongodb://mongo:27017/football`. Fix what the report lists in MongoDB if it matters, and run it again.
+   With MongoDB in this stack, `MONGO_URI` is `mongodb://mongo:27017/football`. Fix what the report lists in MongoDB if it matters, and run the dry run again.
 
-5. The real run: applies the migrations, then copies the data in one transaction and prints the same report:
+6. The real run, once: applies the migrations, then copies the data in one transaction and prints the same report:
 
    ```bash
    $migrate 'npm run migrate-from-mongo --workspace apps/server'
    ```
 
-6. Deploy this version (merge, or `gh workflow run deploy.yml`). Then run step 5 once more: it adds what the old server saved in between (new accounts, matches and sign-ups; changes to rows already copied are not carried over).
-7. Check the site and `/health`, then remove `MONGO_URI` from `.env`, drop `mongo` from `COMPOSE_PROFILES`, `$compose up -d --remove-orphans` and `rm -rf src`. The `mongo_data` volume and the MongoDB backups stay until you delete them.
+   If it fails, no data was copied: fix the cause and run it again. To start over after a successful run, empty the database first (`$compose rm -sf postgres && docker volume rm football-planner_postgres_data`, then step 3).
+
+7. Deploy this version (merge, or `gh workflow run deploy.yml`): the new server starts on the copied data.
+8. Check the site and `/health`, then remove `MONGO_URI` from `.env`, drop `mongo` from `COMPOSE_PROFILES`, `$compose up -d --remove-orphans` and `rm -rf src`. The `mongo_data` volume and the MongoDB backups stay until you delete them.
 
 ## Testing the stack locally
 

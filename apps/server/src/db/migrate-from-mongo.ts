@@ -321,7 +321,25 @@ export type MigrateOptions = {
   timeZone: string;
   /** Only read and report; Postgres is not touched */
   dryRun: boolean;
+  /**
+   * Copy into a database that has data already, adding only rows that are missing.
+   * Without it a real run refuses: once the new server is live, a second copy would
+   * bring back rows deleted in Postgres since.
+   */
+  force?: boolean;
 };
+
+/** Thrown by a real run into a database that has data, without `force` */
+export class NotEmptyError extends Error {
+  constructor(counts: string) {
+    super(
+      `Postgres has data already (${counts}). The copy is meant for an empty database, ` +
+        'before the new server takes requests: a second copy brings back rows deleted ' +
+        'since. Use --force only to add what is missing, knowing that.',
+    );
+    this.name = 'NotEmptyError';
+  }
+}
 
 const emptyReport = (): CollectionReport => ({
   read: 0,
@@ -404,6 +422,25 @@ const keepFirstNext = <T extends EventRow>(rows: T[], problems: string[]) => {
   return rows;
 };
 
+/** Of accounts that clash: one with a password first, then the oldest, then by id */
+const keepFirst = (a: UserRow, b: UserRow) =>
+  Number(Boolean(b.hash)) - Number(Boolean(a.hash)) ||
+  (a.createdAt?.getTime() ?? 0) - (b.createdAt?.getTime() ?? 0) ||
+  a._id!.localeCompare(b._id!);
+
+const assertEmpty = async (q: Executor) => {
+  const counts = [];
+  for (const [name, table] of [
+    ['users', users],
+    ['events', events],
+    ['players', players],
+  ] as const) {
+    const [row] = await q.select({ n: sql<number>`count(*)::int` }).from(table);
+    if (row!.n > 0) counts.push(`${name}: ${row!.n}`);
+  }
+  if (counts.length) throw new NotEmptyError(counts.join(', '));
+};
+
 const CHUNK = 500;
 
 /** Inserts the rows that are not there yet; resolves with how many were new */
@@ -454,7 +491,7 @@ const keepLinkedPlayers = (
 export const migrateFromMongo = async (
   source: MongoSource,
   database: Database | null,
-  { timeZone, dryRun }: MigrateOptions,
+  { timeZone, dryRun, force = false }: MigrateOptions,
 ): Promise<MigrationReport> => {
   const problems: string[] = [];
   const collections = {
@@ -464,14 +501,22 @@ export const migrateFromMongo = async (
     chats: emptyReport(),
   };
 
-  // Accounts that clash with an earlier one (an email differing only in case): their
-  // sign-ups go to the earlier account instead of being lost
+  // Accounts that clash with another (an email differing only in case): the one that
+  // can sign in with a password stays, else the oldest; the sign-ups and matches of the
+  // others go to it instead of being lost
   const mergedUsers = new Map<string, string>();
+  const mergedInto = (userId: string) => {
+    let target = userId;
+    while (mergedUsers.has(target)) target = mergedUsers.get(target)!;
+    return target;
+  };
   const userRows = dropDuplicates(
     dropDuplicates(
-      await readAll(source, 'users', collections.users, (doc) =>
-        toUser(doc, problems),
-      ),
+      (
+        await readAll(source, 'users', collections.users, (doc) =>
+          toUser(doc, problems),
+        )
+      ).sort(keepFirst),
       'users',
       (row) => row.email ?? null,
       collections.users,
@@ -485,21 +530,20 @@ export const migrateFromMongo = async (
     mergedUsers,
   );
   const eventRows = keepFirstNext(
-    await readAll(source, 'events', collections.events, (doc) =>
-      toEvent(doc, timeZone, problems),
-    ),
+    await readAll(source, 'events', collections.events, (doc) => {
+      const row = toEvent(doc, timeZone, problems);
+      if (row && mergedUsers.has(row.creatorId)) {
+        row.creatorId = mergedInto(row.creatorId);
+        problems.push(`events ${row._id}: organiser is now ${row.creatorId}`);
+      }
+      return row;
+    }),
     problems,
   );
   const playerRows = dropDuplicates(
     await readAll(source, 'players', collections.players, (doc) => {
       const row = toPlayer(doc, problems);
-      const owner = row && mergedUsers.get(row.userId);
-      // Chains of merges end at an account that stays
-      if (row && owner) {
-        let target = owner;
-        while (mergedUsers.has(target)) target = mergedUsers.get(target)!;
-        row.userId = target;
-      }
+      if (row) row.userId = mergedInto(row.userId);
       return row;
     }),
     'players',
@@ -539,6 +583,7 @@ export const migrateFromMongo = async (
   await pgStore(database.client, { table: 'chats' }).get(0);
 
   await database.db.transaction(async (tx) => {
+    if (!force) await assertEmpty(tx);
     const count = (
       name: MongoCollection,
       rows: unknown[],

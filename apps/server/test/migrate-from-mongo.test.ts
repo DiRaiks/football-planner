@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 import { events, players, users } from '../src/db/index.js';
 import {
+  NotEmptyError,
   formatReport,
   migrateFromMongo,
   type MongoCollection,
@@ -25,6 +26,7 @@ const ids = {
   weekly: id(),
   next: id(),
   twin: id(),
+  byTwin: id(),
   old: id(),
   broken: id(),
 };
@@ -127,6 +129,18 @@ const fixture = (): Record<MongoCollection, MongoDoc[]> => ({
       playersAmount: 0,
       creatorId: ids.admin.toString(),
     },
+    // Organised by the twin account
+    {
+      _id: ids.byTwin,
+      eventName: 'Матч близнеца',
+      place: 'Двор',
+      date: '2026-11-10',
+      time: '19:00',
+      startsAt: new Date('2026-11-10T16:00:00Z'),
+      minimum: 4,
+      playersAmount: 0,
+      creatorId: ids.duplicate.toString(),
+    },
     // Saved before startsAt existed, with free-text date and time
     {
       _id: ids.old,
@@ -227,14 +241,14 @@ const fixture = (): Record<MongoCollection, MongoDoc[]> => ({
   ],
 });
 
-const run = (dryRun: boolean, docs = fixture()) =>
+const run = (dryRun: boolean, docs = fixture(), force = false) =>
   migrateFromMongo(
     // Like a MongoDB cursor: an async iterable of documents
     async function* (name) {
       yield* docs[name];
     },
     dryRun ? null : ctx.database,
-    { timeZone: 'Europe/Moscow', dryRun },
+    { timeZone: 'Europe/Moscow', dryRun, force },
   );
 
 /** The chats as the bot reads them */
@@ -250,13 +264,14 @@ describe('migrate-from-mongo', () => {
 
     expect(report.collections).toEqual({
       users: { read: 5, inserted: 4, existing: 0, skipped: 1 },
-      events: { read: 5, inserted: 5, existing: 0, skipped: 0 },
+      events: { read: 6, inserted: 6, existing: 0, skipped: 0 },
       players: { read: 6, inserted: 4, existing: 0, skipped: 2 },
       chats: { read: 3, inserted: 3, existing: 0, skipped: 0 },
     });
     expect(report.startsAtFilled).toBe(1);
     expect(report.problems).toEqual([
       `users ${ids.duplicate}: skipped, same old@example.com as ${ids.legacy}; its sign-ups move to that account`,
+      `events ${ids.byTwin}: organiser is now ${ids.legacy}`,
       `events ${ids.old}: date and time "03.11.2026 20.00" saved as "2026-11-03 20:00"`,
       `events ${ids.broken}: no start time, date "someday" and time "вечером" are not readable`,
       `events ${ids.twin}: another match follows ${ids.weekly} already, kept without the link`,
@@ -344,7 +359,8 @@ describe('migrate-from-mongo', () => {
       [301, ['events']],
     ]);
 
-    const again = await run(false);
+    await expect(run(false)).rejects.toThrow(NotEmptyError);
+    const again = await run(false, fixture(), true);
     expect(again.collections.users).toEqual({
       read: 5,
       inserted: 0,
@@ -391,10 +407,39 @@ describe('migrate-from-mongo', () => {
     expect(stats.json()).toEqual({ eventsCount: 2 });
   });
 
+  it('keeps the account with a password, else the oldest, whatever the order', async () => {
+    const docs = fixture();
+    const twin = docs.users.find((u) => u._id === ids.duplicate)!;
+    // The twin comes first and is older, but has no password
+    twin.createdAt = new Date('2020-01-01T00:00:00Z');
+    docs.users = [twin, ...docs.users.filter((u) => u !== twin)];
+    const report = await run(false, docs);
+    expect(report.problems).toContain(
+      `users ${ids.duplicate}: skipped, same old@example.com as ${ids.legacy}; its sign-ups move to that account`,
+    );
+    expect(await getEvent(ctx.app, ids.byTwin.toString())).toMatchObject({
+      creatorId: ids.legacy.toString(),
+    });
+
+    // Neither has a password: the older one stays
+    const a = { _id: id(), email: 'same@example.com', name: 'A' };
+    const b = { _id: id(), email: 'SAME@example.com', name: 'B' };
+    const older = await run(true, {
+      ...fixture(),
+      users: [
+        { ...a, createdAt: new Date('2026-02-01T00:00:00Z') },
+        { ...b, createdAt: new Date('2026-01-01T00:00:00Z') },
+      ],
+    });
+    expect(older.problems).toContain(
+      `users ${a._id}: skipped, same same@example.com as ${b._id}; its sign-ups move to that account`,
+    );
+  });
+
   it('adds only what is new on a second run', async () => {
     const docs = fixture();
     await run(false, { ...docs, players: [], chats: [] });
-    const report = await run(false, docs);
+    const report = await run(false, docs, true);
     expect(report.collections.users.inserted).toBe(0);
     expect(report.collections.players.inserted).toBe(4);
     expect(report.collections.chats.inserted).toBe(3);

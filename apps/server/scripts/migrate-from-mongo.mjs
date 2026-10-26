@@ -4,13 +4,17 @@
 //   npm run migrate-from-mongo                apply the migrations, then copy the data
 //
 // Reads MONGO_URI (the old database), DATABASE_URL (the new one) and TIME_ZONE (start
-// times of matches saved without one). Safe to run again: rows already in Postgres
-// stay as they are. Runs from a checkout with dev dependencies (mongodb, tsx); see
-// deploy/README.md.
+// times of matches saved without one). Runs from a checkout with dev dependencies
+// (mongodb, tsx); see deploy/README.md.
+//
+// Run it once, into an empty database, before the new server takes requests: a second
+// copy would bring back rows deleted in Postgres since. It refuses a database with
+// data unless --force is given, which only adds the rows that are missing.
 import { MongoClient } from 'mongodb';
 
 import { connectPostgres } from '../src/db/index.ts';
 import {
+  NotEmptyError,
   formatReport,
   migrateFromMongo,
 } from '../src/db/migrate-from-mongo.ts';
@@ -22,6 +26,7 @@ const fail = (message) => {
 };
 
 const dryRun = process.argv.includes('--dry-run');
+const force = process.argv.includes('--force');
 const { MONGO_URI, DATABASE_URL } = process.env;
 const timeZone = process.env.TIME_ZONE || 'UTC';
 
@@ -43,9 +48,13 @@ try {
   const report = await migrateFromMongo(
     (name) => db.collection(name).find({}),
     database,
-    { timeZone, dryRun },
+    { timeZone, dryRun, force },
   );
   for (const line of formatReport(report)) console.log(line);
+} catch (error) {
+  if (!(error instanceof NotEmptyError)) throw error;
+  console.error(error.message);
+  process.exitCode = 1;
 } finally {
   await mongo.close();
   await database?.close();
