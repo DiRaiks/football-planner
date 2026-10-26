@@ -56,7 +56,8 @@ const databasePlugin: FastifyPluginAsync<DatabasePluginOptions> = async (
   }
 
   // Fail fast: the API is useless without a database, so a connection or migration
-  // error aborts startup, before the server takes requests
+  // error aborts startup, before the server takes requests. On Postgres, migrate()
+  // holds an advisory lock, so instances starting together take turns (db/index.ts)
   await database.migrate();
   logger.info('Database connected, migrations applied');
 

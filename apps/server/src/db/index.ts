@@ -55,9 +55,34 @@ export const connectPostgres = (url: string): Database => {
   return {
     db,
     client: pool,
-    migrate: () => migrate(db, { migrationsFolder: MIGRATIONS_FOLDER }),
+    migrate: () =>
+      withAdvisoryLock(pool, () =>
+        migrate(db, { migrationsFolder: MIGRATIONS_FOLDER }),
+      ),
     close: () => pool.end(),
   };
+};
+
+/** Key of the lock that lets one process at a time apply migrations */
+const MIGRATION_LOCK = 4_802_731_195;
+
+/**
+ * Runs `task` while holding a session-level advisory lock on a client of its own: two
+ * servers starting at once, or a server and the data migration, apply migrations one
+ * after another instead of together
+ */
+const withAdvisoryLock = async <T>(pool: pg.Pool, task: () => Promise<T>) => {
+  const client = await pool.connect();
+  try {
+    await client.query('SELECT pg_advisory_lock($1)', [MIGRATION_LOCK]);
+    try {
+      return await task();
+    } finally {
+      await client.query('SELECT pg_advisory_unlock($1)', [MIGRATION_LOCK]);
+    }
+  } finally {
+    client.release();
+  }
 };
 
 /** The Postgres error code of a failed query; Drizzle wraps the driver's error */
