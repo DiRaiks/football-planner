@@ -20,6 +20,8 @@ COPY --from=build /app/packages/shared/package.json packages/shared/
 COPY --from=build /app/packages/shared/dist packages/shared/dist
 COPY --from=build /app/apps/server/package.json apps/server/
 COPY --from=build /app/apps/server/dist apps/server/dist
+# SQL migrations, applied on startup
+COPY --from=build /app/apps/server/drizzle apps/server/drizzle
 COPY --from=build /app/apps/server/scripts apps/server/scripts
 USER node
 WORKDIR /app/apps/server

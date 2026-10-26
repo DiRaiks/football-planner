@@ -32,11 +32,11 @@ const monitoringPlugin: FastifyPluginAsync = async (fastify) => {
     registers,
   });
   new Gauge({
-    name: 'mongodb_connected',
-    help: '1 while the MongoDB connection is open',
+    name: 'database_connected',
+    help: '1 while Postgres answers queries',
     registers,
-    collect() {
-      this.set(fastify.mongoose?.connection?.readyState === 1 ? 1 : 0);
+    async collect() {
+      this.set((await fastify.databaseConnected()) ? 1 : 0);
     },
   });
 
@@ -61,10 +61,9 @@ const monitoringPlugin: FastifyPluginAsync = async (fastify) => {
   // container; the status says what is wrong
   fastify.decorate('healthChecker', {
     routeHandler: async (_request, reply) => {
-      const dbState =
-        fastify?.mongoose?.connection?.readyState === 1
-          ? 'connected'
-          : 'disconnected';
+      const dbState = (await fastify.databaseConnected())
+        ? 'connected'
+        : 'disconnected';
       // Without BOT_TOKEN there is no bot to check
       const report = fastify.hasDecorator('tgHealth')
         ? await fastify.tgHealth.check()
