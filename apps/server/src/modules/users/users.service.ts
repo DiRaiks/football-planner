@@ -7,7 +7,7 @@ import type {
   UpdateMeBody,
 } from '@football-planner/shared';
 
-import { players, users, type Db, type UserRecord } from '../../db/index.js';
+import { users, type Db, type Tx, type UserRecord } from '../../db/index.js';
 import { AppError, isDuplicateKeyError } from '../../lib/errors.js';
 import { hashPassword, verifyPassword } from '../../lib/password.js';
 import type { PlayersService } from '../players/players.service.js';
@@ -144,6 +144,9 @@ const hashCode = (code: string) =>
   createHash('sha256').update(code.trim().toUpperCase()).digest('hex');
 
 export class TelegramAccounts {
+  /** Tests run code at points of a merge where a button press could interleave */
+  testHooks: { beforeMergeDelete?: (tx: Tx) => Promise<void> } = {};
+
   constructor(
     private readonly db: Db,
     private readonly players: PlayersService,
@@ -254,8 +257,11 @@ export class TelegramAccounts {
     }
 
     for (const otherId of merged) {
-      await this.moveSignUps(otherId, user);
-      await this.db.delete(users).where(eq(users._id, otherId));
+      await this.players.mergeUser(
+        otherId,
+        user,
+        this.testHooks.beforeMergeDelete,
+      );
     }
     const linked = await findUserById(this.db, user._id);
     return { status: 'linked', user: linked ?? user };
@@ -275,34 +281,6 @@ export class TelegramAccounts {
       .where(eq(users._id, user._id))
       .returning();
     return updated ?? { ...user, telegramId: null, telegramUsername: null };
-  }
-
-  private async moveSignUps(fromUserId: string, to: UserRecord) {
-    const signUps = await this.db
-      .select()
-      .from(players)
-      .where(eq(players.userId, fromUserId));
-    for (const player of signUps) {
-      await this.players.resync(player.eventId, async (tx) => {
-        const [duplicate] = await tx
-          .select({ _id: players._id })
-          .from(players)
-          .where(
-            and(
-              eq(players.eventId, player.eventId),
-              eq(players.userId, to._id),
-            ),
-          );
-        if (duplicate) {
-          await tx.delete(players).where(eq(players._id, player._id));
-        } else {
-          await tx
-            .update(players)
-            .set({ userId: to._id, name: to.name })
-            .where(eq(players._id, player._id));
-        }
-      });
-    }
   }
 }
 

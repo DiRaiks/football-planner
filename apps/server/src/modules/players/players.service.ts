@@ -1,4 +1,4 @@
-import { and, asc, count, eq, sql } from 'drizzle-orm';
+import { and, asc, count, eq, notInArray, sql } from 'drizzle-orm';
 import type {
   Friend,
   SignUpBody,
@@ -8,6 +8,9 @@ import type {
 import {
   events,
   players,
+  users,
+  isForeignKeyViolation,
+  pgErrorCode,
   type Db,
   type EventRecord,
   type Executor,
@@ -19,7 +22,11 @@ import {
   isDuplicateKeyError,
   notFoundError,
 } from '../../lib/errors.js';
-import { withEventLock, type AfterCommit } from '../../lib/event-lock.js';
+import {
+  lockEvents,
+  withEventLock,
+  type AfterCommit,
+} from '../../lib/event-lock.js';
 import type { TelegramNotifier } from '../../plugins/telegram/index.js';
 import { findEventById, toEventDto } from '../events/event.model.js';
 import { isAdmin, type UserRecord } from '../users/user.model.js';
@@ -246,6 +253,86 @@ export class PlayersService {
         this.notifier.eventUpdated(eventId, false);
       });
     });
+  }
+
+  /**
+   * Moves the sign-ups of one account to another and deletes the first, in one
+   * transaction with their matches locked; a match signed up for twice keeps the
+   * sign-up of `to`. A sign-up made for `from` at the same moment fails the delete on
+   * its foreign key, and the whole step runs again with it.
+   */
+  async mergeUser(
+    fromUserId: string,
+    to: UserRecord,
+    beforeDelete?: (tx: Tx) => Promise<void>,
+  ) {
+    for (let attempt = 1; ; attempt++) {
+      try {
+        return await this.mergeOnce(fromUserId, to, beforeDelete);
+      } catch (error) {
+        // 40P01: a deadlock with a sign-up locking the same matches in another order
+        const retry =
+          isForeignKeyViolation(error) || pgErrorCode(error) === '40P01';
+        if (!retry || attempt === 3) throw error;
+      }
+    }
+  }
+
+  private async mergeOnce(
+    fromUserId: string,
+    to: UserRecord,
+    beforeDelete?: (tx: Tx) => Promise<void>,
+  ) {
+    const effects: (() => void)[] = [];
+    await this.db.transaction(async (tx) => {
+      // Lock the matches of the sign-ups, and look again: one may have come meanwhile
+      const before = new Map<string, RosterPerson[] | null>();
+      for (;;) {
+        const fresh = await tx
+          .selectDistinct({ eventId: players.eventId })
+          .from(players)
+          .where(
+            and(
+              eq(players.userId, fromUserId),
+              before.size
+                ? notInArray(players.eventId, [...before.keys()])
+                : undefined,
+            ),
+          );
+        if (!fresh.length) break;
+        const ids = fresh.map((row) => row.eventId);
+        await lockEvents(tx, ids);
+        for (const id of ids) {
+          const roster = await this.roster(id, tx).catch(() => null);
+          before.set(id, roster?.people ?? null);
+        }
+      }
+
+      await tx
+        .update(players)
+        .set({ userId: to._id, name: to.name })
+        .where(
+          and(
+            eq(players.userId, fromUserId),
+            sql`NOT EXISTS (SELECT 1 FROM players AS mine WHERE mine.event_id = ${players.eventId} AND mine.user_id = ${to._id})`,
+          ),
+        );
+      // Matches both accounts signed up for keep the sign-up of `to`
+      await tx.delete(players).where(eq(players.userId, fromUserId));
+      await beforeDelete?.(tx);
+      await tx.delete(users).where(eq(users._id, fromUserId));
+
+      for (const [eventId, people] of before) {
+        if (!people) continue;
+        const now = await this.roster(eventId, tx);
+        await this.saveCount(tx, now.event, now.count.all, people, now.people);
+        effects.push(() => {
+          this.announceMoves(eventId, people, now.people);
+          this.notifier.eventUpdated(eventId, false);
+        });
+      }
+    });
+    for (const effect of effects) effect();
   }
 
   /** Marks a player as paid for the pitch; the match's organiser and admins only */

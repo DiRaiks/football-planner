@@ -2,6 +2,7 @@ import { html, joinHtml } from '@dirai/tg-kit';
 import type { FastifyInstance } from 'fastify';
 import type { Context } from 'grammy';
 
+import { isForeignKeyViolation } from '../../db/index.js';
 import { AppError } from '../../lib/errors.js';
 import { findEventById } from '../../modules/events/event.model.js';
 import type { UserRecord } from '../../modules/users/user.model.js';
@@ -108,10 +109,18 @@ export const registerTelegramActions = (fastify: FastifyInstance) => {
         if (event.startsAt && event.startsAt.getTime() < Date.now()) {
           return await reply(ctx, 'Матч уже начался');
         }
-        const user = await fastify.services.telegramAccounts.findOrCreate(
-          ctx.from,
-        );
-        return await reply(ctx, await rsvp(eventId, action, user));
+        const { telegramAccounts } = fastify.services;
+        const user = await telegramAccounts.findOrCreate(ctx.from);
+        let answer: string;
+        try {
+          answer = await rsvp(eventId, action, user);
+        } catch (error) {
+          // The account was merged into a site account by /link meanwhile: press as that one
+          if (!isForeignKeyViolation(error)) throw error;
+          const merged = await telegramAccounts.findOrCreate(ctx.from);
+          answer = await rsvp(eventId, action, merged);
+        }
+        return await reply(ctx, answer);
       } catch (err) {
         fastify.log.error({ err, eventId }, 'telegram sign-up failed');
         return reply(ctx, 'Не получилось, попробуйте ещё раз');

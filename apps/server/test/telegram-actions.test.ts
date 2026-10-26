@@ -625,6 +625,71 @@ describe('review: queue order, merges and races', () => {
     );
   });
 
+  it('runs a merge again when a sign-up for the old account lands before its delete', async () => {
+    const { event } = await futureMatch();
+    const second = await futureMatch();
+    await press(`rsvp:${event._id}:yes`);
+    const old = await findUser(ctx.app, eq(users.telegramId, ANYA.id));
+    const web = await register(ctx.app, {
+      email: 'race@example.com',
+      name: 'Анна',
+    });
+    const { code } = (
+      await ctx.app.inject({
+        method: 'POST',
+        url: '/v1/users/me/telegram',
+        headers: web.auth,
+      })
+    ).json();
+
+    // A button press signs the old account up for another match in between
+    let attempts = 0;
+    ctx.app.services.telegramAccounts.testHooks.beforeMergeDelete = async (
+      tx,
+    ) => {
+      if (++attempts > 1) return;
+      await tx.insert(players).values({
+        eventId: second.event._id,
+        userId: old!._id,
+        name: 'Аня',
+        date: '2026-11-01',
+        status: true,
+      });
+    };
+    try {
+      await say(`/link ${code}`);
+    } finally {
+      ctx.app.services.telegramAccounts.testHooks = {};
+    }
+
+    expect(attempts).toBe(2);
+    expect(replies(ANYA.id).at(-1)).toContain('Telegram привязан');
+    expect(await findUser(ctx.app, eq(users._id, old!._id))).toBeNull();
+    expect(await firstPlayerOf(ctx.app, event._id)).toMatchObject({
+      userId: web._id,
+      name: 'Анна',
+    });
+    expect((await getEvent(ctx.app, event._id))?.playersAmount).toBe(1);
+  });
+
+  it('presses as the merged account when the old one is gone meanwhile', async () => {
+    const { event } = await futureMatch();
+    const accounts = ctx.app.services.telegramAccounts;
+    const real = await accounts.findOrCreate(ANYA);
+    // The account the press looked up was merged and deleted before the sign-up
+    vi.spyOn(accounts, 'findOrCreate').mockResolvedValueOnce({
+      ...real,
+      _id: 'f'.repeat(24),
+    });
+    await press(`rsvp:${event._id}:yes`);
+    vi.restoreAllMocks();
+
+    expect(answers().at(-1)).toBe('✅ Вы в составе');
+    expect(await firstPlayerOf(ctx.app, event._id)).toMatchObject({
+      userId: real._id,
+    });
+  });
+
   it('stops working once the code is posted in a group, and after too many wrong codes', async () => {
     const web = await register(ctx.app, { email: 'group@example.com' });
     const { code } = (
