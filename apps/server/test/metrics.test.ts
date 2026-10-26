@@ -14,7 +14,7 @@ describe('metrics', () => {
     expect(response.statusCode).toBe(200);
     expect(response.headers['content-type']).toContain('text/plain');
     const text = response.body;
-    expect(text).toContain('mongodb_connected 1');
+    expect(text).toContain('database_connected 1');
     expect(text).toContain('process_cpu_user_seconds_total');
     expect(text).toMatch(
       /http_request_duration_seconds_count\{method="GET",route="\/v1\/events\/:id",status="200"\} 1/,

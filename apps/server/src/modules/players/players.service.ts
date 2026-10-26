@@ -1,3 +1,4 @@
+import { and, asc, count, eq, notInArray, sql } from 'drizzle-orm';
 import type {
   Friend,
   SignUpBody,
@@ -5,34 +6,46 @@ import type {
 } from '@football-planner/shared';
 
 import {
+  events,
+  players,
+  users,
+  isForeignKeyViolation,
+  pgErrorCode,
+  type Db,
+  type EventRecord,
+  type Executor,
+  type Tx,
+} from '../../db/index.js';
+import {
   AppError,
   forbiddenError,
   isDuplicateKeyError,
   notFoundError,
 } from '../../lib/errors.js';
-import { withEventLock } from '../../lib/event-lock.js';
-import type { TelegramNotifier } from '../../plugins/telegram/index.js';
 import {
-  EventModel,
-  toEventDto,
-  type EventDocument,
-} from '../events/event.model.js';
-import { isAdmin, type UserDocument } from '../users/user.model.js';
+  lockEvents,
+  withEventLock,
+  type AfterCommit,
+} from '../../lib/event-lock.js';
+import type { TelegramNotifier } from '../../plugins/telegram/index.js';
+import { findEventById, toEventDto } from '../events/event.model.js';
+import { isAdmin, type UserRecord } from '../users/user.model.js';
 import { computeRoster, squadChanges, type RosterPerson } from './count.js';
 import {
-  PlayerModel,
   toPlayerDto,
   type FriendEntity,
-  type PlayerDocument,
+  type PlayerRecord,
 } from './player.model.js';
 
 export const MAX_FRIENDS = 20;
 
 /** Players of an event in sign-up order */
-const playersInOrder = (eventId: string) =>
-  PlayerModel.find({ eventId }).sort({ createdAt: 1, _id: 1 });
-
-const sureSince = (sure: boolean, now: Date) => (sure ? now : undefined);
+export const playersInOrder = (q: Executor, eventId: string) =>
+  q
+    .select()
+    .from(players)
+    .where(eq(players.eventId, eventId))
+    .orderBy(asc(players.createdAt), asc(players._id));
 
 /**
  * New friends list from the client, keeping the time each friend became sure: the same
@@ -50,49 +63,62 @@ const mergeFriends = (
     return {
       name: friend.name,
       status: friend.status,
-      ...(friend.status && { sureSince: keep ? old.sureSince : now }),
+      ...(friend.status && {
+        sureSince: keep ? old.sureSince : now.toISOString(),
+      }),
     };
   });
 
 export class PlayersService {
-  constructor(private readonly notifier: TelegramNotifier) {}
+  constructor(
+    private readonly db: Db,
+    private readonly notifier: TelegramNotifier,
+  ) {}
 
   /** The event's players with places and the waitlist */
-  async roster(eventId: string) {
-    const event = await EventModel.findById(eventId);
+  async roster(eventId: string, q: Executor = this.db) {
+    const event = await findEventById(q, eventId);
     if (!event) throw notFoundError('event');
-    const players = await playersInOrder(eventId);
-    return { event, players, ...computeRoster(players, event.maximum ?? 0) };
+    const list = await playersInOrder(q, eventId);
+    return { event, players: list, ...computeRoster(list, event.maximum) };
   }
 
-  async findMine(eventId: string, user: UserDocument) {
-    const { players, waitlisted } = await this.roster(eventId);
-    const player = players.find((p) => p.userId === user._id.toString());
+  async findMine(eventId: string, user: UserRecord) {
+    const { players: list, waitlisted } = await this.roster(eventId);
+    const player = list.find((p) => p.userId === user._id);
     if (!player) throw notFoundError('player');
-    return { player, waitlisted: waitlisted.has(player._id.toString()) };
+    return { player, waitlisted: waitlisted.has(player._id) };
   }
 
-  findByEventAndUser(eventId: string, userId: string) {
-    return PlayerModel.findOne({ eventId, userId });
+  async findByEventAndUser(eventId: string, userId: string) {
+    const [player] = await this.db
+      .select()
+      .from(players)
+      .where(and(eq(players.eventId, eventId), eq(players.userId, userId)));
+    return player ?? null;
   }
 
-  signUp(eventId: string, input: SignUpBody, user: UserDocument) {
-    return withEventLock(eventId, async () => {
-      const before = await this.roster(eventId);
+  signUp(eventId: string, input: SignUpBody, user: UserRecord) {
+    return withEventLock(this.db, eventId, async (tx, after) => {
+      const before = await this.roster(eventId, tx);
       const now = new Date();
 
-      let player: PlayerDocument;
+      let player: PlayerRecord;
       try {
-        player = await PlayerModel.create({
-          ...input,
-          friends: mergeFriends([], input.friends, now),
-          sureSince: sureSince(input.status, now),
-          eventId,
-          userId: user._id.toString(),
-          date: before.event.date,
-        });
+        [player] = (await tx
+          .insert(players)
+          .values({
+            name: input.name,
+            status: input.status,
+            friends: mergeFriends([], input.friends, now),
+            sureSince: input.status ? now : null,
+            eventId,
+            userId: user._id,
+            date: before.event.date,
+          })
+          .returning()) as [PlayerRecord];
       } catch (error) {
-        // The unique (eventId, userId) index also covers concurrent sign-ups
+        // The unique (event_id, user_id) also covers concurrent sign-ups
         if (isDuplicateKeyError(error)) {
           throw new AppError(
             409,
@@ -103,14 +129,10 @@ export class PlayersService {
         throw error;
       }
 
-      const result = await this.syncEvent(player, before.people).catch(
-        async (error: unknown) => {
-          // The event was deleted while signing up: do not leave an orphaned player
-          await player.deleteOne();
-          throw error;
-        },
+      const result = await this.syncEvent(tx, after, player, before.people);
+      after(() =>
+        this.notifier.playersChanged('added', player, player.eventId),
       );
-      this.notifier.playersChanged('added', player.toObject(), player.eventId);
       return result;
     });
   }
@@ -118,34 +140,37 @@ export class PlayersService {
   async update(
     playerId: string,
     input: UpdatePlayerBody,
-    user: UserDocument,
+    user: UserRecord,
     eventId?: string,
   ) {
-    const found = await this.getManageable(playerId, user, eventId);
-    return withEventLock(found.eventId, async () => {
-      const before = await this.roster(found.eventId);
-      const player = await this.getManageable(playerId, user, eventId);
+    const found = await this.getManageable(this.db, playerId, user, eventId);
+    return withEventLock(this.db, found.eventId, async (tx, after) => {
+      const before = await this.roster(found.eventId, tx);
+      const current = await this.getManageable(tx, playerId, user, eventId);
       const now = new Date();
       const { friends, ...fields } = input;
 
-      player.set(fields);
-      if (input.status === false) player.sureSince = undefined;
+      const changes: Partial<typeof players.$inferInsert> = { ...fields };
+      if (input.status === false) changes.sureSince = null;
       // Becoming sure starts the turn for a place; staying sure keeps it
       else if (
         input.status === true &&
-        !before.players.find((p) => p._id.equals(player._id))?.status
+        !before.players.find((p) => p._id === current._id)?.status
       ) {
-        player.sureSince = now;
+        changes.sureSince = now;
       }
-      if (friends)
-        player.friends = mergeFriends(player.friends, friends, now) as never;
-      await player.save();
+      if (friends) {
+        changes.friends = mergeFriends(current.friends, friends, now);
+      }
+      const [player] = (await tx
+        .update(players)
+        .set(changes)
+        .where(eq(players._id, current._id))
+        .returning()) as [PlayerRecord];
 
-      const result = await this.syncEvent(player, before.people);
-      this.notifier.playersChanged(
-        'updated',
-        player.toObject(),
-        player.eventId,
+      const result = await this.syncEvent(tx, after, player, before.people);
+      after(() =>
+        this.notifier.playersChanged('updated', player, player.eventId),
       );
       return result;
     });
@@ -155,43 +180,48 @@ export class PlayersService {
    * Adds a guest atomically, for quick repeated presses of the bot's button. The guest
    * is as sure as the player who brings them.
    */
-  addGuest(playerId: string, user: UserDocument, eventId: string) {
-    return withEventLock(eventId, async () => {
-      const before = await this.roster(eventId);
-      const player = await this.getManageable(playerId, user, eventId);
+  addGuest(playerId: string, user: UserRecord, eventId: string) {
+    return withEventLock(this.db, eventId, async (tx, after) => {
+      const before = await this.roster(eventId, tx);
+      const player = await this.getManageable(tx, playerId, user, eventId);
       const now = new Date();
-      const guest = {
+      const guest: FriendEntity = {
         name: `Гость ${player.friends.length + 1}`,
         status: player.status,
-        ...(player.status && { sureSince: now }),
+        ...(player.status && { sureSince: now.toISOString() }),
       };
-      const pushed = await PlayerModel.findOneAndUpdate(
-        { _id: player._id, [`friends.${MAX_FRIENDS - 1}`]: { $exists: false } },
-        { $push: { friends: guest } },
-        { returnDocument: 'after' },
-      );
+      const [pushed] = await tx
+        .update(players)
+        .set({
+          friends: sql`${players.friends} || ${JSON.stringify([guest])}::jsonb`,
+        })
+        .where(
+          and(
+            eq(players._id, player._id),
+            sql`jsonb_array_length(${players.friends}) < ${MAX_FRIENDS}`,
+          ),
+        )
+        .returning();
       if (!pushed) {
         throw new AppError(409, 'TOO_MANY_FRIENDS', 'no more guests');
       }
 
-      const result = await this.syncEvent(pushed, before.people);
-      this.notifier.playersChanged('updated', pushed.toObject(), eventId);
+      const result = await this.syncEvent(tx, after, pushed, before.people);
+      after(() => this.notifier.playersChanged('updated', pushed, eventId));
       return { ...result, guest: guest.name };
     });
   }
 
-  async remove(playerId: string, user: UserDocument, eventId?: string) {
-    const found = await this.getManageable(playerId, user, eventId);
-    return withEventLock(found.eventId, async () => {
-      const before = await this.roster(found.eventId);
-      const player = await this.getManageable(playerId, user, eventId);
-      await player.deleteOne();
+  async remove(playerId: string, user: UserRecord, eventId?: string) {
+    const found = await this.getManageable(this.db, playerId, user, eventId);
+    return withEventLock(this.db, found.eventId, async (tx, after) => {
+      const before = await this.roster(found.eventId, tx);
+      const player = await this.getManageable(tx, playerId, user, eventId);
+      await tx.delete(players).where(eq(players._id, player._id));
 
-      const result = await this.syncEvent(player, before.people);
-      this.notifier.playersChanged(
-        'removed',
-        player.toObject(),
-        player.eventId,
+      const result = await this.syncEvent(tx, after, player, before.people);
+      after(() =>
+        this.notifier.playersChanged('removed', player, player.eventId),
       );
       return result;
     });
@@ -199,20 +229,110 @@ export class PlayersService {
 
   /**
    * Recounts a match after its players changed outside these methods (a merge of
-   * accounts, a new limit of places) and announces who moved
+   * accounts, a new limit of places) and announces who moved. `change` runs in the
+   * same transaction, with the match locked.
    */
-  resync(eventId: string, change: () => Promise<void> = async () => undefined) {
-    return withEventLock(eventId, async () => {
-      const before = await this.roster(eventId).catch(() => null);
-      await change();
+  resync(
+    eventId: string,
+    change: (tx: Tx) => Promise<void> = async () => undefined,
+  ) {
+    return withEventLock(this.db, eventId, async (tx, after) => {
+      const before = await this.roster(eventId, tx).catch(() => null);
+      await change(tx);
       if (!before) return;
-      const after = await this.roster(eventId);
-      after.event.playersAmount = after.count.all;
-      dropStaleTeams(after.event, before.people, after.people);
-      await after.event.save();
-      this.announceMoves(eventId, before.people, after.people);
-      this.notifier.eventUpdated(eventId, false);
+      const now = await this.roster(eventId, tx);
+      await this.saveCount(
+        tx,
+        now.event,
+        now.count.all,
+        before.people,
+        now.people,
+      );
+      after(() => {
+        this.announceMoves(eventId, before.people, now.people);
+        this.notifier.eventUpdated(eventId, false);
+      });
     });
+  }
+
+  /**
+   * Moves the sign-ups of one account to another and deletes the first, in one
+   * transaction with their matches locked; a match signed up for twice keeps the
+   * sign-up of `to`. A sign-up made for `from` at the same moment fails the delete on
+   * its foreign key, and the whole step runs again with it.
+   */
+  async mergeUser(
+    fromUserId: string,
+    to: UserRecord,
+    beforeDelete?: (tx: Tx) => Promise<void>,
+  ) {
+    for (let attempt = 1; ; attempt++) {
+      try {
+        return await this.mergeOnce(fromUserId, to, beforeDelete);
+      } catch (error) {
+        // 40P01: a deadlock with a sign-up locking the same matches in another order
+        const retry =
+          isForeignKeyViolation(error) || pgErrorCode(error) === '40P01';
+        if (!retry || attempt === 3) throw error;
+      }
+    }
+  }
+
+  private async mergeOnce(
+    fromUserId: string,
+    to: UserRecord,
+    beforeDelete?: (tx: Tx) => Promise<void>,
+  ) {
+    const effects: (() => void)[] = [];
+    await this.db.transaction(async (tx) => {
+      // Lock the matches of the sign-ups, and look again: one may have come meanwhile
+      const before = new Map<string, RosterPerson[] | null>();
+      for (;;) {
+        const fresh = await tx
+          .selectDistinct({ eventId: players.eventId })
+          .from(players)
+          .where(
+            and(
+              eq(players.userId, fromUserId),
+              before.size
+                ? notInArray(players.eventId, [...before.keys()])
+                : undefined,
+            ),
+          );
+        if (!fresh.length) break;
+        const ids = fresh.map((row) => row.eventId);
+        await lockEvents(tx, ids);
+        for (const id of ids) {
+          const roster = await this.roster(id, tx).catch(() => null);
+          before.set(id, roster?.people ?? null);
+        }
+      }
+
+      await tx
+        .update(players)
+        .set({ userId: to._id, name: to.name })
+        .where(
+          and(
+            eq(players.userId, fromUserId),
+            sql`NOT EXISTS (SELECT 1 FROM players AS mine WHERE mine.event_id = ${players.eventId} AND mine.user_id = ${to._id})`,
+          ),
+        );
+      // Matches both accounts signed up for keep the sign-up of `to`
+      await tx.delete(players).where(eq(players.userId, fromUserId));
+      await beforeDelete?.(tx);
+      await tx.delete(users).where(eq(users._id, fromUserId));
+
+      for (const [eventId, people] of before) {
+        if (!people) continue;
+        const now = await this.roster(eventId, tx);
+        await this.saveCount(tx, now.event, now.count.all, people, now.people);
+        effects.push(() => {
+          this.announceMoves(eventId, people, now.people);
+          this.notifier.eventUpdated(eventId, false);
+        });
+      }
+    });
+    for (const effect of effects) effect();
   }
 
   /** Marks a player as paid for the pitch; the match's organiser and admins only */
@@ -220,37 +340,44 @@ export class PlayersService {
     eventId: string,
     playerId: string,
     paid: boolean,
-    user: UserDocument,
+    user: UserRecord,
   ) {
-    const event = await EventModel.findById(eventId);
+    const event = await findEventById(this.db, eventId);
     if (!event) throw notFoundError('event');
-    if (event.creatorId !== user._id.toString() && !isAdmin(user)) {
+    if (event.creatorId !== user._id && !isAdmin(user)) {
       throw forbiddenError();
     }
-    const player = await PlayerModel.findOneAndUpdate(
-      { _id: playerId, eventId },
-      { $set: { paid } },
-      { returnDocument: 'after' },
-    );
+    const [player] = await this.db
+      .update(players)
+      .set({ paid })
+      .where(and(eq(players._id, playerId), eq(players.eventId, eventId)))
+      .returning();
     if (!player) throw notFoundError('player');
     const { waitlisted } = await this.roster(eventId);
-    return { player, waitlisted: waitlisted.has(player._id.toString()) };
+    return { player, waitlisted: waitlisted.has(player._id) };
   }
 
   async countEventsOfUser(userId: string) {
-    return PlayerModel.countDocuments({ userId });
+    const [row] = await this.db
+      .select({ n: count() })
+      .from(players)
+      .where(eq(players.userId, userId));
+    return row?.n ?? 0;
   }
 
   private async getManageable(
+    q: Executor,
     playerId: string,
-    user: UserDocument,
+    user: UserRecord,
     eventId?: string,
   ) {
-    const player = await PlayerModel.findById(playerId);
+    const [player] = await q
+      .select()
+      .from(players)
+      .where(eq(players._id, playerId));
     if (!player || (eventId && player.eventId !== eventId))
       throw notFoundError('player');
-    if (player.userId !== user._id.toString() && !isAdmin(user))
-      throw forbiddenError();
+    if (player.userId !== user._id && !isAdmin(user)) throw forbiddenError();
     return player;
   }
 
@@ -265,21 +392,43 @@ export class PlayersService {
     }
   }
 
-  /** Recalculates the event after its players list changed and announces who moved */
-  private async syncEvent(player: PlayerDocument, before: RosterPerson[]) {
-    const players = await playersInOrder(player.eventId);
-    const event = await EventModel.findById(player.eventId);
-    if (!event) throw notFoundError('event');
-    const { count, waitlisted, people } = computeRoster(
-      players,
-      event.maximum ?? 0,
-    );
-    event.playersAmount = count.all;
-    dropStaleTeams(event, before, people);
-    await event.save();
-    this.announceMoves(player.eventId, before, people);
+  /**
+   * Saves the number of people, and drops teams split from the old squad: once someone
+   * leaves or gets a place, they go. Writes only when something changed.
+   */
+  private async saveCount(
+    tx: Tx,
+    event: EventRecord,
+    all: number,
+    before: RosterPerson[],
+    after: RosterPerson[],
+  ) {
+    const staleTeams =
+      event.teams !== null && squadKeys(before) !== squadKeys(after);
+    if (event.playersAmount === all && !staleTeams) return event;
+    const [saved] = await tx
+      .update(events)
+      .set({ playersAmount: all, ...(staleTeams && { teams: null }) })
+      .where(eq(events._id, event._id))
+      .returning();
+    return saved ?? event;
+  }
 
-    return { player, players, event, count, waitlisted };
+  /** Recalculates the event after its players list changed and announces who moved */
+  private async syncEvent(
+    tx: Tx,
+    after: AfterCommit,
+    player: PlayerRecord,
+    before: RosterPerson[],
+  ) {
+    const list = await playersInOrder(tx, player.eventId);
+    const current = await findEventById(tx, player.eventId);
+    if (!current) throw notFoundError('event');
+    const { count, waitlisted, people } = computeRoster(list, current.maximum);
+    const event = await this.saveCount(tx, current, count.all, before, people);
+    after(() => this.announceMoves(player.eventId, before, people));
+
+    return { player, players: list, event, count, waitlisted };
   }
 }
 
@@ -290,28 +439,17 @@ const squadKeys = (people: RosterPerson[]) =>
     .sort()
     .join();
 
-/** Teams were split from the old squad: once someone leaves or gets a place, they go */
-const dropStaleTeams = (
-  event: EventDocument,
-  before: RosterPerson[],
-  after: RosterPerson[],
-) => {
-  if (event.teams && squadKeys(before) !== squadKeys(after)) {
-    event.teams = undefined;
-  }
-};
-
 type PlayersChangeResult = Awaited<ReturnType<PlayersService['signUp']>>;
 
 export const toPlayersChangeDto = ({
   player,
-  players,
+  players: list,
   event,
   count,
   waitlisted,
 }: PlayersChangeResult) => ({
-  player: toPlayerDto(player, waitlisted.has(player._id.toString())),
-  players: players.map((p) => toPlayerDto(p, waitlisted.has(p._id.toString()))),
+  player: toPlayerDto(player, waitlisted.has(player._id)),
+  players: list.map((p) => toPlayerDto(p, waitlisted.has(p._id))),
   event: toEventDto(event),
   count,
 });

@@ -18,6 +18,7 @@ import {
 import V1Routes from './routes/v1/index.js';
 import type { TelegramTestOptions } from './plugins/telegram/index.js';
 import type { TelegramOidcOptions } from './modules/users/telegram-login.js';
+import type { Database } from './db/index.js';
 
 export type BuildAppOptions = {
   /** Environment overrides; when set, `.env` and `process.env` are not read (used in tests) */
@@ -29,6 +30,8 @@ export type BuildAppOptions = {
   jobs?: boolean;
   /** Fake keys and token endpoint of Telegram's login, for tests */
   telegramLogin?: Pick<TelegramOidcOptions, 'keys' | 'fetch'>;
+  /** A database instead of DATABASE_URL (PGlite in tests); the caller closes it */
+  database?: Database;
 };
 
 export const buildApp = async ({
@@ -37,6 +40,7 @@ export const buildApp = async ({
   telegram,
   jobs = true,
   telegramLogin,
+  database,
 }: BuildAppOptions = {}) => {
   const fastify = Fastify({
     logger: getLoggerOptions(env),
@@ -106,7 +110,7 @@ export const buildApp = async ({
   // Opt-in per route via `config.rateLimit`
   await fastify.register(rateLimit, { global: false });
 
-  await fastify.register(DatabasePlugin);
+  await fastify.register(DatabasePlugin, { database });
   // Before Telegram: the bot adds its metrics to the same registry
   await fastify.register(MonitoringPlugin);
   await fastify.register(TelegramPlugin, { test: telegram });

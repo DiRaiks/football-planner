@@ -1,9 +1,9 @@
 import fp from 'fastify-plugin';
 import type { FastifyPluginAsync } from 'fastify';
-import mongoose from 'mongoose';
+import { and, eq, gt, inArray, isNotNull, lte, sql } from 'drizzle-orm';
 import {
   html,
-  mongoStore,
+  pgStore,
   tgBot,
   tgHealth,
   tgNotifier,
@@ -14,17 +14,13 @@ import {
 
 import { splitList } from '../../env.js';
 import { zonedDay } from '../../lib/time.js';
-import {
-  EventModel,
-  type EventDocument,
-  type EventEntity,
-} from '../../modules/events/event.model.js';
+import { events, users, type EventRecord } from '../../db/index.js';
+import { findEventById } from '../../modules/events/event.model.js';
 import {
   computeRoster,
   type RosterPerson,
 } from '../../modules/players/count.js';
-import { PlayerModel } from '../../modules/players/player.model.js';
-import { UserModel } from '../../modules/users/user.model.js';
+import { playersInOrder } from '../../modules/players/players.service.js';
 import { registerTelegramActions } from './actions.js';
 import {
   announcementMessage,
@@ -47,9 +43,9 @@ import {
 
 /** Event data needed after the event is deleted */
 export type CancelledEvent = Pick<
-  EventEntity,
-  'eventName' | 'date' | 'time' | 'place' | 'minimum' | 'telegram'
-> & { _id: string; maximum?: number };
+  EventRecord,
+  '_id' | 'eventName' | 'date' | 'time' | 'place' | 'minimum' | 'telegram'
+> & { maximum?: number };
 
 export type TelegramNotifier = {
   eventCreated: (eventId: string) => void;
@@ -58,7 +54,7 @@ export type TelegramNotifier = {
   eventCancelled: (event: CancelledEvent) => void;
   playersChanged: (
     kind: PlayersChangeKind,
-    player: NotifyPlayer & { _id?: { toString(): string } },
+    player: NotifyPlayer & { _id?: string },
     eventId: string,
   ) => void;
   /** People who got a place, or lost one (fewer places), after a change */
@@ -110,8 +106,8 @@ const disabledNotifier: TelegramNotifier = {
   botUsername: () => null,
 };
 
-const toNotifyEvent = (event: EventDocument | CancelledEvent): NotifyEvent => ({
-  _id: event._id.toString(),
+const toNotifyEvent = (event: EventRecord | CancelledEvent): NotifyEvent => ({
+  _id: event._id,
   eventName: event.eventName,
   date: event.date,
   time: event.time,
@@ -159,10 +155,8 @@ const telegramPlugin: FastifyPluginAsync<TelegramPluginOptions> = async (
     },
   });
   await fastify.register(tgSubscriptions, {
-    // Chats saved by the previous bot have only `chatId` and keep receiving events
-    store: mongoStore(mongoose.connection.collection('chats'), {
-      legacyTopics: [TOPIC],
-    }),
+    // Chats moved from MongoDB without topics got this one (scripts/migrate-from-mongo.mjs)
+    store: pgStore(fastify.sqlClient, { table: 'chats' }),
     topics: [TOPIC],
   });
   await fastify.register(tgNotifier);
@@ -175,7 +169,7 @@ const telegramPlugin: FastifyPluginAsync<TelegramPluginOptions> = async (
     timeoutMs: 2000,
   });
 
-  const { notifier, log } = fastify;
+  const { notifier, log, db } = fastify;
   const publicUrl = PUBLIC_URL?.replace(/\/+$/, '');
   const appUrl = TELEGRAM_APP_URL?.replace(/\/+$/, '');
   const keyboard = (event: NotifyEvent) =>
@@ -208,13 +202,10 @@ const telegramPlugin: FastifyPluginAsync<TelegramPluginOptions> = async (
   };
 
   const load = async (eventId: string) => {
-    const event = await EventModel.findById(eventId);
+    const event = await findEventById(db, eventId);
     if (!event) return null;
-    const players = await PlayerModel.find({ eventId }).sort({
-      createdAt: 1,
-      _id: 1,
-    });
-    return { event, players, ...computeRoster(players, event.maximum ?? 0) };
+    const players = await playersInOrder(db, eventId);
+    return { event, players, ...computeRoster(players, event.maximum) };
   };
   type State = NonNullable<Awaited<ReturnType<typeof load>>>;
 
@@ -233,11 +224,24 @@ const telegramPlugin: FastifyPluginAsync<TelegramPluginOptions> = async (
     );
   };
 
+  /** Merges fields into the match's Telegram state; resolves with whether it exists */
+  const mergeTelegram = async (
+    eventId: string,
+    fields: Record<string, unknown>,
+    without: string[] = [],
+  ) => {
+    const saved = await db
+      .update(events)
+      .set({
+        telegram: sql`(coalesce(${events.telegram}, '{}'::jsonb) - ${`{${without.join(',')}}`}::text[]) || ${JSON.stringify(fields)}::jsonb`,
+      })
+      .where(eq(events._id, eventId))
+      .returning({ _id: events._id });
+    return saved.length > 0;
+  };
+
   const setMinimumReached = (eventId: string, value: boolean) =>
-    EventModel.updateOne(
-      { _id: eventId },
-      { $set: { 'telegram.minimumReached': value } },
-    );
+    mergeTelegram(eventId, { minimumReached: value });
 
   /**
    * A loud message the first time the minimum is reached; reset when it is lost again
@@ -279,41 +283,46 @@ const telegramPlugin: FastifyPluginAsync<TelegramPluginOptions> = async (
   const sendDueReminders = async (now = new Date()) => {
     let sent = 0;
     for (const kind of ['soon', 'day'] as const) {
-      const flag = `telegram.reminders.${kind}`;
+      const notSent = sql`coalesce((${events.telegram} -> 'reminders' ->> ${kind})::boolean, false) = false`;
       const earliest =
         now.getTime() + (kind === 'day' ? REMINDER_LEAD.soon : 0);
-      const due = await EventModel.find({
-        startsAt: {
-          $gt: new Date(earliest),
-          $lte: new Date(now.getTime() + REMINDER_LEAD[kind]),
-        },
-        [flag]: { $ne: true },
-      });
+      const due = await db
+        .select()
+        .from(events)
+        .where(
+          and(
+            gt(events.startsAt, new Date(earliest)),
+            lte(events.startsAt, new Date(now.getTime() + REMINDER_LEAD[kind])),
+            notSent,
+          ),
+        );
       for (const candidate of due) {
-        const announced: unknown =
-          candidate.telegram?.scheduledAt ?? candidate.get('createdAt');
+        const scheduledAt = candidate.telegram?.scheduledAt;
+        const announced = scheduledAt
+          ? new Date(scheduledAt)
+          : candidate.createdAt;
         if (
           kind === 'day' &&
-          announced instanceof Date &&
           candidate.startsAt!.getTime() - announced.getTime() <
             REMINDER_LEAD.day
         ) {
           continue;
         }
-        const claimed = await EventModel.updateOne(
-          { _id: candidate._id, [flag]: { $ne: true } },
-          {
-            $set: {
-              [flag]: true,
-              // The second reminder makes the first one pointless
-              ...(kind === 'soon' && { 'telegram.reminders.day': true }),
-            },
-          },
+        // The second reminder makes the first one pointless
+        const flags = JSON.stringify(
+          kind === 'soon' ? { soon: true, day: true } : { day: true },
         );
-        if (!claimed.modifiedCount) continue;
+        const claimed = await db
+          .update(events)
+          .set({
+            telegram: sql`jsonb_set(coalesce(${events.telegram}, '{}'::jsonb), '{reminders}', coalesce(${events.telegram} -> 'reminders', '{}'::jsonb) || ${flags}::jsonb)`,
+          })
+          .where(and(eq(events._id, candidate._id), notSent))
+          .returning({ _id: events._id });
+        if (!claimed.length) continue;
 
         try {
-          const state = await load(candidate._id.toString());
+          const state = await load(candidate._id);
           if (!state) continue;
           const event = toNotifyEvent(state.event);
           const day =
@@ -339,10 +348,13 @@ const telegramPlugin: FastifyPluginAsync<TelegramPluginOptions> = async (
             { err, eventId: candidate._id },
             'telegram reminder failed',
           );
-          await EventModel.updateOne(
-            { _id: candidate._id },
-            { $unset: { [flag]: 1 } },
-          ).catch(() => undefined);
+          await db
+            .update(events)
+            .set({
+              telegram: sql`${events.telegram} #- ${`{reminders,${kind}}`}::text[]`,
+            })
+            .where(eq(events._id, candidate._id))
+            .catch(() => undefined);
         }
       }
     }
@@ -387,20 +399,18 @@ const telegramPlugin: FastifyPluginAsync<TelegramPluginOptions> = async (
           announcementMessage(event, state.people, state.count),
           { pin: true, replyMarkup: keyboard(event) },
         );
-        const saved = await EventModel.updateOne(
-          { _id: eventId },
-          {
-            $set: {
-              'telegram.announcements': result.messages,
-              'telegram.minimumReached': false,
-              'telegram.scheduledAt': new Date(),
-            },
-          },
-        );
+        const saved = await mergeTelegram(eventId, {
+          announcements: result.messages.map(({ chatId, messageId }) => ({
+            chatId,
+            messageId,
+          })),
+          minimumReached: false,
+          scheduledAt: new Date().toISOString(),
+        });
 
         // Deleted while the announcement was being sent: the cancellation
         // has no message ids to update, so strike these through here
-        if (saved.matchedCount === 0) {
+        if (!saved) {
           await Promise.all(
             result.messages.map(async (target) => {
               await notifier.edit(target, cancelledAnnouncementMessage(event));
@@ -419,12 +429,10 @@ const telegramPlugin: FastifyPluginAsync<TelegramPluginOptions> = async (
         await checkMinimum(state);
         if (scheduleChanged) {
           // A new start time deserves new reminders
-          await EventModel.updateOne(
-            { _id: eventId },
-            {
-              $unset: { 'telegram.reminders': 1 },
-              $set: { 'telegram.scheduledAt': new Date() },
-            },
+          await mergeTelegram(
+            eventId,
+            { scheduledAt: new Date().toISOString() },
+            ['reminders'],
           );
           await notifier.notify(
             TOPIC,
@@ -458,7 +466,7 @@ const telegramPlugin: FastifyPluginAsync<TelegramPluginOptions> = async (
         const waitlisted =
           kind !== 'removed' &&
           player._id !== undefined &&
-          state.waitlisted.has(player._id.toString());
+          state.waitlisted.has(player._id);
         await notifier.notify(
           TOPIC,
           playersChangeMessage(kind, player, event, state.count, waitlisted),
@@ -492,14 +500,19 @@ const telegramPlugin: FastifyPluginAsync<TelegramPluginOptions> = async (
             .map((p): [string, string] => [p.userId!, 'demoted']),
         ]);
         if (!notes.size) return;
-        const users = await UserModel.find({
-          _id: { $in: [...notes.keys()] },
-          telegramId: { $exists: true, $ne: null },
-        });
-        for (const user of users) {
+        const recipients = await db
+          .select({ _id: users._id, telegramId: users.telegramId })
+          .from(users)
+          .where(
+            and(
+              inArray(users._id, [...notes.keys()]),
+              isNotNull(users.telegramId),
+            ),
+          );
+        for (const user of recipients) {
           await notifier.send(
             user.telegramId!,
-            notes.get(user._id.toString()) === 'promoted'
+            notes.get(user._id) === 'promoted'
               ? html`🎉 Освободилось место: вы в составе на «${event.eventName}», ${formatWhen(event)}`
               : html`⏳ Мест на «${event.eventName}» стало меньше: вы в листе ожидания. Освободится место — напишу.`,
           );

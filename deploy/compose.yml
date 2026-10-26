@@ -18,6 +18,11 @@ services:
       PORT: '3000'
       # Requests arrive through Caddy, one hop away
       TRUST_PROXY: '1'
+    depends_on:
+      # Only with the postgres profile; an external database needs no waiting
+      postgres:
+        condition: service_healthy
+        required: false
     logging: *logging
 
   web:
@@ -36,8 +41,68 @@ services:
       - server
     logging: *logging
 
-  # Optional local MongoDB: COMPOSE_PROFILES=mongo and
-  # MONGO_URI=mongodb://mongo:27017/football. Otherwise point MONGO_URI to Atlas.
+  # Optional local Postgres (COMPOSE_PROFILES=postgres): set POSTGRES_PASSWORD, and
+  # DATABASE_URL=postgres://football:<POSTGRES_PASSWORD>@postgres:5432/football
+  postgres:
+    image: postgres:${POSTGRES_VERSION:-18.6-alpine}
+    profiles: [postgres]
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: football
+      POSTGRES_DB: football
+      # The image refuses to start without it
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-}
+    volumes:
+      # Postgres 18 keeps its data under /var/lib/postgresql/<version>
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ['CMD', 'pg_isready', '-U', 'football', '-d', 'football']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+      start_interval: 2s
+    logging: *logging
+
+  # Daily dump of the database to ./backups, keeps BACKUP_KEEP_DAYS
+  postgres-backup:
+    image: postgres:${POSTGRES_VERSION:-18.6-alpine}
+    profiles: [postgres]
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-14}
+      PGHOST: postgres
+      PGUSER: football
+      PGDATABASE: football
+      PGPASSWORD: ${POSTGRES_PASSWORD:-}
+    volumes:
+      - ./backups:/backup
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        while true; do
+          file="/backup/football-$$(date -u +%Y%m%dT%H%M%SZ).dump"
+          if pg_dump --format=custom --file="$$file"; then
+            echo "backup written: $$file"
+            wait=86400
+          else
+            rm -f "$$file"
+            # e.g. Postgres restarting: try again soon instead of in a day
+            echo "backup failed, retrying in 5 minutes" >&2
+            wait=300
+          fi
+          find /backup -name 'football-*.dump' -mtime +"$$BACKUP_KEEP_DAYS" -delete
+          sleep "$$wait"
+        done
+    logging: *logging
+
+  # Legacy: the local MongoDB of older versions (COMPOSE_PROFILES=postgres,mongo), kept
+  # only to move its data to Postgres (deploy/README.md: Moving from MongoDB). Drop the
+  # mongo profile once the data is moved; its volume stays until removed by hand.
   mongo:
     image: mongo:${MONGO_VERSION:-8.0.34}
     profiles: [mongo]
@@ -82,4 +147,5 @@ services:
 volumes:
   caddy_data:
   caddy_config:
+  postgres_data:
   mongo_data:

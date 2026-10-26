@@ -1,13 +1,18 @@
-import mongoose from 'mongoose';
+import { eq, isNull, sql } from 'drizzle-orm';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { EventModel } from '../src/modules/events/event.model.js';
-import { PlayerModel } from '../src/modules/players/player.model.js';
+import { events, players, users } from '../src/db/index.js';
+import { playersInOrder } from '../src/modules/players/players.service.js';
 import {
-  dropLegacyUserIndexes,
-  UserModel,
-} from '../src/modules/users/user.model.js';
-import { createEvent, register, setupApp } from './helpers.js';
+  addChat,
+  countRows,
+  createEvent,
+  findUser,
+  firstPlayerOf,
+  getEvent,
+  register,
+  setupApp,
+} from './helpers.js';
 
 type Call = { method: string; payload: Record<string, unknown> };
 const calls: Call[] = [];
@@ -123,9 +128,7 @@ const futureMatch = async (payload: Record<string, unknown> = {}) => {
 
 beforeEach(async () => {
   calls.length = 0;
-  await mongoose.connection
-    .collection('chats')
-    .insertOne({ chatId: CHAT, topics: ['events'] });
+  await addChat(ctx.app, CHAT);
 });
 
 describe('sign-up buttons', () => {
@@ -134,13 +137,13 @@ describe('sign-up buttons', () => {
     await press(`rsvp:${event._id}:yes`);
 
     expect(answers()).toEqual(['✅ Вы в составе']);
-    const user = await UserModel.findOne({ telegramId: ANYA.id });
+    const user = await findUser(ctx.app, eq(users.telegramId, ANYA.id));
     expect(user).toMatchObject({
       name: 'Аня Котова',
       telegramUsername: 'anya',
     });
-    expect(user?.email).toBeUndefined();
-    expect(await PlayerModel.findOne({ eventId: event._id })).toMatchObject({
+    expect(user?.email).toBeNull();
+    expect(await firstPlayerOf(ctx.app, event._id)).toMatchObject({
       name: 'Аня Котова',
       status: true,
       userId: user!._id.toString(),
@@ -169,13 +172,15 @@ describe('sign-up buttons', () => {
 
     await press(`rsvp:${event._id}:friend`);
     expect(answers().at(-1)).toBe('Добавил: Гость 1');
-    expect(
-      (await PlayerModel.findOne({ eventId: event._id }))?.friends,
-    ).toMatchObject([{ name: 'Гость 1', status: false }]);
+    expect((await firstPlayerOf(ctx.app, event._id))?.friends).toMatchObject([
+      { name: 'Гость 1', status: false },
+    ]);
 
     await press(`rsvp:${event._id}:no`);
     expect(answers().at(-1)).toBe('Отметил: вы и ваши гости не пойдёте');
-    expect(await PlayerModel.countDocuments({ eventId: event._id })).toBe(0);
+    expect(
+      await countRows(ctx.app, players, eq(players.eventId, event._id)),
+    ).toBe(0);
     await press(`rsvp:${event._id}:no`);
     expect(answers().at(-1)).toBe('Вас и так нет в списке');
   });
@@ -183,7 +188,7 @@ describe('sign-up buttons', () => {
   it('signs up with a guest in one press', async () => {
     const { event } = await futureMatch();
     await press(`rsvp:${event._id}:friend`, BORIS);
-    expect(await PlayerModel.findOne({ eventId: event._id })).toMatchObject({
+    expect(await firstPlayerOf(ctx.app, event._id)).toMatchObject({
       name: 'Борис',
       friends: [{ name: 'Гость 1', status: true }],
     });
@@ -191,10 +196,10 @@ describe('sign-up buttons', () => {
 
   it('refuses cancelled and started matches', async () => {
     const { event } = await futureMatch();
-    await EventModel.updateOne(
-      { _id: event._id },
-      { startsAt: new Date(Date.now() - 1000) },
-    );
+    await ctx.app.db
+      .update(events)
+      .set({ startsAt: new Date(Date.now() - 1000) })
+      .where(eq(events._id, event._id));
     await press(`rsvp:${event._id}:yes`);
     expect(answers().at(-1)).toBe('Матч уже начался');
 
@@ -305,8 +310,10 @@ describe('linking a site account', () => {
     expect(replies(ANYA.id).at(-1)).toContain(
       'Telegram привязан к аккаунту <b>Анна</b>',
     );
-    expect(await UserModel.countDocuments({ telegramId: ANYA.id })).toBe(1);
-    expect(await PlayerModel.findOne({ eventId: event._id })).toMatchObject({
+    expect(await countRows(ctx.app, users, eq(users.telegramId, ANYA.id))).toBe(
+      1,
+    );
+    expect(await firstPlayerOf(ctx.app, event._id)).toMatchObject({
       userId: web._id,
     });
     const me = await ctx.app.inject({ url: '/v1/auth/me', headers: web.auth });
@@ -345,8 +352,8 @@ describe('linking a site account', () => {
       })
     ).json();
     await say(`/link ${code}`);
-    const players = await PlayerModel.find({ eventId: event._id });
-    expect(players.map((p) => [p.name, p.status])).toEqual([['Анна', true]]);
+    const signUps = await playersInOrder(ctx.app.db, event._id);
+    expect(signUps.map((p) => [p.name, p.status])).toEqual([['Анна', true]]);
   });
 
   it('refuses a Telegram user linked to another account, and group chats', async () => {
@@ -376,7 +383,7 @@ describe('linking a site account', () => {
   it('cannot unlink an account made from Telegram', async () => {
     const { event } = await futureMatch();
     await press(`rsvp:${event._id}:yes`);
-    const user = await UserModel.findOne({ telegramId: ANYA.id });
+    const user = await findUser(ctx.app, eq(users.telegramId, ANYA.id));
     const token = ctx.app.issueToken(user!);
     const response = await ctx.app.inject({
       method: 'DELETE',
@@ -390,9 +397,7 @@ describe('linking a site account', () => {
 describe('reminders', () => {
   it('reminds the day before and two hours before, once each', async () => {
     const { event } = await futureMatch({ eventName: 'Вторник', minimum: 4 });
-    const startsAt = (await EventModel.findById(
-      event._id,
-    ))!.startsAt!.getTime();
+    const startsAt = (await getEvent(ctx.app, event._id))!.startsAt!.getTime();
     const at = (hoursBefore: number) =>
       new Date(startsAt - hoursBefore * 3_600_000);
     await vi.waitFor(() => expect(replies(CHAT).length).toBeGreaterThan(0));
@@ -416,9 +421,7 @@ describe('reminders', () => {
 
   it('sends only the second reminder for a match created shortly before', async () => {
     const { event } = await futureMatch();
-    const startsAt = (await EventModel.findById(
-      event._id,
-    ))!.startsAt!.getTime();
+    const startsAt = (await getEvent(ctx.app, event._id))!.startsAt!.getTime();
     expect(
       await ctx.app.telegramBot.sendDueReminders(
         new Date(startsAt - 3_600_000),
@@ -433,9 +436,7 @@ describe('reminders', () => {
 
   it('starts over when the start time changes', async () => {
     const { event, auth } = await futureMatch();
-    const startsAt = (await EventModel.findById(
-      event._id,
-    ))!.startsAt!.getTime();
+    const startsAt = (await getEvent(ctx.app, event._id))!.startsAt!.getTime();
     await ctx.app.telegramBot.sendDueReminders(new Date(startsAt - 3_600_000));
     await ctx.app.inject({
       method: 'PATCH',
@@ -445,7 +446,7 @@ describe('reminders', () => {
     });
     await vi.waitFor(async () =>
       expect(
-        (await EventModel.findById(event._id))?.telegram?.reminders,
+        (await getEvent(ctx.app, event._id))?.telegram?.reminders,
       ).toBeUndefined(),
     );
     expect(await ctx.app.telegramBot.sendDueReminders(new Date(startsAt))).toBe(
@@ -455,17 +456,13 @@ describe('reminders', () => {
 });
 
 describe('users without email', () => {
-  it('drops the old unique email index that counted missing emails as duplicates', async () => {
-    const users = UserModel.collection;
-    await users.dropIndexes();
-    await users.createIndex({ email: 1 }, { unique: true, name: 'email_1' });
-    await dropLegacyUserIndexes();
-    await UserModel.syncIndexes();
-    await UserModel.create({ name: 'A', telegramId: 1 });
-    await UserModel.create({ name: 'B', telegramId: 2 });
-    expect(await UserModel.countDocuments({ email: { $exists: false } })).toBe(
-      2,
-    );
+  it('keeps any number of accounts without email, but one per Telegram user', async () => {
+    await ctx.app.db.insert(users).values({ name: 'A', telegramId: 1 });
+    await ctx.app.db.insert(users).values({ name: 'B', telegramId: 2 });
+    expect(await countRows(ctx.app, users, isNull(users.email))).toBe(2);
+    await expect(
+      ctx.app.db.insert(users).values({ name: 'C', telegramId: 2 }),
+    ).rejects.toThrow();
   });
 });
 
@@ -588,7 +585,7 @@ describe('review: queue order, merges and races', () => {
       press(`rsvp:${event._id}:friend`),
       press(`rsvp:${event._id}:friend`),
     ]);
-    const player = await PlayerModel.findOne({ eventId: event._id });
+    const player = await firstPlayerOf(ctx.app, event._id);
     expect(player?.friends.map((f) => f.name).sort()).toEqual([
       'Гость 1',
       'Гость 2',
@@ -603,7 +600,7 @@ describe('review: queue order, merges and races', () => {
       name: 'Анна',
     });
     await join(web.auth, event._id, { name: 'Анна', status: true });
-    expect((await EventModel.findById(event._id))?.playersAmount).toBe(2);
+    expect((await getEvent(ctx.app, event._id))?.playersAmount).toBe(2);
 
     const { code } = (
       await ctx.app.inject({
@@ -615,7 +612,7 @@ describe('review: queue order, merges and races', () => {
     calls.length = 0;
     await say(`/link ${code}`);
     await vi.waitFor(async () =>
-      expect((await EventModel.findById(event._id))?.playersAmount).toBe(1),
+      expect((await getEvent(ctx.app, event._id))?.playersAmount).toBe(1),
     );
     await vi.waitFor(() =>
       expect(
@@ -626,6 +623,71 @@ describe('review: queue order, merges and races', () => {
         ),
       ).toBe(true),
     );
+  });
+
+  it('runs a merge again when a sign-up for the old account lands before its delete', async () => {
+    const { event } = await futureMatch();
+    const second = await futureMatch();
+    await press(`rsvp:${event._id}:yes`);
+    const old = await findUser(ctx.app, eq(users.telegramId, ANYA.id));
+    const web = await register(ctx.app, {
+      email: 'race@example.com',
+      name: 'Анна',
+    });
+    const { code } = (
+      await ctx.app.inject({
+        method: 'POST',
+        url: '/v1/users/me/telegram',
+        headers: web.auth,
+      })
+    ).json();
+
+    // A button press signs the old account up for another match in between
+    let attempts = 0;
+    ctx.app.services.telegramAccounts.testHooks.beforeMergeDelete = async (
+      tx,
+    ) => {
+      if (++attempts > 1) return;
+      await tx.insert(players).values({
+        eventId: second.event._id,
+        userId: old!._id,
+        name: 'Аня',
+        date: '2026-11-01',
+        status: true,
+      });
+    };
+    try {
+      await say(`/link ${code}`);
+    } finally {
+      ctx.app.services.telegramAccounts.testHooks = {};
+    }
+
+    expect(attempts).toBe(2);
+    expect(replies(ANYA.id).at(-1)).toContain('Telegram привязан');
+    expect(await findUser(ctx.app, eq(users._id, old!._id))).toBeNull();
+    expect(await firstPlayerOf(ctx.app, event._id)).toMatchObject({
+      userId: web._id,
+      name: 'Анна',
+    });
+    expect((await getEvent(ctx.app, event._id))?.playersAmount).toBe(1);
+  });
+
+  it('presses as the merged account when the old one is gone meanwhile', async () => {
+    const { event } = await futureMatch();
+    const accounts = ctx.app.services.telegramAccounts;
+    const real = await accounts.findOrCreate(ANYA);
+    // The account the press looked up was merged and deleted before the sign-up
+    vi.spyOn(accounts, 'findOrCreate').mockResolvedValueOnce({
+      ...real,
+      _id: 'f'.repeat(24),
+    });
+    await press(`rsvp:${event._id}:yes`);
+    vi.restoreAllMocks();
+
+    expect(answers().at(-1)).toBe('✅ Вы в составе');
+    expect(await firstPlayerOf(ctx.app, event._id)).toMatchObject({
+      userId: real._id,
+    });
   });
 
   it('stops working once the code is posted in a group, and after too many wrong codes', async () => {
@@ -649,9 +711,7 @@ describe('review: queue order, merges and races', () => {
 
   it('says today for a match later today, and skips the day reminder for short notice', async () => {
     const { event } = await futureMatch();
-    const startsAt = (await EventModel.findById(
-      event._id,
-    ))!.startsAt!.getTime();
+    const startsAt = (await getEvent(ctx.app, event._id))!.startsAt!.getTime();
     // Announced long before: 10 hours ahead (10:00 UTC on match day) it is today
     expect(
       await ctx.app.telegramBot.sendDueReminders(
@@ -661,19 +721,24 @@ describe('review: queue order, merges and races', () => {
     expect(replies(CHAT).at(-1)).toContain('⏰ Сегодня матч');
 
     const late = await futureMatch({ time: '18:00' });
-    const lateStart = (await EventModel.findById(
+    const lateStart = (await getEvent(
+      ctx.app,
       late.event._id,
     ))!.startsAt!.getTime();
     // The announcement sets scheduledAt when it goes out; let it finish first
     await vi.waitFor(async () =>
       expect(
-        (await EventModel.findById(late.event._id))?.telegram?.scheduledAt,
+        (await getEvent(ctx.app, late.event._id))?.telegram?.scheduledAt,
       ).toBeDefined(),
     );
-    await EventModel.updateOne(
-      { _id: late.event._id },
-      { 'telegram.scheduledAt': new Date(lateStart - 10 * 3_600_000) },
-    );
+    await ctx.app.db
+      .update(events)
+      .set({
+        telegram: sql`${events.telegram} || ${JSON.stringify({
+          scheduledAt: new Date(lateStart - 10 * 3_600_000).toISOString(),
+        })}::jsonb`,
+      })
+      .where(eq(events._id, late.event._id));
     // Announced only 10 hours ahead: no day-before reminder, the announcement is enough
     expect(
       await ctx.app.telegramBot.sendDueReminders(
@@ -687,15 +752,12 @@ describe('review: queue order, merges and races', () => {
     ).toBe(1);
   });
 
-  it('keeps Telegram-only accounts out of the people list and handles a new database', async () => {
+  it('keeps Telegram-only accounts out of the people list', async () => {
     const { event, auth } = await futureMatch();
     await press(`rsvp:${event._id}:yes`);
     const list = (
       await ctx.app.inject({ url: '/v1/users', headers: auth })
     ).json() as { name: string }[];
     expect(list.map((u) => u.name)).not.toContain('Аня Котова');
-
-    await UserModel.collection.drop();
-    await expect(dropLegacyUserIndexes()).resolves.toBeUndefined();
   });
 });

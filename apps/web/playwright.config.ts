@@ -5,7 +5,7 @@ const WEB_PORT = 4173;
 
 /**
  * End-to-end smoke tests: the production build of the web app (vite preview) against
- * the real API on an in-memory MongoDB. Run `npm run build` first.
+ * the real API on Postgres in memory (PGlite). Run `npm run build` first.
  */
 export default defineConfig({
   testDir: 'e2e',

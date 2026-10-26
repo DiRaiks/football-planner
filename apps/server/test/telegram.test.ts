@@ -1,7 +1,6 @@
-import mongoose from 'mongoose';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { EventModel } from '../src/modules/events/event.model.js';
+import { events } from '../src/db/index.js';
 import { computeRoster } from '../src/modules/players/count.js';
 import {
   MAX_MESSAGE_LENGTH,
@@ -9,7 +8,13 @@ import {
   formatWhen,
   progressBar,
 } from '../src/plugins/telegram/messages.js';
-import { createEvent, register, setupApp } from './helpers.js';
+import {
+  addChat,
+  createEvent,
+  getEvent,
+  register,
+  setupApp,
+} from './helpers.js';
 
 type Call = { method: string; payload: Record<string, unknown> };
 const calls: Call[] = [];
@@ -80,10 +85,7 @@ const signUp = (
 beforeEach(async () => {
   calls.length = 0;
   beforeSend = undefined;
-  // Shape of documents written by the previous telegraf-based bot
-  await mongoose.connection
-    .collection('chats')
-    .insertOne({ chatId: CHAT, createdAt: new Date() });
+  await addChat(ctx.app, CHAT);
 });
 
 describe('telegram announcements', () => {
@@ -128,7 +130,7 @@ describe('telegram announcements', () => {
     });
     await vi.waitFor(async () =>
       expect(
-        (await EventModel.findById(event._id).lean())?.telegram?.announcements,
+        (await getEvent(ctx.app, event._id))?.telegram?.announcements,
       ).toEqual([{ chatId: CHAT, messageId: expect.any(Number) }]),
     );
   });
@@ -139,7 +141,7 @@ describe('telegram announcements', () => {
     const event = await createEvent(ctx.app, alice.auth, { minimum: 3 });
     await vi.waitFor(async () =>
       expect(
-        (await EventModel.findById(event._id))?.telegram?.announcements,
+        (await getEvent(ctx.app, event._id))?.telegram?.announcements,
       ).toHaveLength(1),
     );
 
@@ -228,7 +230,7 @@ describe('telegram announcements', () => {
     const event = await createEvent(ctx.app, auth, { date: '2026-11-03' });
     await vi.waitFor(async () =>
       expect(
-        (await EventModel.findById(event._id))?.telegram?.announcements,
+        (await getEvent(ctx.app, event._id))?.telegram?.announcements,
       ).toHaveLength(1),
     );
 
@@ -268,7 +270,7 @@ describe('telegram announcements', () => {
     const { auth } = await register(ctx.app);
     beforeSend = async () => {
       beforeSend = undefined;
-      await EventModel.deleteMany({});
+      await ctx.app.db.delete(events);
     };
 
     await createEvent(ctx.app, auth);
@@ -302,7 +304,7 @@ describe('telegram announcements', () => {
     await patch({ minimum: 3 });
     await vi.waitFor(async () =>
       expect(
-        (await EventModel.findById(event._id))?.telegram?.minimumReached,
+        (await getEvent(ctx.app, event._id))?.telegram?.minimumReached,
       ).toBe(false),
     );
 
@@ -315,7 +317,7 @@ describe('telegram announcements', () => {
     const event = await createEvent(ctx.app, auth, { minimum: 0 });
     await vi.waitFor(async () =>
       expect(
-        (await EventModel.findById(event._id))?.telegram?.announcements,
+        (await getEvent(ctx.app, event._id))?.telegram?.announcements,
       ).toHaveLength(1),
     );
     const others = await Promise.all(
@@ -352,9 +354,9 @@ describe('telegram announcements', () => {
       },
     });
 
-    expect(
-      await mongoose.connection.collection('chats').findOne({ chatId: 300 }),
-    ).toMatchObject({ topics: ['events'] });
+    expect(await ctx.app.subscriptions.store.get(300)).toMatchObject({
+      topics: ['events'],
+    });
   });
 });
 

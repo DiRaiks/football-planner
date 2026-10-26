@@ -16,8 +16,4 @@ export const notFoundError = (entity: string) =>
 export const forbiddenError = () =>
   new AppError(403, 'FORBIDDEN', 'not allowed');
 
-export const isDuplicateKeyError = (error: unknown) =>
-  typeof error === 'object' &&
-  error !== null &&
-  'code' in error &&
-  error.code === 11000;
+export { isUniqueViolation as isDuplicateKeyError } from '../db/index.js';

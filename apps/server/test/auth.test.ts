@@ -1,8 +1,10 @@
 import { createHmac, pbkdf2Sync } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 
-import { UserModel } from '../src/modules/users/user.model.js';
-import { JWT_SECRET, register, setupApp } from './helpers.js';
+import { eq } from 'drizzle-orm';
+
+import { users } from '../src/db/index.js';
+import { JWT_SECRET, findUser, register, setupApp } from './helpers.js';
 
 const ctx = setupApp({ AUTH_RATE_LIMIT_MAX: 1000 });
 
@@ -111,17 +113,13 @@ describe('auth', () => {
       512,
       'sha512',
     ).toString('hex');
-    await UserModel.create({
+    // An old record, stored before emails were lowercased
+    await ctx.app.db.insert(users).values({
       email: 'Legacy@Example.com',
       name: 'Legacy',
       hash,
       salt,
     });
-    // Simulate an old record stored before emails were lowercased
-    await UserModel.collection.updateOne(
-      { name: 'Legacy' },
-      { $set: { email: 'Legacy@Example.com' } },
-    );
 
     const res = await ctx.app.inject({
       method: 'POST',
@@ -130,11 +128,9 @@ describe('auth', () => {
     });
 
     expect(res.statusCode).toBe(200);
-    const user = await UserModel.findOne({ name: 'Legacy' }).select(
-      '+hash +salt',
-    );
+    const user = await findUser(ctx.app, eq(users.name, 'Legacy'));
     expect(user?.hash).toMatch(/^scrypt\$/);
-    expect(user?.salt).toBeUndefined();
+    expect(user?.salt).toBeNull();
   });
 
   it('returns the profile for a valid token', async () => {

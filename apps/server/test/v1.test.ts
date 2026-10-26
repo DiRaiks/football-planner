@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { EventModel } from '../src/modules/events/event.model.js';
-import { register, registerAdmin, setupApp } from './helpers.js';
+import { events } from '../src/db/index.js';
+import { countRows, register, registerAdmin, setupApp } from './helpers.js';
 
 const ctx = setupApp({ AUTH_RATE_LIMIT_MAX: 1000 });
 
@@ -99,7 +99,7 @@ describe('v1 events', () => {
       headers: alice.auth,
     });
     expect(del.statusCode).toBe(204);
-    expect(await EventModel.countDocuments()).toBe(0);
+    expect(await countRows(ctx.app, events)).toBe(0);
   });
 
   it('forbids changes by other users but allows admins', async () => {

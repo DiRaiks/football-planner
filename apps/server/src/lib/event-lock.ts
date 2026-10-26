@@ -1,17 +1,41 @@
-const locks = new Map<string, Promise<unknown>>();
+import { sql } from 'drizzle-orm';
+
+import type { Db, Tx } from '../db/index.js';
+
+/** Queues something to do once the transaction has committed, e.g. a Telegram message */
+export type AfterCommit = (effect: () => void) => void;
+
+/** Holds the rows of these matches until the transaction ends; in id order, so no deadlocks */
+export const lockEvents = async (tx: Tx, eventIds: string[]) => {
+  for (const id of [...new Set(eventIds)].sort()) {
+    await tx.execute(sql`SELECT 1 FROM events WHERE id = ${id} FOR UPDATE`);
+  }
+};
 
 /**
- * Runs changes to one match's roster one after another, so "who moved into the squad"
- * is computed against the state right before each change and announced once. The
- * service runs as a single instance (see deploy/README.md).
+ * Runs a change to one match's roster in a transaction that holds the match's row
+ * (`SELECT … FOR UPDATE`), so changes run one after another, also across processes, and
+ * "who moved into the squad" is computed against the state right before each change.
+ * Effects queued with `after` run once the change is committed, so notifications never
+ * read the state before it.
  */
-export const withEventLock = <T>(eventId: string, task: () => Promise<T>) => {
-  const previous = locks.get(eventId) ?? Promise.resolve();
-  const run = previous.then(task, task);
-  const settled = run.catch(() => undefined);
-  locks.set(eventId, settled);
-  void settled.then(() => {
-    if (locks.get(eventId) === settled) locks.delete(eventId);
+export const withEventLock = <T>(
+  db: Db,
+  eventId: string,
+  task: (tx: Tx, after: AfterCommit) => Promise<T>,
+): Promise<T> => withEventsLock(db, [eventId], task);
+
+/** `withEventLock` for several matches at once */
+export const withEventsLock = async <T>(
+  db: Db,
+  eventIds: string[],
+  task: (tx: Tx, after: AfterCommit) => Promise<T>,
+): Promise<T> => {
+  const effects: (() => void)[] = [];
+  const result = await db.transaction(async (tx) => {
+    await lockEvents(tx, eventIds);
+    return task(tx, (effect) => effects.push(effect));
   });
-  return run;
+  for (const effect of effects) effect();
+  return result;
 };

@@ -32,7 +32,7 @@ jobs:
       - run: npx playwright install --with-deps chromium
         working-directory: apps/web
       - run: npm run build --workspace football-planner-web
-      # Sign-up flow on desktop and phone against the real API on an in-memory MongoDB
+      # Sign-up flow on desktop and phone against the real API on Postgres in memory (PGlite)
       - run: npm run test:e2e --workspace football-planner-web
       # Accessibility and best practices of the public pages
       - run: npm run lighthouse --workspace football-planner-web

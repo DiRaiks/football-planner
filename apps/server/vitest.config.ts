@@ -4,7 +4,8 @@ export default defineConfig({
   test: {
     include: ['test/**/*.test.ts'],
     environment: 'node',
-    // A single in-memory MongoDB is shared by all test files
+    // One test file at a time: each starts its own database, and TEST_DATABASE_URL
+    // points them all at one Postgres server
     fileParallelism: false,
     hookTimeout: 120_000,
     testTimeout: 20_000,

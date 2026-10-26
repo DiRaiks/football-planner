@@ -2,9 +2,10 @@ import { createHmac } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 
 import { parseTrustProxy } from '../src/env.js';
-import { PlayerModel } from '../src/modules/players/player.model.js';
-import { UserModel } from '../src/modules/users/user.model.js';
-import { createEvent, register, setupApp } from './helpers.js';
+import { eq, sql } from 'drizzle-orm';
+
+import { players, users } from '../src/db/index.js';
+import { countRows, createEvent, register, setupApp } from './helpers.js';
 
 const ctx = setupApp({ AUTH_RATE_LIMIT_MAX: 1000 });
 
@@ -79,10 +80,10 @@ describe('security', () => {
 
   it('revokes tokens when the role changes via the CLI', async () => {
     const user = await register(ctx.app);
-    await UserModel.updateOne(
-      { _id: user._id },
-      { $set: { role: 'admin' }, $inc: { tokenVersion: 1 } },
-    );
+    await ctx.app.db
+      .update(users)
+      .set({ role: 'admin', tokenVersion: sql`${users.tokenVersion} + 1` })
+      .where(eq(users._id, user._id));
 
     const res = await ctx.app.inject({
       method: 'GET',
@@ -133,7 +134,9 @@ describe('security', () => {
     expect(results.map((r) => r.statusCode).sort()).toEqual([
       201, 409, 409, 409,
     ]);
-    expect(await PlayerModel.countDocuments({ eventId: event._id })).toBe(1);
+    expect(
+      await countRows(ctx.app, players, eq(players.eventId, event._id)),
+    ).toBe(1);
   });
 
   it('answers unknown routes in the unified error format', async () => {

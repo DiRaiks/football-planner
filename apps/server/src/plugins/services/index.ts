@@ -52,15 +52,15 @@ const servicesPlugin: FastifyPluginAsync<ServicesOptions> = async (
       'PUBLIC_URL is not set, so "Log in with Telegram" is disabled',
     );
   }
-  const notifier = fastify.telegramBot;
+  const { db, telegramBot: notifier } = fastify;
 
-  const players = new PlayersService(notifier);
+  const players = new PlayersService(db, notifier);
   fastify.decorate('services', {
-    events: new EventsService(notifier, fastify.config.TIME_ZONE),
+    events: new EventsService(db, notifier, fastify.config.TIME_ZONE),
     players,
-    users: new UsersService(),
-    telegramAccounts: new TelegramAccounts(players),
-    stats: new StatsService(),
+    users: new UsersService(db),
+    telegramAccounts: new TelegramAccounts(db, players),
+    stats: new StatsService(db),
     telegramLogin:
       clientId && clientSecret && publicUrl
         ? new TelegramOidc({
