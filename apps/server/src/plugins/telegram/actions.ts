@@ -3,8 +3,8 @@ import type { FastifyInstance } from 'fastify';
 import type { Context } from 'grammy';
 
 import { AppError } from '../../lib/errors.js';
-import { EventModel } from '../../modules/events/event.model.js';
-import type { UserDocument } from '../../modules/users/user.model.js';
+import { findEventById } from '../../modules/events/event.model.js';
+import type { UserRecord } from '../../modules/users/user.model.js';
 import type { RsvpAction } from './messages.js';
 
 /** Failed /link attempts per Telegram user before a pause, and the pause */
@@ -25,7 +25,7 @@ export const registerTelegramActions = (fastify: FastifyInstance) => {
   const { bot } = fastify.tg;
 
   /** The player's state after a press, as the answer to it */
-  const stateOf = async (eventId: string, user: UserDocument) => {
+  const stateOf = async (eventId: string, user: UserRecord) => {
     const { player, waitlisted } = await fastify.services.players.findMine(
       eventId,
       user,
@@ -37,11 +37,11 @@ export const registerTelegramActions = (fastify: FastifyInstance) => {
   const rsvp = async (
     eventId: string,
     action: RsvpAction,
-    user: UserDocument,
+    user: UserRecord,
   ): Promise<string> => {
     const { players } = fastify.services;
-    const mine = await players.findByEventAndUser(eventId, user._id.toString());
-    const playerId = mine?._id.toString();
+    const mine = await players.findByEventAndUser(eventId, user._id);
+    const playerId = mine?._id;
 
     switch (action) {
       case 'yes':
@@ -84,16 +84,9 @@ export const registerTelegramActions = (fastify: FastifyInstance) => {
             if (!isCode(error, 'PLAYER_EXISTS')) throw error;
           }
         }
-        const me = await players.findByEventAndUser(
-          eventId,
-          user._id.toString(),
-        );
+        const me = await players.findByEventAndUser(eventId, user._id);
         try {
-          const { guest } = await players.addGuest(
-            me!._id.toString(),
-            user,
-            eventId,
-          );
+          const { guest } = await players.addGuest(me!._id, user, eventId);
           return `Добавил: ${guest}`;
         } catch (error) {
           if (isCode(error, 'TOO_MANY_FRIENDS')) {
@@ -110,7 +103,7 @@ export const registerTelegramActions = (fastify: FastifyInstance) => {
     async (ctx) => {
       const [, eventId, action] = ctx.match as [string, string, RsvpAction];
       try {
-        const event = await EventModel.findById(eventId);
+        const event = await findEventById(fastify.db, eventId);
         if (!event) return await reply(ctx, 'Матч отменён');
         if (event.startsAt && event.startsAt.getTime() < Date.now()) {
           return await reply(ctx, 'Матч уже начался');

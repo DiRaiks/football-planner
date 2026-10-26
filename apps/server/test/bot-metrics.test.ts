@@ -1,7 +1,6 @@
-import mongoose from 'mongoose';
 import { describe, expect, it, vi } from 'vitest';
 
-import { createEvent, register, setupApp } from './helpers.js';
+import { addChat, createEvent, register, setupApp } from './helpers.js';
 
 const ctx = setupApp(
   { AUTH_RATE_LIMIT_MAX: 1000, BOT_TOKEN: '123:test' },
@@ -37,9 +36,7 @@ const metrics = async () => (await ctx.app.inject({ url: '/metrics' })).body;
 
 describe('bot metrics', () => {
   it('counts updates, commands and sent messages next to the app metrics', async () => {
-    await mongoose.connection
-      .collection('chats')
-      .insertOne({ chatId: -100, topics: ['events'] });
+    await addChat(ctx.app, -100);
     const { auth } = await register(ctx.app);
     await createEvent(ctx.app, auth);
     await ctx.app.tg.bot.handleUpdate({
@@ -66,7 +63,7 @@ describe('bot metrics', () => {
     );
     expect(text).toContain('tg_notifier_queue');
     // One registry: the app's own metrics are still there
-    expect(text).toContain('mongodb_connected 1');
+    expect(text).toContain('database_connected 1');
     // The kit serves no routes of its own
     expect((await ctx.app.inject({ url: '/telegram/health' })).statusCode).toBe(
       404,
