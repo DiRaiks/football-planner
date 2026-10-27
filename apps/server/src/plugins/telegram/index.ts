@@ -10,7 +10,7 @@ import {
   tgSubscriptions,
   type SentMessage,
   type TgBotOptions,
-} from '@dirai/tg-kit';
+} from '@dirai-kit/tg';
 
 import { splitList } from '../../env.js';
 import { zonedDay } from '../../lib/time.js';

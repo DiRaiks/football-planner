@@ -1,4 +1,4 @@
-import { html, joinHtml, type Html } from '@dirai/tg-kit';
+import { html, joinHtml, type Html } from '@dirai-kit/tg';
 import type { DailyForecast } from '@football-planner/shared';
 
 import type { RosterPerson } from '../../modules/players/count.js';
