@@ -1,18 +1,23 @@
 import { fileURLToPath } from 'node:url';
 import type { ExtractTablesWithRelations } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/node-postgres';
-import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import type {
   PgDatabase,
   PgQueryResultHKT,
   PgTransaction,
 } from 'drizzle-orm/pg-core';
-import pg from 'pg';
+import { createPool, migrateWithLock, type SqlClient } from '@dirai-kit/pg';
 
 import * as schema from './schema.js';
 
 export * from './schema.js';
 export { newId } from './ids.js';
+export {
+  isForeignKeyViolation,
+  isUniqueViolation,
+  pgErrorCode,
+  type SqlClient,
+} from '@dirai-kit/pg';
 
 type Schema = typeof schema;
 
@@ -25,11 +30,6 @@ export type Tx = PgTransaction<
 >;
 /** Runs queries: the database, or a transaction in progress */
 export type Executor = Db | Tx;
-
-/** The subset of a Postgres client used for raw queries: a `pg` Pool or PGlite */
-export type SqlClient = {
-  query(text: string, values?: unknown[]): Promise<{ rows: unknown[] }>;
-};
 
 export type Database = {
   db: Db;
@@ -44,58 +44,26 @@ export const MIGRATIONS_FOLDER = fileURLToPath(
   new URL('../../drizzle', import.meta.url),
 );
 
-export const connectPostgres = (url: string): Database => {
-  const pool = new pg.Pool({
-    connectionString: url,
-    connectionTimeoutMillis: 5000,
-  });
-  // An idle client losing its connection must not crash the process
-  pool.on('error', () => undefined);
-  const db = drizzle(pool, { schema });
+/**
+ * Name of the advisory lock that lets one process at a time apply migrations: two
+ * servers starting at once, or a server and the data migration, take turns
+ */
+const MIGRATION_LOCK = 'football-planner:migrations';
+
+export const connectPostgres = (
+  url: string,
+  { onIdleError }: { onIdleError?: (error: Error) => void } = {},
+): Database => {
+  const pool = createPool({ url, onIdleError });
+  const db = drizzle({ client: pool, schema });
   return {
     db,
     client: pool,
     migrate: () =>
-      withAdvisoryLock(pool, () =>
-        migrate(db, { migrationsFolder: MIGRATIONS_FOLDER }),
-      ),
+      migrateWithLock(pool, {
+        migrationsFolder: MIGRATIONS_FOLDER,
+        lock: MIGRATION_LOCK,
+      }),
     close: () => pool.end(),
   };
 };
-
-/** Key of the lock that lets one process at a time apply migrations */
-const MIGRATION_LOCK = 4_802_731_195;
-
-/**
- * Runs `task` while holding a session-level advisory lock on a client of its own: two
- * servers starting at once, or a server and the data migration, apply migrations one
- * after another instead of together
- */
-const withAdvisoryLock = async <T>(pool: pg.Pool, task: () => Promise<T>) => {
-  const client = await pool.connect();
-  try {
-    await client.query('SELECT pg_advisory_lock($1)', [MIGRATION_LOCK]);
-    try {
-      return await task();
-    } finally {
-      await client.query('SELECT pg_advisory_unlock($1)', [MIGRATION_LOCK]);
-    }
-  } finally {
-    client.release();
-  }
-};
-
-/** The Postgres error code of a failed query; Drizzle wraps the driver's error */
-export const pgErrorCode = (error: unknown): string | undefined => {
-  for (let e = error, depth = 0; e && depth < 5; depth++) {
-    const code = (e as { code?: unknown }).code;
-    if (typeof code === 'string') return code;
-    e = (e as { cause?: unknown }).cause;
-  }
-  return undefined;
-};
-
-export const isUniqueViolation = (error: unknown) =>
-  pgErrorCode(error) === '23505';
-export const isForeignKeyViolation = (error: unknown) =>
-  pgErrorCode(error) === '23503';

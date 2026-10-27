@@ -6,10 +6,12 @@ One VPS runs the whole stack with Docker Compose:
 | ----------------------------- | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
 | `web`                         | `ghcr.io/<owner>/football-planner-web`    | Caddy with the built app: TLS certificates, the SPA, proxy of `/v1`, `/telegram/*` and `/health` to the server |
 | `server`                      | `ghcr.io/<owner>/football-planner-server` | Fastify API and Telegram bot, plain HTTP inside the network, runs as `node`; applies database migrations first |
-| `postgres`, `postgres-backup` | `postgres:18.6-alpine`                    | Optional (`COMPOSE_PROFILES=postgres`): local Postgres with a daily `pg_dump` to `./backups`                   |
+| `postgres`, `postgres-backup` | `postgres:18.6-alpine`                    | Optional (`COMPOSE_PROFILES=postgres`): local Postgres with a daily `pg_dump` to `./backups`, from dirai-kit   |
 | `mongo`, `mongo-backup`       | `mongo:8.0`                               | Legacy (`COMPOSE_PROFILES=postgres,mongo`): the MongoDB of older versions, only to move its data               |
 
-When CI passes on `main`, the deploy workflow builds both images from that commit, tags them with its SHA and `latest`, and pushes them to GHCR. When the server is configured, the workflow uploads `compose.yml`, pulls the new images, restarts the stack and waits for both health checks. Until then the deploy job is skipped, so pushes stay green.
+When CI passes on `main`, the deploy workflow calls the shared one of [dirai-kit](https://github.com/DiRaiks/dirai-kit/blob/main/.github/workflows/deploy.yml), pinned to a commit: it builds both images from that commit, tags them with its SHA and `latest`, and pushes them to GHCR. When the server is configured, it uploads `compose.yml`, `postgres.env` and dirai-kit's `postgres.compose.yml` (the `postgres` and `postgres-backup` services, included by `compose.yml`), pulls the new images, restarts the stack and waits for the health checks of `server` and `web`. Until then the deploy job is skipped, so pushes stay green.
+
+`postgres.env` names the local database and its dumps: `POSTGRES_NAME=football` (user and database) and `BACKUP_PREFIX=football` (`backups/football-<timestamp>.dump`), the names used before the shared file, so an existing volume and old dumps keep working.
 
 ## First deployment
 
@@ -107,7 +109,8 @@ It needs the repository's dev dependencies, so it runs from a checkout in a one-
 
    ```bash
    git clone --depth 1 https://github.com/DiRaiks/football-planner.git src
-   cp src/deploy/compose.yml compose.yml
+   cp src/deploy/compose.yml src/deploy/postgres.env .
+   curl -fsSL https://raw.githubusercontent.com/DiRaiks/dirai-kit/aa9060fca5620c6ca848e6b93a7b311fe914d964/deploy/postgres.compose.yml -o postgres.compose.yml
    $compose up -d postgres
    docker network ls   # the stack's network: <compose project>_default
    ```
@@ -143,6 +146,8 @@ Build the images and run the same compose file with `DOMAIN=localhost` (Caddy us
 docker build -f apps/server/Dockerfile -t local/football-planner-server:test .
 docker build -f apps/web/Dockerfile -t local/football-planner-web:test .
 printf 'IMAGE_REGISTRY=local\nIMAGE_TAG=test\n' > images.env
+# compose.yml includes the shared Postgres services (git-ignored here)
+curl -fsSL https://raw.githubusercontent.com/DiRaiks/dirai-kit/aa9060fca5620c6ca848e6b93a7b311fe914d964/deploy/postgres.compose.yml -o deploy/postgres.compose.yml
 # .env: DOMAIN=localhost, COMPOSE_PROFILES=postgres, POSTGRES_PASSWORD=pw,
 #       DATABASE_URL=postgres://football:pw@postgres:5432/football, JWT_SECRET=...
 docker compose -f deploy/compose.yml --env-file .env --env-file images.env up -d

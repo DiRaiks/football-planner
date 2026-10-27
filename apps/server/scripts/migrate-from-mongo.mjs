@@ -38,7 +38,14 @@ if (!isTimeZone(timeZone))
 if (!process.env.TIME_ZONE) console.warn('TIME_ZONE is not set, using UTC');
 
 const mongo = new MongoClient(MONGO_URI, { serverSelectionTimeoutMS: 10_000 });
-const database = dryRun ? null : connectPostgres(DATABASE_URL);
+// Applies the migrations under the server's advisory lock (db/index.ts): a server
+// starting at the same time waits instead of migrating along
+const database = dryRun
+  ? null
+  : connectPostgres(DATABASE_URL, {
+      onIdleError: (error) =>
+        console.warn(`Idle Postgres connection dropped: ${error.message}`),
+    });
 try {
   await mongo.connect();
   const db = mongo.db();

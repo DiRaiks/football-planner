@@ -2,9 +2,9 @@
  * Postgres in WebAssembly for the tests, the end-to-end API and the data migration's
  * tests. Not used by the server in production: @electric-sql/pglite is a dev dependency.
  */
-import { PGlite } from '@electric-sql/pglite';
+import type { PGlite } from '@electric-sql/pglite';
+import { migratedPglite } from '@dirai-kit/pg/testing';
 import { drizzle } from 'drizzle-orm/pglite';
-import { migrate } from 'drizzle-orm/pglite/migrator';
 
 import { MIGRATIONS_FOLDER, type Database } from './index.js';
 import * as schema from './schema.js';
@@ -12,13 +12,15 @@ import * as schema from './schema.js';
 export const createPgliteDatabase = async (): Promise<
   Database & { pglite: PGlite }
 > => {
-  const pglite = await PGlite.create();
-  const db = drizzle(pglite, { schema });
+  // A copy of a template migrated once per test worker
+  const pglite = await migratedPglite({ migrationsFolder: MIGRATIONS_FOLDER });
+  const db = drizzle({ client: pglite, schema });
   return {
     pglite,
     db,
     client: pglite,
-    migrate: () => migrate(db, { migrationsFolder: MIGRATIONS_FOLDER }),
+    // Already applied to the template
+    migrate: async () => undefined,
     close: () => pglite.close(),
   };
 };

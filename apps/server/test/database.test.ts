@@ -1,21 +1,16 @@
-import pg from 'pg';
+import { createTestDatabase } from '@dirai-kit/pg/testing';
 import { describe, expect, it } from 'vitest';
 
-import { connectPostgres, newId } from '../src/db/index.js';
+import { connectPostgres } from '../src/db/index.js';
 
 const url = process.env.TEST_DATABASE_URL;
 
 // Needs a real server: PGlite is one process
 describe.runIf(url)('migrations on Postgres', () => {
   it('apply once when two processes start together', async () => {
-    const name = `football_test_${newId()}`;
-    const admin = new pg.Client({ connectionString: url });
-    await admin.connect();
-    await admin.query(`CREATE DATABASE ${name}`);
-    const target = new URL(url!);
-    target.pathname = `/${name}`;
-    const a = connectPostgres(target.toString());
-    const b = connectPostgres(target.toString());
+    const target = await createTestDatabase(url!, { prefix: 'football_test_' });
+    const a = connectPostgres(target.url);
+    const b = connectPostgres(target.url);
     try {
       await Promise.all([a.migrate(), b.migrate()]);
       const { rows } = await a.client.query(
@@ -25,8 +20,7 @@ describe.runIf(url)('migrations on Postgres', () => {
     } finally {
       await a.close();
       await b.close();
-      await admin.query(`DROP DATABASE IF EXISTS ${name} WITH (FORCE)`);
-      await admin.end();
+      await target.drop();
     }
   });
 });

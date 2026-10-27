@@ -1,14 +1,7 @@
-/** Expected business error, rendered by the error handler as `{ code, message }` with `status` */
-export class AppError extends Error {
-  constructor(
-    readonly status: number,
-    readonly code: string,
-    message: string,
-  ) {
-    super(message);
-    this.name = 'AppError';
-  }
-}
+import { AppError } from '@dirai-kit/fastify';
+
+/** Expected business errors, rendered by the `errors` plugin as `{ code, message }` with `status` */
+export { AppError };
 
 export const notFoundError = (entity: string) =>
   new AppError(404, 'NOT_FOUND', `${entity} not found`);
