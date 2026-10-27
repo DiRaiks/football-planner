@@ -1,12 +1,11 @@
 import { count, eq, sql, type SQL } from 'drizzle-orm';
-import pg from 'pg';
+import { createTestDatabase } from '@dirai-kit/pg/testing';
 import { afterAll, beforeAll, beforeEach } from 'vitest';
 
 import { buildApp, type BuildAppOptions } from '../src/app.js';
 import {
   connectPostgres,
   events,
-  newId,
   players,
   users,
   type Database,
@@ -22,26 +21,17 @@ type App = Awaited<ReturnType<typeof buildApp>>;
  * Postgres in memory (PGlite), or with TEST_DATABASE_URL a fresh database on that server
  * (e.g. postgres://postgres:pw@localhost:5432/postgres), dropped after the test file
  */
-const createTestDatabase = async (): Promise<Database> => {
+const openTestDatabase = async (): Promise<Database> => {
   const url = process.env.TEST_DATABASE_URL;
   if (!url) return createPgliteDatabase();
 
-  const name = `football_test_${newId()}`;
-  const admin = new pg.Client({ connectionString: url });
-  await admin.connect();
-  await admin.query(`CREATE DATABASE ${name}`);
-  await admin.end();
-  const target = new URL(url);
-  target.pathname = `/${name}`;
-  const database = connectPostgres(target.toString());
+  const target = await createTestDatabase(url, { prefix: 'football_test_' });
+  const database = connectPostgres(target.url);
   return {
     ...database,
     close: async () => {
       await database.close();
-      const cleanup = new pg.Client({ connectionString: url });
-      await cleanup.connect();
-      await cleanup.query(`DROP DATABASE IF EXISTS ${name} WITH (FORCE)`);
-      await cleanup.end();
+      await target.drop();
     },
   };
 };
@@ -55,7 +45,7 @@ export const setupApp = (
   const ctx = {} as { app: App; database: Database };
 
   beforeAll(async () => {
-    ctx.database = await createTestDatabase();
+    ctx.database = await openTestDatabase();
     ctx.app = await buildApp({
       database: ctx.database,
       fastify: { logger: false },

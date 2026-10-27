@@ -1,13 +1,13 @@
-import Fastify, { type FastifyError, type FastifyServerOptions } from 'fastify';
+import Fastify, { type FastifyServerOptions } from 'fastify';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
 import fastifyEnv from '@fastify/env';
 import type { TypeBoxTypeProvider } from '@fastify/type-provider-typebox';
+import { errors, loggerOptions, splitList } from '@dirai-kit/fastify';
 
-import { getEnvOptions, getLoggerOptions, splitList } from './env.js';
+import { getEnvOptions } from './env.js';
 import { isTimeZone } from './lib/time.js';
-import { AppError } from './lib/errors.js';
 import {
   AuthPlugin,
   DatabasePlugin,
@@ -42,8 +42,13 @@ export const buildApp = async ({
   telegramLogin,
   database,
 }: BuildAppOptions = {}) => {
+  // The logger is created before the env plugin reads the settings
+  const { LOG_LEVEL, LOG_FORMAT } = env ?? process.env;
   const fastify = Fastify({
-    logger: getLoggerOptions(env),
+    logger: loggerOptions({
+      level: typeof LOG_LEVEL === 'string' ? LOG_LEVEL : undefined,
+      pretty: LOG_FORMAT === 'pretty',
+    }),
     ...fastifyOptions,
     ajv: {
       customOptions: {
@@ -72,34 +77,8 @@ export const buildApp = async ({
     },
   );
 
-  fastify.setErrorHandler((error: FastifyError | AppError, request, reply) => {
-    if (error instanceof AppError) {
-      return reply
-        .code(error.status)
-        .send({ code: error.code, message: error.message });
-    }
-    if (error.validation) {
-      return reply
-        .code(400)
-        .send({ code: 'VALIDATION_ERROR', message: error.message });
-    }
-
-    const status =
-      error.statusCode && error.statusCode >= 400 ? error.statusCode : 500;
-    if (status >= 500) request.log.error(error);
-
-    return reply.code(status).send({
-      code: typeof error.code === 'string' ? error.code : 'INTERNAL_ERROR',
-      message: status >= 500 ? 'internal server error' : error.message,
-    });
-  });
-
-  fastify.setNotFoundHandler((request, reply) =>
-    reply.code(404).send({
-      code: 'NOT_FOUND',
-      message: `route ${request.method} ${request.url} not found`,
-    }),
-  );
+  // { code, message } errors, 404 for unknown routes
+  await fastify.register(errors);
 
   await fastify.register(helmet);
   await fastify.register(cors, {
@@ -111,7 +90,7 @@ export const buildApp = async ({
   await fastify.register(rateLimit, { global: false });
 
   await fastify.register(DatabasePlugin, { database });
-  // Before Telegram: the bot adds its metrics to the same registry
+  // /health and /metrics; before Telegram: the bot adds its metrics to the same registry
   await fastify.register(MonitoringPlugin);
   await fastify.register(TelegramPlugin, { test: telegram });
   await fastify.register(AuthPlugin);
@@ -133,14 +112,6 @@ export const buildApp = async ({
     });
     fastify.addHook('onClose', async () => clearInterval(timer));
   }
-
-  fastify.get('/metrics', fastify.metrics.routeHandler);
-  // Public through Caddy, and each call reads the database
-  fastify.get(
-    '/health',
-    { config: { rateLimit: { max: 120, timeWindow: '1 minute' } } },
-    fastify.healthChecker.routeHandler,
-  );
 
   return fastify;
 };

@@ -13,8 +13,6 @@ declare module 'fastify' {
     db: Db;
     /** Raw queries: the Telegram kit's chat store, health checks */
     sqlClient: SqlClient;
-    /** Whether the database answers a trivial query in time */
-    databaseConnected: () => Promise<boolean>;
   }
 }
 
@@ -22,8 +20,6 @@ export type DatabasePluginOptions = {
   /** A database to use instead of DATABASE_URL, e.g. PGlite in tests; not closed with the app */
   database?: Database;
 };
-
-const PING_TIMEOUT_MS = 2000;
 
 const databasePlugin: FastifyPluginAsync<DatabasePluginOptions> = async (
   fastify,
@@ -44,7 +40,10 @@ const databasePlugin: FastifyPluginAsync<DatabasePluginOptions> = async (
         'DATABASE_URL must start with postgres:// or postgresql://',
       );
     }
-    database = connectPostgres(DATABASE_URL);
+    database = connectPostgres(DATABASE_URL, {
+      onIdleError: (err) =>
+        logger.warn({ err }, 'Idle Postgres connection dropped'),
+    });
     fastify.addHook('onClose', async () => {
       await database!.close();
       logger.info('Database disconnected');
@@ -57,24 +56,8 @@ const databasePlugin: FastifyPluginAsync<DatabasePluginOptions> = async (
   await database.migrate();
   logger.info('Database connected, migrations applied');
 
-  const { client } = database;
   fastify.decorate('db', database.db);
-  fastify.decorate('sqlClient', client);
-  fastify.decorate('databaseConnected', async () => {
-    let timer: NodeJS.Timeout | undefined;
-    const timeout = new Promise<boolean>((resolve) => {
-      timer = setTimeout(() => resolve(false), PING_TIMEOUT_MS);
-    });
-    const ping = client.query('SELECT 1').then(
-      () => true,
-      () => false,
-    );
-    try {
-      return await Promise.race([ping, timeout]);
-    } finally {
-      clearTimeout(timer);
-    }
-  });
+  fastify.decorate('sqlClient', database.client);
 };
 
 export default fp(databasePlugin, { fastify: '5.x', name: 'database' });

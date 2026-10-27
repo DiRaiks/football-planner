@@ -1,7 +1,7 @@
 import { createHmac } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 
-import { parseTrustProxy } from '../src/env.js';
+import { parseTrustProxy } from '@dirai-kit/fastify';
 import { eq, sql } from 'drizzle-orm';
 
 import { players, users } from '../src/db/index.js';

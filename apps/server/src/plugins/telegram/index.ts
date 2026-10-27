@@ -1,5 +1,6 @@
 import fp from 'fastify-plugin';
 import type { FastifyPluginAsync } from 'fastify';
+import { splitList } from '@dirai-kit/fastify';
 import { and, eq, gt, inArray, isNotNull, lte, sql } from 'drizzle-orm';
 import {
   html,
@@ -12,7 +13,6 @@ import {
   type TgBotOptions,
 } from '@dirai-kit/tg';
 
-import { splitList } from '../../env.js';
 import { zonedDay } from '../../lib/time.js';
 import { events, users, type EventRecord } from '../../db/index.js';
 import { findEventById } from '../../modules/events/event.model.js';
@@ -162,7 +162,7 @@ const telegramPlugin: FastifyPluginAsync<TelegramPluginOptions> = async (
   await fastify.register(tgNotifier);
   // Bot metrics (tg_*) go to the app's /metrics, the bot's state to its /health
   await fastify.register(tgHealth, {
-    registry: fastify.metrics.registry,
+    registry: fastify.ops.registry,
     healthPath: false,
     metricsPath: false,
     // Well inside the 5 s of the Docker health check (Dockerfile)
