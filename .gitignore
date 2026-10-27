@@ -69,3 +69,5 @@ playwright-report
 test-results
 lighthouse-report
 .lighthouseci
+# Fetched from dirai-kit for local runs of deploy/compose.yml (deploy/README.md)
+deploy/postgres.compose.yml
