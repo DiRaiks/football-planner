@@ -6,7 +6,7 @@
  * Idempotent: rows that exist already are left alone (ON CONFLICT DO NOTHING), so a
  * second run adds only what is new. Everything is written in one transaction.
  */
-import { pgStore } from '@dirai/tg-kit';
+import { pgStore } from '@dirai-kit/tg';
 import { getTableColumns, sql, type InferInsertModel } from 'drizzle-orm';
 import type { PgTable } from 'drizzle-orm/pg-core';
 

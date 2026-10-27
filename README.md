@@ -58,13 +58,13 @@ The Telegram bot keeps a live, pinned announcement in your team chat.
 
 ## Stack
 
-| Part                             | Technology                                                                                                                 |
-| -------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| Web app (`apps/web`)             | React 19, React Router 8, TanStack Query 5, Tailwind CSS 4, Motion, Vite 8                                                 |
-| API (`apps/server`)              | Fastify 5, TypeBox, Postgres with Drizzle ORM, pino                                                                        |
-| Shared types (`packages/shared`) | TypeBox schemas used by the API and the app                                                                                |
-| Telegram                         | [`@dirai/tg-kit`](https://www.npmjs.com/package/@dirai/tg-kit) on grammY ([source](https://github.com/DiRaiks/tg-bot-kit)) |
-| Tests                            | Vitest, Testing Library, PGlite (Postgres in memory)                                                                       |
+| Part                             | Technology                                                                                                                                      |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| Web app (`apps/web`)             | React 19, React Router 8, TanStack Query 5, Tailwind CSS 4, Motion, Vite 8                                                                      |
+| API (`apps/server`)              | Fastify 5, TypeBox, Postgres with Drizzle ORM, pino                                                                                             |
+| Shared types (`packages/shared`) | TypeBox schemas used by the API and the app                                                                                                     |
+| Telegram                         | [`@dirai-kit/tg`](https://www.npmjs.com/package/@dirai-kit/tg) on grammY ([source](https://github.com/DiRaiks/dirai-kit/tree/main/packages/tg)) |
+| Tests                            | Vitest, Testing Library, PGlite (Postgres in memory)                                                                                            |
 
 ## Getting started
 
@@ -165,7 +165,7 @@ npm run lighthouse --workspace football-planner-web # reports in apps/web/lighth
 
 ## Monitoring
 
-`GET /health` reports the API, its database and the Telegram bot (polling or webhook state, the subscriptions store, the send queue). It answers 200 while the process runs; `status` is `degraded` when the database is down or the bot cannot receive updates. The route is public, so Telegram's error texts stay in the logs, and it is rate limited. `GET /metrics` serves Prometheus metrics: request durations by route, whether the database answers (`database_connected`), Node.js process metrics, and the bot's `tg_*` metrics from [tg-kit](https://github.com/DiRaiks/tg-bot-kit): updates received, handler failures, commands, messages sent or failed, and the notifier queue. Caddy does not expose `/metrics` publicly; scrape it inside the Docker network.
+`GET /health` reports the API, its database and the Telegram bot (polling or webhook state, the subscriptions store, the send queue). It answers 200 while the process runs; `status` is `degraded` when the database is down or the bot cannot receive updates. The route is public, so Telegram's error texts stay in the logs, and it is rate limited. `GET /metrics` serves Prometheus metrics: request durations by route, whether the database answers (`database_connected`), Node.js process metrics, and the bot's `tg_*` metrics from [tg-kit](https://github.com/DiRaiks/dirai-kit/tree/main/packages/tg): updates received, handler failures, commands, messages sent or failed, and the notifier queue. Caddy does not expose `/metrics` publicly; scrape it inside the Docker network.
 
 ## License
 

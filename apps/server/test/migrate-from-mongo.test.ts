@@ -1,4 +1,4 @@
-import { pgStore } from '@dirai/tg-kit';
+import { pgStore } from '@dirai-kit/tg';
 import { eq } from 'drizzle-orm';
 import { ObjectId } from 'mongodb';
 import { describe, expect, it } from 'vitest';
