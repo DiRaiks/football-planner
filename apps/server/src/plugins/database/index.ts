@@ -29,18 +29,14 @@ const databasePlugin: FastifyPluginAsync<DatabasePluginOptions> = async (
   fastify,
   options,
 ) => {
-  const { DATABASE_URL, MONGO_URI } = fastify.config;
+  const { DATABASE_URL } = fastify.config;
   const logger = fastify.log;
 
   let database = options.database;
   if (!database) {
     if (!DATABASE_URL) {
       throw new Error(
-        MONGO_URI
-          ? 'MONGO_URI is no longer used: the server stores its data in Postgres now. ' +
-              'Set DATABASE_URL (postgres://user:password@host:5432/db) and move the data ' +
-              'with `npm run migrate-from-mongo` (deploy/README.md)'
-          : 'DATABASE_URL is not set, e.g. postgres://user:password@host:5432/football',
+        'DATABASE_URL is not set, e.g. postgres://user:password@host:5432/football',
       );
     }
     if (!/^postgres(ql)?:\/\//.test(DATABASE_URL)) {

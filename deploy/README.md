@@ -91,7 +91,7 @@ $compose start server
 
 ## Moving from MongoDB
 
-Versions before Postgres kept their data in MongoDB (`MONGO_URI`). The server no longer reads it, and refuses to start with only `MONGO_URI` set. `apps/server/scripts/migrate-from-mongo.mjs` copies users, matches, sign-ups and the bot's chats into Postgres:
+Versions before Postgres kept their data in MongoDB (`MONGO_URI`). `apps/server/scripts/migrate-from-mongo.mjs` copies users, matches, sign-ups and the bot's chats into Postgres:
 
 - ids stay the same, so links to `/events/<id>` in old Telegram messages and signed-in sessions keep working;
 - matches saved without a start time get one from their date and time in `TIME_ZONE`, with free-text dates such as `03.11.2026 20.00` normalised (this replaces the old `migrate-dates` script);
