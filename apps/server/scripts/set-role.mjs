@@ -9,11 +9,7 @@ if (!email || !['admin', 'user'].includes(role)) {
   process.exit(1);
 }
 if (!process.env.DATABASE_URL) {
-  console.error(
-    process.env.MONGO_URI
-      ? 'MONGO_URI is no longer used: set DATABASE_URL to the Postgres database'
-      : 'DATABASE_URL is not set',
-  );
+  console.error('DATABASE_URL is not set');
   process.exit(1);
 }
 

@@ -23,7 +23,7 @@ jobs:
   e2e:
     runs-on: ubuntu-latest
     # Chromium and its system libraries come with the image: no apt step to wait on.
-    # Keep the tag equal to @playwright/test (Renovate updates them together).
+    # Dependabot bumps @playwright/test but not this tag: the install step below covers the gap.
     container:
       image: mcr.microsoft.com/playwright:v1.64.1-noble
       options: --ipc=host
@@ -34,6 +34,9 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      # Downloads only the Chromium of the installed @playwright/test when it differs
+      # from the image's; a no-op when they match
+      - run: npx playwright install chromium
       - run: npm run build --workspace football-planner-web
       # Sign-up flow on desktop and phone against the real API on Postgres in memory (PGlite)
       - run: npm run test:e2e --workspace football-planner-web

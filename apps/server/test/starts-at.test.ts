@@ -168,12 +168,6 @@ describe('database settings', () => {
       env: { PORT: 0, JWT_SECRET, ...env },
     });
 
-  it('explains that MONGO_URI was replaced by DATABASE_URL', async () => {
-    await expect(
-      start({ MONGO_URI: 'mongodb://127.0.0.1:1/football' }),
-    ).rejects.toThrow(/MONGO_URI is no longer used.*DATABASE_URL/);
-  });
-
   it('refuses to start without DATABASE_URL or with another database', async () => {
     await expect(start({})).rejects.toThrow('DATABASE_URL is not set');
     await expect(

@@ -56,7 +56,17 @@ services:
       # Postgres 18 keeps its data under /var/lib/postgresql/<version>
       - postgres_data:/var/lib/postgresql
     healthcheck:
-      test: ['CMD', 'pg_isready', '-U', 'football', '-d', 'football']
+      test:
+        [
+          'CMD',
+          'pg_isready',
+          '-h',
+          '127.0.0.1',
+          '-U',
+          'football',
+          '-d',
+          'football',
+        ]
       interval: 30s
       timeout: 5s
       retries: 3

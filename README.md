@@ -126,7 +126,7 @@ Every match stores the date and time entered for the venue, and the instant it s
 
 ### Moving from MongoDB
 
-Versions before Postgres kept their data in MongoDB. `MONGO_URI` is no longer read: the server refuses to start with only `MONGO_URI` set. `npm run migrate-from-mongo --workspace apps/server -- --dry-run` reads `MONGO_URI` and reports what it would copy; without `--dry-run` it copies users, matches, sign-ups and the bot's chats into `DATABASE_URL`, keeping their ids. It also fills the start time of matches saved before `startsAt` existed, which the former `migrate-dates` script did. It runs once, into an empty database, before the new server takes requests. Steps for production: [deploy/README.md](deploy/README.md#moving-from-mongodb).
+Versions before Postgres kept their data in MongoDB. `npm run migrate-from-mongo --workspace apps/server -- --dry-run` reads `MONGO_URI` and reports what it would copy; without `--dry-run` it copies users, matches, sign-ups and the bot's chats into `DATABASE_URL`, keeping their ids. It also fills the start time of matches saved before `startsAt` existed, which the former `migrate-dates` script did. It runs once, into an empty database, before the new server takes requests. Steps for production: [deploy/README.md](deploy/README.md#moving-from-mongodb).
 
 ## Deployment
 

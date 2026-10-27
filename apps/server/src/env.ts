@@ -1,8 +1,6 @@
 export type ENVS = {
   PORT: number;
   DATABASE_URL?: string;
-  /** No longer used; only to explain at startup that DATABASE_URL replaced it */
-  MONGO_URI?: string;
   JWT_SECRET: string;
   JWT_EXPIRES_IN: string;
   LOG_LEVEL: string;
@@ -32,14 +30,12 @@ declare module 'fastify' {
 
 const ENV_SCHEME = {
   type: 'object',
-  // DATABASE_URL is required too: the database plugin says so, with a hint for MONGO_URI
+  // DATABASE_URL is required too: the database plugin says so with an example
   required: ['PORT', 'JWT_SECRET'],
   properties: {
     PORT: { type: 'number', default: 3000 },
     // Postgres connection string: postgres://user:password@host:5432/football
     DATABASE_URL: { type: 'string' },
-    // The MongoDB of older versions: only read to fail with a clear message
-    MONGO_URI: { type: 'string' },
     JWT_SECRET: { type: 'string', minLength: 32 },
     JWT_EXPIRES_IN: { type: 'string', default: '30d' },
     LOG_LEVEL: {
