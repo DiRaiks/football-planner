@@ -1,13 +1,26 @@
 import { useState, type FormEvent } from 'react';
 import type { Friend, Player, User } from '@football-planner/shared';
-import { Check, Plus, Question, UserPlus, X } from '@phosphor-icons/react';
+import {
+  Check,
+  PencilSimple,
+  Plus,
+  Question,
+  UserPlus,
+  X,
+} from '@phosphor-icons/react';
 
-import { Button, ErrorNote, IconButton, Segmented, cn } from '@/components/ui';
+import { Button, ErrorNote, IconButton, Segmented } from '@/components/ui';
 import { errorMessage } from '@/lib/api';
 import { useLeave, useSignUp, useUpdatePlayer } from './api';
 
 type Status = 'sure' | 'maybe';
 const toStatus = (value: boolean): Status => (value ? 'sure' : 'maybe');
+
+/** A friend's status, next to their name */
+const FRIEND_STATUS_OPTIONS = [
+  { value: 'sure' as const, label: 'Точно' },
+  { value: 'maybe' as const, label: 'Возможно' },
+];
 
 const STATUS_OPTIONS = [
   {
@@ -123,41 +136,19 @@ export function JoinPanel({
         {me.friends.length > 0 && (
           <ul className="grid gap-1.5">
             {me.friends.map((friend, index) => (
-              <li
+              <FriendRow
                 key={`${friend.name}-${index}`}
-                className="flex items-center gap-2 rounded-control bg-surface-2 py-1 pr-1 pl-3"
-              >
-                <span className="min-w-0 flex-1 truncate">{friend.name}</span>
-                <button
-                  type="button"
-                  disabled={pending}
-                  onClick={() =>
-                    setFriends(
-                      me.friends.map((item, i) =>
-                        i === index ? { ...item, status: !item.status } : item,
-                      ),
-                    )
-                  }
-                  className={cn(
-                    'h-11 rounded-full px-3.5 text-sm font-medium transition-colors duration-150',
-                    friend.status
-                      ? 'bg-accent-soft text-ink'
-                      : 'border border-dashed border-line text-muted',
-                  )}
-                  aria-label={`${friend.name}: ${friend.status ? 'точно идёт' : 'возможно'}, изменить`}
-                >
-                  {friend.status ? 'точно' : 'возможно'}
-                </button>
-                <IconButton
-                  label={`Убрать ${friend.name}`}
-                  disabled={pending}
-                  onClick={() =>
-                    setFriends(me.friends.filter((_, i) => i !== index))
-                  }
-                >
-                  <X className="size-4" aria-hidden />
-                </IconButton>
-              </li>
+                friend={friend}
+                disabled={pending}
+                onChange={(next) =>
+                  setFriends(
+                    me.friends.map((item, i) => (i === index ? next : item)),
+                  )
+                }
+                onRemove={() =>
+                  setFriends(me.friends.filter((_, i) => i !== index))
+                }
+              />
             ))}
           </ul>
         )}
@@ -169,6 +160,89 @@ export function JoinPanel({
 
       {error && <ErrorNote>{errorMessage(error)}</ErrorNote>}
     </section>
+  );
+}
+
+/**
+ * A friend in the sign-up: the name is renamed in place (a "Гость 2" from the bot's
+ * button gets a real name), the status switches between sure and maybe
+ */
+function FriendRow({
+  friend,
+  disabled,
+  onChange,
+  onRemove,
+}: {
+  friend: Friend;
+  disabled: boolean;
+  onChange: (friend: Friend) => void;
+  onRemove: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(friend.name);
+
+  const save = () => {
+    setEditing(false);
+    const name = draft.trim();
+    if (name && name !== friend.name) onChange({ ...friend, name });
+  };
+
+  return (
+    <li className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1 rounded-control bg-surface-2 p-1 pl-3 sm:grid-cols-[minmax(0,1fr)_auto_auto]">
+      {editing ? (
+        <input
+          autoFocus
+          aria-label={`Имя друга вместо «${friend.name}»`}
+          maxLength={50}
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          onFocus={(event) => event.target.select()}
+          onBlur={save}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') event.currentTarget.blur();
+            if (event.key === 'Escape') {
+              setDraft(friend.name);
+              setEditing(false);
+            }
+          }}
+          className="h-11 min-w-0 rounded-control border border-accent bg-surface px-3 text-base focus:ring-3 focus:ring-accent/30 focus:outline-none"
+        />
+      ) : (
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => {
+            setDraft(friend.name);
+            setEditing(true);
+          }}
+          aria-label={`Переименовать ${friend.name}`}
+          className="group flex h-11 min-w-0 items-center gap-1.5 text-left"
+        >
+          <span className="truncate">{friend.name}</span>
+          <PencilSimple
+            className="size-4 shrink-0 text-muted transition-colors duration-150 group-hover:text-ink"
+            aria-hidden
+          />
+        </button>
+      )}
+      <IconButton
+        label={`Убрать ${friend.name}`}
+        disabled={disabled}
+        onClick={onRemove}
+        className="hover:bg-surface sm:order-last"
+      >
+        <X className="size-4" aria-hidden />
+      </IconButton>
+      <Segmented
+        label={`${friend.name} придёт`}
+        value={toStatus(friend.status)}
+        options={FRIEND_STATUS_OPTIONS}
+        onChange={(value) =>
+          !disabled && onChange({ ...friend, status: value === 'sure' })
+        }
+        className="col-span-2 bg-surface sm:col-span-1"
+      />
+    </li>
   );
 }
 
