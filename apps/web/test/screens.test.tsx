@@ -6,6 +6,7 @@ import type { Player } from '@football-planner/shared';
 
 import { AuthProvider, useAuth } from '@/features/auth/auth';
 import { EventForm } from '@/features/events/EventForm';
+import { MATCH_NAMES } from '@/features/events/match-names';
 import { Scoreboard } from '@/features/events/Scoreboard';
 import { JoinPanel } from '@/features/players/JoinPanel';
 import { playersKey, usePlayers } from '@/features/players/api';
@@ -144,6 +145,11 @@ describe('EventForm', () => {
       />,
     );
 
+    // A new match starts with one of the fun names
+    const name = screen.getByLabelText('Название');
+    expect(MATCH_NAMES).toContain((name as HTMLInputElement).value);
+
+    await userEvent.clear(name);
     await userEvent.click(screen.getByRole('button', { name: 'Создать матч' }));
     expect(screen.getByText('Как назовём матч?')).toBeInTheDocument();
     expect(onSubmit).not.toHaveBeenCalled();
@@ -292,6 +298,7 @@ describe('places on the pitch', () => {
         onCancel={() => undefined}
       />,
     );
+    await userEvent.clear(screen.getByLabelText('Название'));
     await userEvent.type(screen.getByLabelText('Название'), 'Матч');
     await userEvent.type(screen.getByLabelText('Место'), 'Манеж');
     // From no limit, + jumps to the minimum; − from there goes back to no limit

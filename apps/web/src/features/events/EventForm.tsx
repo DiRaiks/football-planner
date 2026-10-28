@@ -10,6 +10,7 @@ import {
   Segmented,
 } from '@/components/ui';
 import { todayIso } from '@/lib/format';
+import { randomMatchName } from './match-names';
 
 type Values = Omit<CreateEventBody, 'location'>;
 type Errors = Partial<Record<keyof Values, string>>;
@@ -116,8 +117,9 @@ export function EventForm({
   onSubmit: (values: Values) => void;
   onCancel: () => void;
 }) {
-  const [values, setValues] = useState<Values>({
-    eventName: initial?.eventName ?? '',
+  const [values, setValues] = useState<Values>(() => ({
+    // A new match starts with a fun name, ready to keep or change
+    eventName: initial?.eventName ?? randomMatchName(),
     place: initial?.place ?? '',
     date: initial?.date ?? todayIso(),
     time: initial?.time ?? '20:00',
@@ -125,7 +127,7 @@ export function EventForm({
     maximum: initial?.maximum ?? 0,
     repeat: initial?.repeat ?? 'none',
     price: initial?.price ?? 0,
-  });
+  }));
   // The price as typed, so an empty field stays empty while editing
   const [priceText, setPriceText] = useState(
     initial?.price ? String(initial.price) : '',

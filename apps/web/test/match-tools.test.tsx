@@ -47,6 +47,7 @@ describe('EventForm', () => {
       />,
     );
 
+    await userEvent.clear(screen.getByLabelText('Название'));
     await userEvent.type(screen.getByLabelText('Название'), 'Вторник');
     await userEvent.type(screen.getByLabelText('Место'), 'Манеж');
     await userEvent.click(screen.getByRole('radio', { name: 'Каждую неделю' }));
