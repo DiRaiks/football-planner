@@ -131,6 +131,53 @@ describe('JoinPanel', () => {
       body: { friends: [{ name: 'Петя', status: true }] },
     });
   });
+
+  it('renames a friend in place and switches their status', async () => {
+    const mine = player({
+      _id: 'p2',
+      userId: user._id,
+      name: user.name,
+      status: true,
+      friends: [{ name: 'Гость 1', status: true }],
+    });
+    const calls = mockApi(() => ({ body: change([mine]) }));
+    renderWithQuery(<JoinPanel eventId="e1" user={user} players={[mine]} />);
+
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Переименовать Гость 1' }),
+    );
+    const input = screen.getByLabelText('Имя друга вместо «Гость 1»');
+    await userEvent.clear(input);
+    await userEvent.type(input, 'Петя{Enter}');
+    await waitFor(() => expect(calls).toHaveLength(1));
+    expect(calls[0]).toMatchObject({
+      body: { friends: [{ name: 'Петя', status: true }] },
+    });
+
+    // Esc leaves the name as it was; an empty name is not saved
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Переименовать Гость 1' }),
+    );
+    await userEvent.type(
+      screen.getByLabelText('Имя друга вместо «Гость 1»'),
+      'Вася{Escape}',
+    );
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Переименовать Гость 1' }),
+    );
+    await userEvent.clear(screen.getByLabelText('Имя друга вместо «Гость 1»'));
+    await userEvent.keyboard('{Enter}');
+    expect(calls).toHaveLength(1);
+
+    const status = screen.getByRole('radiogroup', { name: 'Гость 1 придёт' });
+    await userEvent.click(
+      within(status).getByRole('radio', { name: 'Возможно' }),
+    );
+    await waitFor(() => expect(calls).toHaveLength(2));
+    expect(calls[1]).toMatchObject({
+      body: { friends: [{ name: 'Гость 1', status: false }] },
+    });
+  });
 });
 
 describe('EventForm', () => {
