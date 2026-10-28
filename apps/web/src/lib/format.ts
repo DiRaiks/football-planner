@@ -4,6 +4,13 @@ const dayFormat = new Intl.DateTimeFormat('ru-RU', {
   month: 'long',
   timeZone: 'UTC',
 });
+const fullDayFormat = new Intl.DateTimeFormat('ru-RU', {
+  weekday: 'long',
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric',
+  timeZone: 'UTC',
+});
 const weekdayFormat = new Intl.DateTimeFormat('ru-RU', {
   weekday: 'short',
   timeZone: 'UTC',
@@ -21,10 +28,20 @@ export const parseDay = (date: string): Date | null => {
   return new Date(Date.UTC(y, m - 1, d));
 };
 
-/** "вт, 3 ноября" */
-export const formatDay = (date: string) => {
+/** "вт, 3 ноября"; another year than this one is named: "вт, 5 ноября 2019" */
+export const formatDay = (date: string, now = new Date()) => {
   const day = parseDay(date);
-  return day ? dayFormat.format(day) : date;
+  if (!day) return date;
+  const year = day.getUTCFullYear();
+  return year === now.getFullYear()
+    ? dayFormat.format(day)
+    : `${dayFormat.format(day)} ${year}`;
+};
+
+/** For a tooltip: "вторник, 5 ноября 2019 г." */
+export const formatFullDay = (date: string) => {
+  const day = parseDay(date);
+  return day ? fullDayFormat.format(day) : date;
 };
 
 /** Parts for the date block of an event card: "3", "нояб.", "вт" */

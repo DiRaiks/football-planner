@@ -12,7 +12,7 @@ import {
 import { useUser } from '@/features/auth/auth';
 import { useAttendance } from '@/features/stats/api';
 import { errorMessage } from '@/lib/api';
-import { formatDay, plural } from '@/lib/format';
+import { formatDay, formatFullDay, plural } from '@/lib/format';
 
 const PERIODS = [
   { value: '30', label: 'Месяц' },
@@ -105,7 +105,12 @@ export function StatsPage() {
                   style={{ width: `${(row.played / most) * 100}%` }}
                 />
               </span>
-              <span className="col-span-2 col-start-2 text-xs text-muted">
+              <span
+                className="col-span-2 col-start-2 text-xs text-muted"
+                title={
+                  row.lastPlayed ? formatFullDay(row.lastPlayed) : undefined
+                }
+              >
                 {row.lastPlayed
                   ? `последний: ${formatDay(row.lastPlayed)}`
                   : 'ещё не играл'}

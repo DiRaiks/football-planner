@@ -3,7 +3,7 @@ import type { Event } from '@football-planner/shared';
 import { CaretRight } from '@phosphor-icons/react';
 
 import { cn } from '@/components/ui';
-import { dayParts } from '@/lib/format';
+import { dayParts, formatFullDay } from '@/lib/format';
 
 /** A match in the list: date block, name and place, sure players against the minimum */
 export function EventCard({
@@ -24,6 +24,7 @@ export function EventCard({
       )}
     >
       <div
+        title={formatFullDay(event.date)}
         className={cn(
           'grid w-16 shrink-0 justify-items-center rounded-[12px] py-2',
           past ? 'bg-surface-2 text-muted' : 'bg-pitch text-pitch-ink',

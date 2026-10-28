@@ -2,7 +2,7 @@ import type { Event } from '@football-planner/shared';
 import { ArrowsClockwise, MapPin, Wallet } from '@phosphor-icons/react';
 
 import { cn } from '@/components/ui';
-import { formatDay, plural, PLAYERS } from '@/lib/format';
+import { formatDay, formatFullDay, plural, PLAYERS } from '@/lib/format';
 import { WeatherBadge } from '@/features/weather/WeatherBadge';
 
 type Count = { all: number; exactly: number; maybe: number; waiting?: number };
@@ -76,7 +76,12 @@ export function Scoreboard({ event, count }: { event: Event; count: Count }) {
         <div className="flex items-start justify-between gap-4">
           <div className="grid gap-1">
             <p className="text-sm font-medium text-pitch-muted">
-              {formatDay(event.date)}, {event.time}
+              <time
+                dateTime={event.date}
+                title={`${formatFullDay(event.date)}, ${event.time}`}
+              >
+                {formatDay(event.date)}, {event.time}
+              </time>
             </p>
             <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
               {event.eventName}

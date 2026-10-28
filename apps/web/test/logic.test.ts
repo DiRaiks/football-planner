@@ -7,6 +7,7 @@ import { weatherIcon } from '@/features/weather/WeatherBadge';
 import {
   dayParts,
   formatDay,
+  formatFullDay,
   parseDay,
   plural,
   PLAYERS,
@@ -18,7 +19,11 @@ import { player } from './helpers';
 
 describe('format', () => {
   it('formats event days independently of the time zone', () => {
-    expect(formatDay('2026-11-03')).toBe('вт, 3 ноября');
+    const now = new Date(2026, 9, 28);
+    expect(formatDay('2026-11-03', now)).toBe('вт, 3 ноября');
+    // Another year is named, so old matches are not taken for this year's
+    expect(formatDay('2019-11-05', now)).toBe('вт, 5 ноября 2019');
+    expect(formatFullDay('2019-11-05')).toBe('вторник, 5 ноября 2019 г.');
     expect(dayParts('2026-12-31')).toEqual({
       day: '31',
       month: 'дек',
