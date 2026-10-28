@@ -10,7 +10,7 @@ const ctx = setupApp();
 
 /** The attendance as computed in JavaScript before it became one SQL query */
 const reference = async (now: Date, days: number) => {
-  const since = now.getTime() - days * 86_400_000;
+  const since = days === 0 ? 0 : now.getTime() - days * 86_400_000;
   const all = await ctx.app.db.select().from(events);
   const recent = all
     .filter(
@@ -116,7 +116,8 @@ describe('attendance query', () => {
     }
 
     const now = new Date(base + 25 * 86_400_000);
-    for (const days of [7, 14, 90]) {
+    // 0 is all time
+    for (const days of [7, 14, 90, 0]) {
       const expected = await reference(now, days);
       expect(expected.length).toBeGreaterThan(0);
       expect(await ctx.app.services.stats.attendance(days, now)).toEqual(

@@ -18,6 +18,7 @@ const PERIODS = [
   { value: '30', label: 'Месяц' },
   { value: '90', label: '3 месяца' },
   { value: '365', label: 'Год' },
+  { value: '0', label: 'Всё время' },
 ] as const;
 
 const MATCHES: [string, string, string] = ['матч', 'матча', 'матчей'];
