@@ -46,7 +46,7 @@ function WeatherGlyph({ code }: { code: number }) {
   return <CloudRain {...props} />;
 }
 
-/** Forecast for the match day; hidden when the day is outside the forecast window */
+/** The weather at the start of the match; hidden when it is beyond the forecast window */
 export function WeatherBadge({ eventId }: { eventId: string }) {
   const { data } = useWeather(eventId, true);
   const forecast = data?.forecast;
@@ -57,11 +57,11 @@ export function WeatherBadge({ eventId }: { eventId: string }) {
   return (
     <div
       className="grid shrink-0 justify-items-end gap-0.5 text-right"
-      title={forecast.description}
+      title={`Прогноз на начало матча: ${forecast.description}, ${Math.round(forecast.temperature)}°, ветер ${Math.round(forecast.windSpeed)} км/ч${data.location.name ? ` · ${data.location.name}` : ''}`}
     >
       <span className="flex items-center gap-1.5 font-mono text-lg tabular-nums">
         <WeatherGlyph code={forecast.weatherCode} />
-        {Math.round(forecast.tempMax)}°
+        {Math.round(forecast.temperature)}°
       </span>
       <span className="text-xs text-pitch-muted">
         {forecast.description}

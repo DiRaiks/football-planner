@@ -1,5 +1,5 @@
 import { html, joinHtml, type Html } from '@dirai-kit/tg';
-import type { DailyForecast } from '@football-planner/shared';
+import type { Forecast } from '@football-planner/shared';
 
 import type { RosterPerson } from '../../modules/players/count.js';
 
@@ -192,12 +192,10 @@ export const teamsMessage = (event: NotifyEvent, teams: string[][]) =>
 
 export type ReminderKind = 'day' | 'soon';
 
-const forecastLine = (forecast: DailyForecast | null) => {
+/** The weather at the start: "🌤 Пасмурно, 12°, осадки 40%" */
+const forecastLine = (forecast: Forecast | null) => {
   if (!forecast) return null;
-  const temp =
-    Math.round(forecast.tempMin) === Math.round(forecast.tempMax)
-      ? `${Math.round(forecast.tempMax)}°`
-      : `${Math.round(forecast.tempMin)}…${Math.round(forecast.tempMax)}°`;
+  const temp = `${Math.round(forecast.temperature)}°`;
   const rain =
     forecast.precipitationProbability !== null &&
     forecast.precipitationProbability >= 30
@@ -211,7 +209,7 @@ export const reminderMessage = (
   kind: ReminderKind,
   event: NotifyEvent,
   count: PlayersCount,
-  forecast: DailyForecast | null,
+  forecast: Forecast | null,
   /** For the day-before reminder: whether the match is today or tomorrow at the venue */
   day: 'today' | 'tomorrow' = 'tomorrow',
 ) =>

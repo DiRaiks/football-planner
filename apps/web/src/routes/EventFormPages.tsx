@@ -22,11 +22,15 @@ export function NewEventPage() {
         pending={create.isPending}
         error={create.error ? errorMessage(create.error) : null}
         onCancel={() => navigate(-1)}
-        onSubmit={(values) =>
-          create.mutate(values, {
-            onSuccess: (event) =>
-              navigate(`/events/${event._id}`, { replace: true }),
-          })
+        onSubmit={({ location, ...values }) =>
+          // A new match without a city takes the default one
+          create.mutate(
+            { ...values, ...(location && { location }) },
+            {
+              onSuccess: (event) =>
+                navigate(`/events/${event._id}`, { replace: true }),
+            },
+          )
         }
       />
     </div>

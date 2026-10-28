@@ -12,6 +12,7 @@ export type ENVS = {
   TELEGRAM_ADMIN_IDS: string;
   WEATHER_DEFAULT_LAT?: number;
   WEATHER_DEFAULT_LON?: number;
+  WEATHER_DEFAULT_CITY?: string;
   PUBLIC_URL?: string;
   TELEGRAM_LOGIN_CLIENT_ID?: string;
   TELEGRAM_LOGIN_CLIENT_SECRET?: string;
@@ -67,6 +68,8 @@ const ENV_SCHEME = {
     // Weather location for events without coordinates; weather is disabled when unset
     WEATHER_DEFAULT_LAT: { type: 'number', minimum: -90, maximum: 90 },
     WEATHER_DEFAULT_LON: { type: 'number', minimum: -180, maximum: 180 },
+    // Name of that place, shown as the default in the match form
+    WEATHER_DEFAULT_CITY: { type: 'string', maxLength: 100 },
     // Public site URL used in links sent by the bot, e.g. https://football-planner.ru
     PUBLIC_URL: { type: 'string' },
     // "Log in with Telegram" on the site: Client ID and Secret from @BotFather (Login

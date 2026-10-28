@@ -28,7 +28,7 @@ The Telegram bot keeps a live, pinned announcement in your team chat.
 
 - **One-tap sign-up.** "Иду" or "Возможно" right on the match page, change your mind later, bring friends and mark whether each of them is sure.
 - **Match scoreboard.** Sure players against the minimum, maybe players shown separately, and how many are still missing.
-- **Weather for the match day** from [Open-Meteo](https://open-meteo.com), no API key needed.
+- **Weather at the start of the match** from [Open-Meteo](https://open-meteo.com), no API key needed: the forecast for that hour, in the city picked in the match form (suggestions as you type), or the default city.
 - **Places and a waitlist.** Set how many fit on the pitch; later sure sign-ups wait in line in sign-up order and move up by themselves when someone drops out.
 - **Telegram bot** with a pinned announcement per match that is edited on every change, quiet notes for sign-ups, and a loud message only when the minimum is reached, the time or place changes, or the match is cancelled.
 - **Sign up from the chat.** Buttons under every announcement: "Иду", "Возможно", "Не иду", "+ Друг". The first press makes an account from the Telegram profile, no site needed; `/link` in the profile joins it with a site account.
@@ -100,7 +100,8 @@ Copy `.env.example` to `.env`.
 | `CORS_ORIGINS`                                                     |          | Allowed origins if the app is served from another origin                                            |
 | `TRUST_PROXY`                                                      |          | Proxy hops (usually `1`) or proxy IPs when running behind a reverse proxy                           |
 | `TIME_ZONE`                                                        | `UTC`    | IANA time zone of the venues, e.g. `Europe/Moscow`: match times are entered in it                   |
-| `WEATHER_DEFAULT_LAT`, `WEATHER_DEFAULT_LON`                       |          | Weather location for matches without coordinates                                                    |
+| `WEATHER_DEFAULT_LAT`, `WEATHER_DEFAULT_LON`                       |          | Weather location for matches without a city; no weather for them when unset                         |
+| `WEATHER_DEFAULT_CITY`                                             |          | Name of that place, shown in the match form as the default city                                     |
 | `JWT_EXPIRES_IN`, `AUTH_RATE_LIMIT_MAX`, `LOG_LEVEL`, `LOG_FORMAT` |          | Session length, login attempts per minute, logging                                                  |
 
 ### Telegram login and Mini App

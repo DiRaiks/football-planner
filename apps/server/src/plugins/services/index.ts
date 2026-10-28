@@ -42,6 +42,7 @@ const servicesPlugin: FastifyPluginAsync<ServicesOptions> = async (
   const {
     WEATHER_DEFAULT_LAT: lat,
     WEATHER_DEFAULT_LON: lon,
+    WEATHER_DEFAULT_CITY: city,
     TELEGRAM_LOGIN_CLIENT_ID: clientId,
     TELEGRAM_LOGIN_CLIENT_SECRET: clientSecret,
     PUBLIC_URL,
@@ -71,7 +72,9 @@ const servicesPlugin: FastifyPluginAsync<ServicesOptions> = async (
           })
         : null,
     weather: new WeatherService(
-      lat !== undefined && lon !== undefined ? { lat, lon } : undefined,
+      lat !== undefined && lon !== undefined
+        ? { lat, lon, ...(city?.trim() && { name: city.trim() }) }
+        : undefined,
     ),
   } satisfies Services);
 };

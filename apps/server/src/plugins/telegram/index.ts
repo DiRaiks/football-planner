@@ -267,7 +267,7 @@ const telegramPlugin: FastifyPluginAsync<TelegramPluginOptions> = async (
     const location = weather.resolveLocation(state.event.location);
     if (!location) return null;
     return weather
-      .getForecastForDate(location, state.event.date)
+      .getForecastAt(location, state.event.startsAt)
       .catch((err: unknown) => {
         log.warn({ err }, 'weather for a reminder failed');
         return null;

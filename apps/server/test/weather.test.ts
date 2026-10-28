@@ -1,26 +1,36 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import {
-  WeatherService,
-  toIsoDay,
-} from '../src/modules/weather/weather.service.js';
+import { WeatherService } from '../src/modules/weather/weather.service.js';
 import { register, setupApp } from './helpers.js';
 
 const ctx = setupApp({
   AUTH_RATE_LIMIT_MAX: 1000,
   WEATHER_DEFAULT_LAT: 47.22,
   WEATHER_DEFAULT_LON: 39.71,
+  WEATHER_DEFAULT_CITY: 'Ростов-на-Дону',
 });
 
 const openMeteoResponse = {
-  daily: {
-    time: ['2026-11-03', '2026-11-04'],
-    weather_code: [61, 0],
-    temperature_2m_min: [3.1, 1.5],
-    temperature_2m_max: [9.4, 7.2],
-    precipitation_probability_max: [80, null],
-    wind_speed_10m_max: [14.2, 6.3],
+  hourly: {
+    time: ['2026-11-03T19:00', '2026-11-03T20:00', '2026-11-03T21:00'],
+    weather_code: [3, 61, 0],
+    temperature_2m: [9.4, 7.6, 6.1],
+    precipitation_probability: [20, 80, null],
+    wind_speed_10m: [10.1, 14.2, 6.3],
   },
+};
+
+const geocodingResponse = {
+  results: [
+    {
+      name: 'Ростов-на-Дону',
+      latitude: 47.23135,
+      longitude: 39.72328,
+      country: 'Россия',
+      admin1: 'Ростовская область',
+    },
+    { name: 'Ростов', latitude: 57.18, longitude: 39.41, country: 'Россия' },
+  ],
 };
 
 const realFetch = globalThis.fetch;
@@ -30,6 +40,10 @@ beforeEach(() => {
   weatherCalls = [];
   vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
     const url = new URL(input instanceof Request ? input.url : String(input));
+    if (url.hostname === 'geocoding-api.open-meteo.com') {
+      weatherCalls.push(url);
+      return Response.json(geocodingResponse);
+    }
     if (url.hostname !== 'api.open-meteo.com') return realFetch(input, init);
 
     weatherCalls.push(url);
@@ -57,10 +71,12 @@ const createEvent = async (auth: Record<string, string>, payload = {}) => {
 };
 
 describe('weather', () => {
-  it('returns the forecast for the event day at the event location', async () => {
+  it('returns the weather at the start of the match, at its location', async () => {
     const { auth } = await register(ctx.app);
     const event = await createEvent(auth, {
-      location: { lat: 55.75, lon: 37.62 },
+      // 20:30 reads the 20:00 hour
+      time: '20:30',
+      location: { lat: 55.75, lon: 37.62, name: 'Москва' },
     });
 
     const res = await ctx.app.inject({
@@ -71,18 +87,20 @@ describe('weather', () => {
 
     expect(res.statusCode).toBe(200);
     expect(res.json()).toEqual({
-      location: { lat: 55.75, lon: 37.62 },
+      location: { lat: 55.75, lon: 37.62, name: 'Москва' },
       forecast: {
-        date: '2026-11-03',
+        time: '2026-11-03T20:00:00.000Z',
         weatherCode: 61,
         description: 'Небольшой дождь',
-        tempMin: 3.1,
-        tempMax: 9.4,
+        temperature: 7.6,
         precipitationProbability: 80,
-        windSpeedMax: 14.2,
+        windSpeed: 14.2,
       },
     });
     expect(weatherCalls[0]?.searchParams.get('latitude')).toBe('55.75');
+    expect(weatherCalls[0]?.searchParams.get('hourly')).toContain(
+      'temperature_2m',
+    );
   });
 
   it('falls back to the default location and caches the forecast', async () => {
@@ -99,7 +117,7 @@ describe('weather', () => {
     await get();
 
     expect(first.json()).toEqual({
-      location: { lat: 47.22, lon: 39.71 },
+      location: { lat: 47.22, lon: 39.71, name: 'Ростов-на-Дону' },
       forecast: null,
     });
     // Two requests, one upstream call
@@ -147,8 +165,8 @@ describe('WeatherService cache', () => {
   it('shares one upstream call between concurrent requests', async () => {
     const service = new WeatherService();
     await Promise.all([
-      service.getDailyForecast({ lat: 10.001, lon: 20.001 }),
-      service.getDailyForecast({ lat: 10.002, lon: 20.002 }),
+      service.getHourlyForecast({ lat: 10.001, lon: 20.001 }),
+      service.getHourlyForecast({ lat: 10.002, lon: 20.002 }),
     ]);
 
     expect(weatherCalls).toHaveLength(1);
@@ -157,7 +175,7 @@ describe('WeatherService cache', () => {
 
   it('evicts the least recently used locations', async () => {
     const service = new WeatherService(undefined, 2);
-    const get = (lat: number) => service.getDailyForecast({ lat, lon: 0 });
+    const get = (lat: number) => service.getHourlyForecast({ lat, lon: 0 });
 
     await get(1);
     await get(2);
@@ -175,13 +193,46 @@ describe('WeatherService cache', () => {
   });
 });
 
-describe('toIsoDay', () => {
-  it('accepts valid calendar days only', () => {
-    expect(toIsoDay('2026-11-03')).toBe('2026-11-03');
-    expect(toIsoDay('2028-02-29')).toBe('2028-02-29');
-    expect(toIsoDay('2026-02-29')).toBeNull();
-    expect(toIsoDay('2026-99-99')).toBeNull();
-    expect(toIsoDay('2026-11-03T18:00:00.000Z')).toBeNull();
-    expect(toIsoDay('03.11.2026')).toBeNull();
+describe('cities', () => {
+  it('finds cities by name with their region, and names the default', async () => {
+    const { auth } = await register(ctx.app);
+    const search = (q: string) =>
+      ctx.app.inject({
+        url: `/v1/weather/cities?q=${encodeURIComponent(q)}`,
+        headers: auth,
+      });
+
+    const res = await search('Рост');
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toEqual([
+      {
+        name: 'Ростов-на-Дону',
+        region: 'Ростовская область, Россия',
+        lat: 47.23135,
+        lon: 39.72328,
+      },
+      { name: 'Ростов', region: 'Россия', lat: 57.18, lon: 39.41 },
+    ]);
+    const call = weatherCalls.at(-1);
+    expect(call?.searchParams.get('name')).toBe('рост');
+    expect(call?.searchParams.get('language')).toBe('ru');
+
+    // The same query again comes from the cache
+    await search('рост ');
+    expect(weatherCalls).toHaveLength(1);
+    expect((await search('Р')).statusCode).toBe(400);
+
+    const defaults = await ctx.app.inject({
+      url: '/v1/weather/default',
+      headers: auth,
+    });
+    expect(defaults.json()).toEqual({
+      location: { lat: 47.22, lon: 39.71, name: 'Ростов-на-Дону' },
+    });
+  });
+
+  it('needs a signed-in user', async () => {
+    const res = await ctx.app.inject({ url: '/v1/weather/cities?q=Рост' });
+    expect(res.statusCode).toBe(401);
   });
 });

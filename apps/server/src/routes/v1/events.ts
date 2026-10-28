@@ -103,7 +103,7 @@ const eventsRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
 
       return {
         location,
-        forecast: await weather.getForecastForDate(location, event.date),
+        forecast: await weather.getForecastAt(location, event.startsAt),
       };
     },
   );

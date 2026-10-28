@@ -1,5 +1,9 @@
 import { useState, type FormEvent } from 'react';
-import type { CreateEventBody, Event } from '@football-planner/shared';
+import type {
+  CreateEventBody,
+  Event,
+  Location,
+} from '@football-planner/shared';
 import { Minus, Plus } from '@phosphor-icons/react';
 
 import {
@@ -10,10 +14,13 @@ import {
   Segmented,
 } from '@/components/ui';
 import { todayIso } from '@/lib/format';
+import { CityField } from './CityField';
 import { randomMatchName } from './match-names';
 
 type Values = Omit<CreateEventBody, 'location'>;
-type Errors = Partial<Record<keyof Values, string>>;
+type Errors = Partial<Record<keyof Values | 'location', string>>;
+/** What the form submits: no city (null) means the default one */
+export type EventFormValues = Values & { location: Location | null };
 
 const validate = (values: Values): Errors => {
   const errors: Errors = {};
@@ -114,7 +121,7 @@ export function EventForm({
   submitLabel: string;
   pending: boolean;
   error?: string | null;
-  onSubmit: (values: Values) => void;
+  onSubmit: (values: EventFormValues) => void;
   onCancel: () => void;
 }) {
   const [values, setValues] = useState<Values>(() => ({
@@ -128,6 +135,13 @@ export function EventForm({
     repeat: initial?.repeat ?? 'none',
     price: initial?.price ?? 0,
   }));
+  // The city as typed; the location changes only when a city is picked
+  const [location, setLocation] = useState<Location | null>(
+    initial?.location ?? null,
+  );
+  const [cityText, setCityText] = useState(
+    initial?.location ? (initial.location.name ?? 'Точка на карте') : '',
+  );
   // The price as typed, so an empty field stays empty while editing
   const [priceText, setPriceText] = useState(
     initial?.price ? String(initial.price) : '',
@@ -144,12 +158,16 @@ export function EventForm({
   const submit = (event: FormEvent) => {
     event.preventDefault();
     const found = validate(values);
+    if (cityText.trim() && !location) {
+      found.location = 'Выберите город из подсказок или очистите поле';
+    }
     setErrors(found);
     if (Object.keys(found).length > 0) return;
     onSubmit({
       ...values,
       eventName: values.eventName.trim(),
       place: values.place.trim(),
+      location: cityText.trim() ? location : null,
     });
   };
 
@@ -170,6 +188,20 @@ export function EventForm({
         value={values.place}
         onChange={(event) => set('place')(event.target.value)}
         error={errors.place}
+      />
+      <CityField
+        text={cityText}
+        location={location}
+        error={errors.location}
+        onTextChange={(text) => {
+          setCityText(text);
+          setLocation(null);
+          setErrors((current) => ({ ...current, location: undefined }));
+        }}
+        onPick={(picked) => {
+          setLocation(picked);
+          setCityText(picked.name ?? '');
+        }}
       />
       <div className="grid grid-cols-2 gap-3">
         <Field

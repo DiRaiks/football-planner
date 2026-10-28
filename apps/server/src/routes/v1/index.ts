@@ -4,6 +4,7 @@ import authRoutes from './auth.js';
 import eventsRoutes from './events.js';
 import playersRoutes from './players.js';
 import statsRoutes from './stats.js';
+import weatherRoutes from './weather.js';
 import usersRoutes from './users.js';
 
 /** Id params of the routes below */
@@ -23,6 +24,7 @@ const v1Routes: FastifyPluginAsyncTypebox = async (fastify) => {
   await fastify.register(eventsRoutes, { prefix: '/events' });
   await fastify.register(playersRoutes, { prefix: '/events/:eventId/players' });
   await fastify.register(statsRoutes, { prefix: '/stats' });
+  await fastify.register(weatherRoutes, { prefix: '/weather' });
 };
 
 export default v1Routes;
