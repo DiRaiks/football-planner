@@ -236,6 +236,12 @@ describe('Telegram login', () => {
     tokenAnswer = async () =>
       Response.json({ error: 'invalid_grant' }, { status: 400 });
     expect((await login()).statusCode).toBe(401);
+    // Telegram's own way: the error with a 200, named in the answer
+    tokenAnswer = async () => Response.json({ error: 'invalid_client' });
+    expect((await login()).json()).toEqual({
+      code: 'TELEGRAM_AUTH_FAILED',
+      message: 'token endpoint said invalid_client',
+    });
 
     tokenAnswer = async () => Promise.reject(new Error('network'));
     expect((await login()).json().code).toBe('TELEGRAM_UNAVAILABLE');
