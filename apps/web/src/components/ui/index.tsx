@@ -237,14 +237,19 @@ export function Segmented<T extends string>({
             tabIndex={index === focusable ? 0 : -1}
             onClick={() => onChange(option.value)}
             className={cn(
-              'inline-flex h-11 items-center justify-center gap-1.5 rounded-[8px] text-sm font-medium',
+              // One line with room around the label: a wrapped or edge-to-edge label
+              // looks broken in the selected pill
+              'inline-flex h-11 min-w-0 items-center justify-center gap-1.5 rounded-[8px] px-3 text-sm font-medium whitespace-nowrap',
               pressable,
               selected
                 ? 'bg-accent-soft text-ink shadow-panel ring-1 ring-accent/40'
                 : 'text-muted hover:text-ink',
             )}
           >
-            {option.icon}
+            {/* On a phone three labels with icons do not fit in one line */}
+            {option.icon && (
+              <span className="hidden sm:inline-flex">{option.icon}</span>
+            )}
             {option.label}
           </button>
         );
