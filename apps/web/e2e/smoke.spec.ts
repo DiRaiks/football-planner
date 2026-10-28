@@ -7,7 +7,7 @@ const register = async (page: Page, name = 'Ильдар Сафин') => {
   await page.goto('/register');
   await page.getByLabel('Имя').fill(name);
   await page.getByLabel('Почта').fill(email);
-  await page.getByLabel('Пароль').fill('password123');
+  await page.getByLabel('Пароль', { exact: true }).fill('password123');
   await page.getByRole('button', { name: 'Создать аккаунт' }).click();
   await expect(page.getByRole('heading', { name: 'Матчи' })).toBeVisible();
   return email;
