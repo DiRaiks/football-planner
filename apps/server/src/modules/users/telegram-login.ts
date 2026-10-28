@@ -153,7 +153,13 @@ export class TelegramOidc {
 
     const body = (await response.json().catch(() => null)) as {
       id_token?: unknown;
+      error?: unknown;
     } | null;
+    // Telegram answers refusals with 200 and an OAuth error code such as
+    // `invalid_grant` or `invalid_client`; the code names the cause
+    if (typeof body?.error === 'string') {
+      throw invalid(`token endpoint said ${body.error.slice(0, 64)}`);
+    }
     const idToken = body?.id_token;
     if (typeof idToken !== 'string') throw invalid('no id token');
 
