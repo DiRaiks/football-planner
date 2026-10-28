@@ -373,13 +373,16 @@ describe('attendance', () => {
       headers: owner.auth,
     });
     expect(response.statusCode).toBe(200);
-    expect(
+    const status = async (days: string) =>
       (
         await ctx.app.inject({
-          url: '/v1/stats/attendance?days=1',
+          url: `/v1/stats/attendance?days=${days}`,
           headers: owner.auth,
         })
-      ).statusCode,
-    ).toBe(400);
+      ).statusCode;
+    // A week to a year, or 0 for all time
+    expect(await status('0')).toBe(200);
+    expect(await status('1')).toBe(400);
+    expect(await status('366')).toBe(400);
   });
 });

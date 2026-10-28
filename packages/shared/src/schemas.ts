@@ -206,8 +206,12 @@ export const SplitTeamsBody = Type.Object(
 );
 
 export const AttendanceQuery = Type.Object(
-  // Matches of the last `days`; 0 is all time
-  { days: Type.Optional(Type.Integer({ minimum: 0, maximum: 365 })) },
+  // Matches of the last `days`, a week to a year; 0 is all time
+  {
+    days: Type.Optional(
+      Type.Union([Type.Literal(0), Type.Integer({ minimum: 7, maximum: 365 })]),
+    ),
+  },
   { additionalProperties: false },
 );
 
