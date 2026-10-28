@@ -197,7 +197,7 @@ describe('EventForm', () => {
           }
         : {
             body: {
-              location: { lat: 47.23, lon: 39.72, name: 'Ростов-на-Дону' },
+              location: { lat: 59.94, lon: 30.31, name: 'Санкт-Петербург' },
             },
           },
     );
@@ -211,7 +211,7 @@ describe('EventForm', () => {
       />,
     );
     expect(
-      await screen.findByText('Для погоды. Если не выбрать — Ростов-на-Дону'),
+      await screen.findByText('Для погоды. Если не выбрать — Санкт-Петербург'),
     ).toBeInTheDocument();
     await userEvent.type(screen.getByLabelText('Место'), 'Манеж');
 

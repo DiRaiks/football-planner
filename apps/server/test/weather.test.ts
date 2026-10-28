@@ -5,9 +5,9 @@ import { register, setupApp } from './helpers.js';
 
 const ctx = setupApp({
   AUTH_RATE_LIMIT_MAX: 1000,
-  WEATHER_DEFAULT_LAT: 47.22,
-  WEATHER_DEFAULT_LON: 39.71,
-  WEATHER_DEFAULT_CITY: 'Ростов-на-Дону',
+  WEATHER_DEFAULT_LAT: 59.94,
+  WEATHER_DEFAULT_LON: 30.31,
+  WEATHER_DEFAULT_CITY: 'Санкт-Петербург',
 });
 
 const openMeteoResponse = {
@@ -23,13 +23,18 @@ const openMeteoResponse = {
 const geocodingResponse = {
   results: [
     {
-      name: 'Ростов-на-Дону',
-      latitude: 47.23135,
-      longitude: 39.72328,
+      name: 'Кировск',
+      latitude: 67.61,
+      longitude: 33.67,
       country: 'Россия',
-      admin1: 'Ростовская область',
+      admin1: 'Мурманская область',
     },
-    { name: 'Ростов', latitude: 57.18, longitude: 39.41, country: 'Россия' },
+    {
+      name: 'Кировский',
+      latitude: 45.09,
+      longitude: 133.51,
+      country: 'Россия',
+    },
   ],
 };
 
@@ -117,12 +122,12 @@ describe('weather', () => {
     await get();
 
     expect(first.json()).toEqual({
-      location: { lat: 47.22, lon: 39.71, name: 'Ростов-на-Дону' },
+      location: { lat: 59.94, lon: 30.31, name: 'Санкт-Петербург' },
       forecast: null,
     });
     // Two requests, one upstream call
     expect(weatherCalls).toHaveLength(1);
-    expect(weatherCalls[0]?.searchParams.get('latitude')).toBe('47.22');
+    expect(weatherCalls[0]?.searchParams.get('latitude')).toBe('59.94');
   });
 });
 
@@ -202,23 +207,23 @@ describe('cities', () => {
         headers: auth,
       });
 
-    const res = await search('Рост');
+    const res = await search('Киров');
     expect(res.statusCode).toBe(200);
     expect(res.json()).toEqual([
       {
-        name: 'Ростов-на-Дону',
-        region: 'Ростовская область, Россия',
-        lat: 47.23135,
-        lon: 39.72328,
+        name: 'Кировск',
+        region: 'Мурманская область, Россия',
+        lat: 67.61,
+        lon: 33.67,
       },
-      { name: 'Ростов', region: 'Россия', lat: 57.18, lon: 39.41 },
+      { name: 'Кировский', region: 'Россия', lat: 45.09, lon: 133.51 },
     ]);
     const call = weatherCalls.at(-1);
-    expect(call?.searchParams.get('name')).toBe('рост');
+    expect(call?.searchParams.get('name')).toBe('киров');
     expect(call?.searchParams.get('language')).toBe('ru');
 
     // The same query again comes from the cache
-    await search('рост ');
+    await search('киров ');
     expect(weatherCalls).toHaveLength(1);
     expect((await search('Р')).statusCode).toBe(400);
 
@@ -227,12 +232,12 @@ describe('cities', () => {
       headers: auth,
     });
     expect(defaults.json()).toEqual({
-      location: { lat: 47.22, lon: 39.71, name: 'Ростов-на-Дону' },
+      location: { lat: 59.94, lon: 30.31, name: 'Санкт-Петербург' },
     });
   });
 
   it('needs a signed-in user', async () => {
-    const res = await ctx.app.inject({ url: '/v1/weather/cities?q=Рост' });
+    const res = await ctx.app.inject({ url: '/v1/weather/cities?q=Киров' });
     expect(res.statusCode).toBe(401);
   });
 });

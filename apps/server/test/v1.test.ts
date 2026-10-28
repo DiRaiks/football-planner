@@ -85,12 +85,12 @@ describe('v1 events', () => {
       method: 'PATCH',
       url: `/v1/events/${event._id}`,
       headers: alice.auth,
-      payload: { eventName: 'Renamed', location: { lat: 47.2, lon: 39.7 } },
+      payload: { eventName: 'Renamed', location: { lat: 55.7, lon: 37.6 } },
     });
     expect(patch.statusCode).toBe(200);
     expect(patch.json()).toMatchObject({
       eventName: 'Renamed',
-      location: { lat: 47.2, lon: 39.7 },
+      location: { lat: 55.7, lon: 37.6 },
     });
 
     const del = await ctx.app.inject({
