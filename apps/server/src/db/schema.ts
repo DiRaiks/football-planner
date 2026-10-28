@@ -119,7 +119,11 @@ export const events = pgTable(
     repeatOf: text('repeat_of').unique('events_repeat_of_unique'),
     playersAmount: integer('players_amount').notNull().default(0),
     creatorId: text('creator_id').notNull(),
-    location: jsonb('location').$type<{ lat: number; lon: number }>(),
+    location: jsonb('location').$type<{
+      lat: number;
+      lon: number;
+      name?: string;
+    }>(),
     telegram: jsonb('telegram').$type<EventTelegram>(),
     ...timestamps,
   },

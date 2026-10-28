@@ -37,6 +37,7 @@ const renderSignedIn = (path: string, url: string, page: ReactNode) => {
 
 describe('EventForm', () => {
   it('sends a weekly match with a price', async () => {
+    mockApi(() => ({ body: { location: null } }));
     const onSubmit = vi.fn();
     renderWithQuery(
       <EventForm

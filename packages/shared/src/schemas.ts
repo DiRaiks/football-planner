@@ -104,7 +104,28 @@ export const Location = Type.Object(
   {
     lat: Type.Number({ minimum: -90, maximum: 90 }),
     lon: Type.Number({ minimum: -180, maximum: 180 }),
+    // The city the coordinates were picked by, shown in the match form
+    name: Type.Optional(Type.String({ minLength: 1, maxLength: 100 })),
   },
+  { additionalProperties: false },
+);
+
+/** A city found by name, for the match form */
+export const City = Type.Object({
+  name: Type.String(),
+  // Region and country, to tell cities of the same name apart
+  region: Type.String(),
+  lat: Type.Number(),
+  lon: Type.Number(),
+});
+
+/** The location of matches without one of their own; null when weather is off */
+export const DefaultLocation = Type.Object({
+  location: Type.Union([Location, Type.Null()]),
+});
+
+export const CitySearchQuery = Type.Object(
+  { q: Type.String({ minLength: 2, maxLength: 100 }) },
   { additionalProperties: false },
 );
 
@@ -242,21 +263,21 @@ export const PlayersChange = Type.Object({
 
 // --- Weather ---
 
-export const DailyForecast = Type.Object({
-  date: Type.String({ description: 'YYYY-MM-DD in the venue time zone' }),
+/** The weather at the hour a match starts */
+export const Forecast = Type.Object({
+  time: Type.String({ description: 'start of the hour, ISO in UTC' }),
   // WMO weather interpretation code
   weatherCode: Type.Integer(),
   description: Type.String(),
-  tempMin: Type.Number(),
-  tempMax: Type.Number(),
+  temperature: Type.Number(),
   precipitationProbability: Type.Union([Type.Integer(), Type.Null()]),
-  windSpeedMax: Type.Number({ description: 'km/h' }),
+  windSpeed: Type.Number({ description: 'km/h' }),
 });
 
 export const EventWeather = Type.Object({
   location: Location,
-  forecast: Type.Union([DailyForecast, Type.Null()], {
-    description: 'null when the event is outside the 16-day forecast window',
+  forecast: Type.Union([Forecast, Type.Null()], {
+    description: 'null when the start is outside the 16-day forecast window',
   }),
 });
 
@@ -288,5 +309,8 @@ export type SetPaidBody = Static<typeof SetPaidBody>;
 export type SplitTeamsBody = Static<typeof SplitTeamsBody>;
 export type AttendanceQuery = Static<typeof AttendanceQuery>;
 export type AttendanceRow = Static<typeof AttendanceRow>;
-export type DailyForecast = Static<typeof DailyForecast>;
+export type Forecast = Static<typeof Forecast>;
+export type City = Static<typeof City>;
+export type CitySearchQuery = Static<typeof CitySearchQuery>;
+export type DefaultLocation = Static<typeof DefaultLocation>;
 export type EventWeather = Static<typeof EventWeather>;

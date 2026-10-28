@@ -209,10 +209,28 @@ const telegramPlugin: FastifyPluginAsync<TelegramPluginOptions> = async (
   };
   type State = NonNullable<Awaited<ReturnType<typeof load>>>;
 
+  /** The weather at the start of the match; null when unknown or the provider fails */
+  const forecastFor = async (state: State) => {
+    const { weather } = fastify.services;
+    const location = weather.resolveLocation(state.event.location);
+    if (!location) return null;
+    return weather
+      .getForecastAt(location, state.event.startsAt)
+      .catch((err: unknown) => {
+        log.warn({ err }, 'weather for a Telegram message failed');
+        return null;
+      });
+  };
+
   /** Rewrites the pinned announcements with the current players */
   const refreshAnnouncements = async (state: State) => {
     const event = toNotifyEvent(state.event);
-    const message = announcementMessage(event, state.people, state.count);
+    const message = announcementMessage(
+      event,
+      state.people,
+      state.count,
+      await forecastFor(state),
+    );
     const replyMarkup = keyboard(event);
     const announcements: SentMessage[] =
       state.event.telegram?.announcements ?? [];
@@ -260,18 +278,6 @@ const telegramPlugin: FastifyPluginAsync<TelegramPluginOptions> = async (
     } else if (!reached && announced) {
       await setMinimumReached(eventId, false);
     }
-  };
-
-  const forecastFor = async (state: State) => {
-    const { weather } = fastify.services;
-    const location = weather.resolveLocation(state.event.location);
-    if (!location) return null;
-    return weather
-      .getForecastForDate(location, state.event.date)
-      .catch((err: unknown) => {
-        log.warn({ err }, 'weather for a reminder failed');
-        return null;
-      });
   };
 
   /**
@@ -396,7 +402,12 @@ const telegramPlugin: FastifyPluginAsync<TelegramPluginOptions> = async (
         const event = toNotifyEvent(state.event);
         const result = await notifier.notify(
           TOPIC,
-          announcementMessage(event, state.people, state.count),
+          announcementMessage(
+            event,
+            state.people,
+            state.count,
+            await forecastFor(state),
+          ),
           { pin: true, replyMarkup: keyboard(event) },
         );
         const saved = await mergeTelegram(eventId, {

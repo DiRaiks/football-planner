@@ -181,7 +181,65 @@ describe('JoinPanel', () => {
 });
 
 describe('EventForm', () => {
+  it('picks a city for the weather, and names the default one', async () => {
+    mockApi(({ path }) =>
+      path.startsWith('/weather/cities')
+        ? {
+            body: [
+              { name: 'Москва', region: 'Россия', lat: 55.75, lon: 37.62 },
+              {
+                name: 'Мостовской',
+                region: 'Краснодарский край, Россия',
+                lat: 44.41,
+                lon: 40.79,
+              },
+            ],
+          }
+        : {
+            body: {
+              location: { lat: 59.94, lon: 30.31, name: 'Санкт-Петербург' },
+            },
+          },
+    );
+    const onSubmit = vi.fn();
+    renderWithQuery(
+      <EventForm
+        submitLabel="Создать матч"
+        pending={false}
+        onSubmit={onSubmit}
+        onCancel={() => undefined}
+      />,
+    );
+    expect(
+      await screen.findByText('Для погоды. Если не выбрать — Санкт-Петербург'),
+    ).toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText('Место'), 'Манеж');
+
+    // Typed but not picked: the form asks to pick or clear
+    const city = screen.getByRole('combobox', { name: 'Город' });
+    await userEvent.type(city, 'Мос');
+    await userEvent.click(screen.getByRole('button', { name: 'Создать матч' }));
+    expect(
+      screen.getByText('Выберите город из подсказок или очистите поле'),
+    ).toBeInTheDocument();
+    expect(onSubmit).not.toHaveBeenCalled();
+
+    await userEvent.click(city);
+    await userEvent.type(city, 'к');
+    await userEvent.click(
+      await screen.findByRole('option', { name: /Москва/ }),
+    );
+    expect(city).toHaveValue('Москва');
+    await userEvent.click(screen.getByRole('button', { name: 'Создать матч' }));
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        location: { lat: 55.75, lon: 37.62, name: 'Москва' },
+      }),
+    );
+  });
+
   it('validates required fields and trims the values', async () => {
+    mockApi(() => ({ body: { location: null } }));
     const onSubmit = vi.fn();
     renderWithQuery(
       <EventForm
@@ -336,6 +394,7 @@ describe('missing match', () => {
 
 describe('places on the pitch', () => {
   it('refuses fewer places than the minimum', async () => {
+    mockApi(() => ({ body: { location: null } }));
     const onSubmit = vi.fn();
     renderWithQuery(
       <EventForm

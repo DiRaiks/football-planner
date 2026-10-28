@@ -20,7 +20,11 @@ export const toEventDto = (event: EventRecord): Event => ({
   playersAmount: event.playersAmount,
   creatorId: event.creatorId,
   ...(event.location && {
-    location: { lat: event.location.lat, lon: event.location.lon },
+    location: {
+      lat: event.location.lat,
+      lon: event.location.lon,
+      ...(event.location.name && { name: event.location.name }),
+    },
   }),
   createdAt: event.createdAt.toISOString(),
   updatedAt: event.updatedAt.toISOString(),

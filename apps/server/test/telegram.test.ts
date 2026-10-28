@@ -396,4 +396,34 @@ describe('message helpers', () => {
     expect(message.value.length).toBeLessThanOrEqual(MAX_MESSAGE_LENGTH);
     expect(message.value).toMatch(/и ещё \d+/);
   });
+
+  it('shows the weather at the start under the place', () => {
+    const event = {
+      _id: '1',
+      eventName: 'E',
+      date: '2026-11-03',
+      time: '20:00',
+      place: 'Манеж',
+      minimum: 10,
+    };
+    const count = { all: 0, exactly: 0, maybe: 0 };
+    const forecast = {
+      time: '2026-11-03T17:00:00.000Z',
+      weatherCode: 61,
+      description: 'Небольшой дождь',
+      temperature: 7.6,
+      precipitationProbability: 80,
+      windSpeed: 14.2,
+    };
+
+    const lines = announcementMessage(event, [], count, forecast).value.split(
+      '\n',
+    );
+    expect(lines.slice(2, 4)).toEqual([
+      '📍 Манеж',
+      '🌤 Небольшой дождь, 8°, осадки 80%',
+    ]);
+    // Beyond the forecast window: no line
+    expect(announcementMessage(event, [], count).value).not.toContain('🌤');
+  });
 });
