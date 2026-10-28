@@ -7,7 +7,7 @@ import { matchLink } from '../src/plugins/telegram/messages.js';
 import { eq } from 'drizzle-orm';
 
 import { users } from '../src/db/index.js';
-import { countRows, register, setupApp } from './helpers.js';
+import { countRows, createEvent, register, setupApp } from './helpers.js';
 
 const BOT_TOKEN = '123:test';
 const CLIENT_ID = '123456789';
@@ -25,11 +25,13 @@ const signInitData = (fields: Record<string, string>, token = BOT_TOKEN) => {
 };
 
 const now = () => String(Math.floor(Date.now() / 1000));
+const PHOTO = 'https://t.me/i/userpic/320/ildar.jpg';
 const tgUser = JSON.stringify({
   id: 4242,
   first_name: 'Ильдар',
   last_name: 'Сафин',
   username: 'ildar',
+  photo_url: PHOTO,
 });
 
 describe('matchLink', () => {
@@ -63,6 +65,7 @@ describe('verifyInitData', () => {
         first_name: 'Ильдар',
         last_name: 'Сафин',
         username: 'ildar',
+        photo_url: PHOTO,
       },
       startParam: '507f1f77bcf86cd799439011',
     });
@@ -105,6 +108,7 @@ const idToken = (claims: Record<string, unknown> = {}, audience = CLIENT_ID) =>
     given_name: 'Ильдар',
     family_name: 'Сафин',
     preferred_username: 'ildar',
+    picture: PHOTO,
     ...claims,
   })
     .setProtectedHeader({ alg: 'RS256' })
@@ -183,6 +187,7 @@ describe('Telegram login', () => {
     expect(first.json()).toMatchObject({
       name: 'Ильдар Сафин',
       telegramLinked: true,
+      photoUrl: PHOTO,
       token: expect.any(String),
     });
     expect(tokenCalls.at(-1)).toEqual({
@@ -273,6 +278,34 @@ describe('Telegram login', () => {
     tokenAnswer = async () => Response.json({ id_token: await idToken() });
   });
 
+  it('keeps the latest https photo for avatars, also in rosters', async () => {
+    const newer = 'https://t.me/i/userpic/320/ildar-2.jpg';
+    tokenAnswer = async () =>
+      Response.json({ id_token: await idToken({ picture: newer }) });
+    const session = (await login()).json();
+    expect(session.photoUrl).toBe(newer);
+
+    // Not a link to show: the stored photo stays
+    tokenAnswer = async () =>
+      Response.json({ id_token: await idToken({ picture: 'javascript:x' }) });
+    expect((await login()).json().photoUrl).toBe(newer);
+    tokenAnswer = async () => Response.json({ id_token: await idToken() });
+
+    const auth = { authorization: `Bearer ${session.token}` };
+    const event = await createEvent(ctx.app, auth);
+    await ctx.app.inject({
+      method: 'POST',
+      url: `/v1/events/${event._id}/players`,
+      headers: auth,
+      payload: { name: 'Ильдар', status: true, friends: [] },
+    });
+    const roster = await ctx.app.inject({
+      url: `/v1/events/${event._id}/players`,
+      headers: auth,
+    });
+    expect(roster.json()).toMatchObject([{ name: 'Ильдар', photoUrl: newer }]);
+  });
+
   it('rejects a malformed PKCE verifier', async () => {
     const response = await ctx.app.inject({
       method: 'POST',
@@ -299,6 +332,7 @@ describe('Mini App sign-in', () => {
     expect(response.json()).toMatchObject({
       name: 'Ильдар Сафин',
       telegramLinked: true,
+      photoUrl: PHOTO,
     });
     // The Mini App signs in on every launch: its session is short
     const { exp, iat } = ctx.app.jwt.decode<{ exp: number; iat: number }>(

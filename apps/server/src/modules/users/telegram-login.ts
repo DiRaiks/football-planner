@@ -7,7 +7,7 @@ import {
 } from 'jose';
 
 import { AppError } from '../../lib/errors.js';
-import type { TelegramUser } from './users.service.js';
+import { telegramPhotoUrl, type TelegramUser } from './users.service.js';
 
 /** How long Mini App data stays valid after Telegram signed it */
 const INIT_DATA_MAX_AGE_S = 24 * 60 * 60;
@@ -78,12 +78,14 @@ export const verifyInitData = (
     throw invalid('init data has no user');
   }
   const startParam = params.get('start_param') ?? undefined;
+  const photoUrl = telegramPhotoUrl(user.photo_url);
   return {
     user: {
       id: user.id,
       first_name: String(user.first_name ?? ''),
       ...(user.last_name && { last_name: String(user.last_name) }),
       ...(user.username && { username: String(user.username) }),
+      ...(photoUrl && { photo_url: photoUrl }),
     },
     ...(startParam && { startParam }),
   };
@@ -193,11 +195,13 @@ export class TelegramOidc {
     // `name` is the full name already: a family name only goes with `given_name`
     const lastName = text(claims.given_name) && text(claims.family_name);
     const username = text(claims.preferred_username);
+    const photoUrl = telegramPhotoUrl(claims.picture);
     return {
       id,
       first_name: firstName,
       ...(lastName && { last_name: lastName }),
       ...(username && { username }),
+      ...(photoUrl && { photo_url: photoUrl }),
     };
   }
 }

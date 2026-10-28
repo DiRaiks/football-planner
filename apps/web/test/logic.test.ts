@@ -55,6 +55,7 @@ describe('players', () => {
       _id: 'a',
       userId: 'u1',
       name: 'Андрей',
+      photoUrl: 'https://t.me/i/userpic/320/andrey.jpg',
       status: true,
       friends: [{ name: 'Петя', status: false }],
     }),
@@ -90,6 +91,9 @@ describe('players', () => {
       ['Оля', false, 'Мария'],
     ]);
     expect(maybe.map((p) => p.name)).toEqual(['Петя', 'Мария']);
+    // The player's photo, not their friend's
+    expect(sure[0]?.photoUrl).toBe('https://t.me/i/userpic/320/andrey.jpg');
+    expect(maybe[0]?.photoUrl).toBeUndefined();
   });
 
   it('describes progress towards the minimum', () => {

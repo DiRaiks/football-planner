@@ -56,6 +56,8 @@ export const users = pgTable(
     tokenVersion: integer('token_version').notNull().default(0),
     telegramId: bigint('telegram_id', { mode: 'number' }),
     telegramUsername: text('telegram_username'),
+    /** Profile photo from the last Telegram login (site or Mini App), on Telegram's servers */
+    telegramPhotoUrl: text('telegram_photo_url'),
     /** sha256 of a one-time code that links this account to a Telegram user */
     telegramLinkToken: text('telegram_link_token'),
     telegramLinkExpiresAt: timestamp('telegram_link_expires_at', {

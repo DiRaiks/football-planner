@@ -1,0 +1,1 @@
+ALTER TABLE "users" ADD COLUMN "telegram_photo_url" text;

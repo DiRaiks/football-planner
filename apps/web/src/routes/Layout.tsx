@@ -1,7 +1,7 @@
 import { Link, NavLink, Navigate, Outlet, useLocation } from 'react-router';
 import { ChartBar, UserCircle } from '@phosphor-icons/react';
 
-import { Skeleton, cn } from '@/components/ui';
+import { ProfilePhoto, Skeleton, cn } from '@/components/ui';
 import { useAuth } from '@/features/auth/auth';
 
 /** Only same-site paths are followed after login; "//evil.com" and absolute URLs are not */
@@ -84,10 +84,17 @@ export function AppLayout() {
               <span className="hidden max-w-[16ch] truncate sm:inline">
                 {user.name}
               </span>
-              <UserCircle
-                className="size-7"
-                weight="duotone"
-                aria-label="Профиль"
+              <ProfilePhoto
+                src={user.photoUrl}
+                alt="Профиль"
+                className="size-7 rounded-full"
+                fallback={
+                  <UserCircle
+                    className="size-7"
+                    weight="duotone"
+                    aria-label="Профиль"
+                  />
+                }
               />
             </Link>
           </nav>

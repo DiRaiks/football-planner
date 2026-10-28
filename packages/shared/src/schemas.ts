@@ -21,6 +21,8 @@ export const User = Type.Object({
   name: Type.String(),
   role: UserRole,
   telegramLinked: Type.Boolean(),
+  // Telegram profile photo, once the user logged in with Telegram
+  photoUrl: Type.Optional(Type.String()),
 });
 
 /** A one-time code to send to the bot as `/link CODE`, valid for 15 minutes */
@@ -189,6 +191,8 @@ export const Player = Type.Object({
   waitlisted: Type.Boolean(),
   // Paid for the pitch, for themselves and the sure friends they bring
   paid: Type.Boolean(),
+  // The player's Telegram profile photo, if known
+  photoUrl: Type.Optional(Type.String()),
 });
 
 export const SetPaidBody = Type.Object(

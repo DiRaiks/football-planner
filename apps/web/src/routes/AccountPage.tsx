@@ -27,7 +27,7 @@ import {
 const THEME_OPTIONS = [
   {
     value: 'system' as const,
-    label: 'Как в системе',
+    label: 'Системная',
     icon: <Desktop className="size-4" aria-hidden />,
   },
   {
