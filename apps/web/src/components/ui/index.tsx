@@ -9,7 +9,7 @@ import {
   type ReactNode,
 } from 'react';
 import { Link } from 'react-router';
-import { CircleNotch } from '@phosphor-icons/react';
+import { CircleNotch, Eye, EyeSlash } from '@phosphor-icons/react';
 
 export const cn = (...classes: (string | false | null | undefined)[]) =>
   classes.filter(Boolean).join(' ');
@@ -132,35 +132,61 @@ type FieldProps = InputHTMLAttributes<HTMLInputElement> & {
   error?: string;
 };
 
-/** Label above, hint or error below; never a placeholder as the label */
+/**
+ * Label above, hint or error below; never a placeholder as the label. A password
+ * field has a button that shows what was typed.
+ */
 export function Field({
   label,
   hint,
   error,
   className,
   id,
+  type,
   ...props
 }: FieldProps) {
   const autoId = useId();
   const inputId = id ?? autoId;
   const describedBy = error || hint ? `${inputId}-desc` : undefined;
+  const password = type === 'password';
+  const [shown, setShown] = useState(false);
 
   return (
     <div className={cn('grid gap-1.5', className)}>
       <label htmlFor={inputId} className="text-sm font-medium">
         {label}
       </label>
-      <input
-        id={inputId}
-        aria-invalid={error ? true : undefined}
-        aria-describedby={describedBy}
-        className={cn(
-          'h-12 rounded-control border bg-surface px-3.5 text-base text-ink transition-[border-color,box-shadow] duration-150 placeholder:text-muted/70',
-          'focus:border-accent focus:outline-none focus:ring-3 focus:ring-accent/30',
-          error ? 'border-danger' : 'border-line',
+      <div className="relative grid">
+        <input
+          id={inputId}
+          type={password && shown ? 'text' : type}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={describedBy}
+          className={cn(
+            'h-12 rounded-control border bg-surface px-3.5 text-base text-ink transition-[border-color,box-shadow] duration-150 placeholder:text-muted/70',
+            'focus:border-accent focus:outline-none focus:ring-3 focus:ring-accent/30',
+            error ? 'border-danger' : 'border-line',
+            password && 'pr-12',
+          )}
+          {...props}
+        />
+        {password && (
+          <button
+            type="button"
+            onClick={() => setShown((value) => !value)}
+            aria-label={shown ? 'Скрыть пароль' : 'Показать пароль'}
+            aria-pressed={shown}
+            aria-controls={inputId}
+            className="absolute inset-y-0 right-0 grid w-12 place-items-center rounded-r-control text-muted transition-colors duration-150 hover:text-ink focus-visible:text-ink focus-visible:ring-3 focus-visible:ring-accent/30 focus-visible:outline-none"
+          >
+            {shown ? (
+              <EyeSlash className="size-5" aria-hidden />
+            ) : (
+              <Eye className="size-5" aria-hidden />
+            )}
+          </button>
         )}
-        {...props}
-      />
+      </div>
       {(error || hint) && (
         <p
           id={describedBy}
