@@ -94,11 +94,27 @@ const nameList = (names: string[], limit: number) =>
     ? `${names.slice(0, limit).join(', ')} и ещё ${names.length - limit}`
     : names.join(', ');
 
-/** The pinned message of a match, edited on every change of the players list */
+/** The weather at the start: "🌤 Пасмурно, 12°, осадки 40%" */
+const forecastLine = (forecast: Forecast | null) => {
+  if (!forecast) return null;
+  const temp = `${Math.round(forecast.temperature)}°`;
+  const rain =
+    forecast.precipitationProbability !== null &&
+    forecast.precipitationProbability >= 30
+      ? `, осадки ${forecast.precipitationProbability}%`
+      : '';
+  return html`🌤 ${forecast.description}, ${temp}${rain}`;
+};
+
+/**
+ * The pinned message of a match, edited on every change of the players list; the
+ * weather at the start once the match is within the forecast window
+ */
 export const announcementMessage = (
   event: NotifyEvent,
   people: RosterPerson[],
   count: PlayersCount,
+  forecast: Forecast | null = null,
 ): Html => {
   const sure = namesIn(people, 'squad');
   const maybe = namesIn(people, 'maybe');
@@ -109,6 +125,7 @@ export const announcementMessage = (
       html`⚽ <b>${event.eventName}</b>`,
       html`📅 ${formatWhen(event)}`,
       html`📍 ${event.place}`,
+      forecastLine(forecast),
       '',
       progressLine(count, event),
       html`✅ Точно: ${sure.length ? nameList(sure, limit) : 'пока никого'}`,
@@ -191,18 +208,6 @@ export const teamsMessage = (event: NotifyEvent, teams: string[][]) =>
   ]);
 
 export type ReminderKind = 'day' | 'soon';
-
-/** The weather at the start: "🌤 Пасмурно, 12°, осадки 40%" */
-const forecastLine = (forecast: Forecast | null) => {
-  if (!forecast) return null;
-  const temp = `${Math.round(forecast.temperature)}°`;
-  const rain =
-    forecast.precipitationProbability !== null &&
-    forecast.precipitationProbability >= 30
-      ? `, осадки ${forecast.precipitationProbability}%`
-      : '';
-  return html`🌤 ${forecast.description}, ${temp}${rain}`;
-};
 
 /** The day before and two hours before the start, with the score and the weather */
 export const reminderMessage = (
