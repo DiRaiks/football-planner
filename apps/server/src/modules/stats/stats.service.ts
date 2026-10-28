@@ -3,8 +3,8 @@ import type { AttendanceRow } from '@football-planner/shared';
 
 import type { Db } from '../../db/index.js';
 
-/** Matches looked at, at most: a year of five games a week */
-const MAX_EVENTS = 260 * 5;
+/** Matches looked at, at most: years of a few games a week */
+const MAX_EVENTS = 5000;
 
 type Row = {
   user_id: string;
@@ -18,13 +18,13 @@ export class StatsService {
   constructor(private readonly db: Db) {}
 
   /**
-   * Who played how often in the matches of the last `days`: "played" counts a sure
+   * Who played how often in the matches of the last `days` (0: all time): "played" counts a sure
    * sign-up with a place, "maybe" a sign-up that stayed undecided. Friends have no
    * account and are not counted, but take places like in the roster (players/count.ts):
    * sure people get them in the order they became sure.
    */
   async attendance(days = 90, now = new Date()): Promise<AttendanceRow[]> {
-    const since = new Date(now.getTime() - days * 86_400_000);
+    const since = new Date(days === 0 ? 0 : now.getTime() - days * 86_400_000);
     const result = (await this.db.execute(sql`
       WITH recent AS (
         SELECT id, date, maximum, starts_at

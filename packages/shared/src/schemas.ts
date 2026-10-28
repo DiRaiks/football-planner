@@ -206,7 +206,8 @@ export const SplitTeamsBody = Type.Object(
 );
 
 export const AttendanceQuery = Type.Object(
-  { days: Type.Optional(Type.Integer({ minimum: 7, maximum: 365 })) },
+  // Matches of the last `days`; 0 is all time
+  { days: Type.Optional(Type.Integer({ minimum: 0, maximum: 365 })) },
   { additionalProperties: false },
 );
 
