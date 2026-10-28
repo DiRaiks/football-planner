@@ -29,6 +29,7 @@ export const toPublicUser = (user: UserRecord) => ({
   name: user.name,
   role: user.role,
   telegramLinked: user.telegramId !== null,
+  ...(user.telegramPhotoUrl && { photoUrl: user.telegramPhotoUrl }),
 });
 
 export const isAdmin = (user: UserRecord) => user.role === 'admin';

@@ -6,6 +6,8 @@ import { Avatar, cn } from '@/components/ui';
 type Person = {
   key: string;
   name: string;
+  /** Telegram photo of a player; friends have none */
+  photoUrl?: string;
   broughtBy?: string;
   isMe: boolean;
   /** The player who pays for this person: themselves, or who brought the friend */
@@ -50,6 +52,7 @@ export const rosterGroups = (
       {
         key: player._id,
         name: player.name,
+        ...(player.photoUrl && { photoUrl: player.photoUrl }),
         isMe: player.userId === myUserId,
         payerId: player._id,
         paid,
@@ -140,7 +143,11 @@ function Group({
             key={person.key}
             className="flex min-h-12 items-center gap-3 rounded-control px-1"
           >
-            <Avatar name={person.name} muted={muted} />
+            <Avatar
+              name={person.name}
+              photoUrl={person.photoUrl}
+              muted={muted}
+            />
             <span className="grid min-w-0">
               <span className={cn('truncate', person.isMe && 'font-semibold')}>
                 {person.name}

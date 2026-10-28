@@ -119,6 +119,18 @@ export type TelegramUser = {
   first_name: string;
   last_name?: string;
   username?: string;
+  /** Only from a login (site or Mini App); button presses do not carry it */
+  photo_url?: string;
+};
+
+/** A photo URL Telegram vouched for, if it is a plain https link of sane length */
+export const telegramPhotoUrl = (value: unknown) => {
+  if (typeof value !== 'string' || value.length > 512) return undefined;
+  try {
+    return new URL(value).protocol === 'https:' ? value : undefined;
+  } catch {
+    return undefined;
+  }
 };
 
 /** Link codes: short, unambiguous, typed by hand */
@@ -160,10 +172,23 @@ export class TelegramAccounts {
     return user ?? null;
   }
 
-  /** The account of a Telegram user; made on their first button press, without email */
+  /**
+   * The account of a Telegram user; made on their first button press, without email.
+   * A login brings the current profile photo, kept for avatars.
+   */
   async findOrCreate(from: TelegramUser) {
     const existing = await this.findByTelegramId(from.id);
-    if (existing) return existing;
+    if (existing) {
+      if (!from.photo_url || from.photo_url === existing.telegramPhotoUrl) {
+        return existing;
+      }
+      const [updated] = await this.db
+        .update(users)
+        .set({ telegramPhotoUrl: from.photo_url })
+        .where(eq(users._id, existing._id))
+        .returning();
+      return updated ?? existing;
+    }
     try {
       const [created] = (await this.db
         .insert(users)
@@ -171,6 +196,7 @@ export class TelegramAccounts {
           name: telegramName(from).trim(),
           telegramId: from.id,
           telegramUsername: from.username ?? null,
+          telegramPhotoUrl: from.photo_url ?? null,
         })
         .returning()) as [UserRecord];
       return created;
@@ -237,7 +263,11 @@ export class TelegramAccounts {
         if (other.email) return { status: 'taken' };
         await this.db
           .update(users)
-          .set({ telegramId: null, telegramUsername: null })
+          .set({
+            telegramId: null,
+            telegramUsername: null,
+            telegramPhotoUrl: null,
+          })
           .where(eq(users._id, other._id));
         merged.push(other._id);
       }
@@ -247,6 +277,7 @@ export class TelegramAccounts {
           .set({
             telegramId: from.id,
             ...(from.username && { telegramUsername: from.username }),
+            ...(from.photo_url && { telegramPhotoUrl: from.photo_url }),
           })
           .where(eq(users._id, user._id));
         break;
@@ -277,10 +308,17 @@ export class TelegramAccounts {
     }
     const [updated] = await this.db
       .update(users)
-      .set({ telegramId: null, telegramUsername: null })
+      .set({ telegramId: null, telegramUsername: null, telegramPhotoUrl: null })
       .where(eq(users._id, user._id))
       .returning();
-    return updated ?? { ...user, telegramId: null, telegramUsername: null };
+    return (
+      updated ?? {
+        ...user,
+        telegramId: null,
+        telegramUsername: null,
+        telegramPhotoUrl: null,
+      }
+    );
   }
 }
 

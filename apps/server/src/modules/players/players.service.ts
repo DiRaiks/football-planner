@@ -1,4 +1,12 @@
-import { and, asc, count, eq, notInArray, sql } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  count,
+  eq,
+  getTableColumns,
+  notInArray,
+  sql,
+} from 'drizzle-orm';
 import type {
   Friend,
   SignUpBody,
@@ -39,11 +47,12 @@ import {
 
 export const MAX_FRIENDS = 20;
 
-/** Players of an event in sign-up order */
+/** Players of an event in sign-up order, with the Telegram photo of each account */
 export const playersInOrder = (q: Executor, eventId: string) =>
   q
-    .select()
+    .select({ ...getTableColumns(players), photoUrl: users.telegramPhotoUrl })
     .from(players)
+    .innerJoin(users, eq(users._id, players.userId))
     .where(eq(players.eventId, eventId))
     .orderBy(asc(players.createdAt), asc(players._id));
 

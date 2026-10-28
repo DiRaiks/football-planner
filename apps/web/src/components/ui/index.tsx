@@ -2,6 +2,7 @@ import {
   useEffect,
   useId,
   useRef,
+  useState,
   type ButtonHTMLAttributes,
   type InputHTMLAttributes,
   type KeyboardEvent,
@@ -293,12 +294,47 @@ export function ErrorNote({ children }: { children: ReactNode }) {
   );
 }
 
-/** Initials in a rounded square; color depends on the name so people are easy to tell apart */
+/**
+ * A Telegram profile photo, or `fallback` when there is none or it does not load (Telegram
+ * can be slow or blocked for some people)
+ */
+export function ProfilePhoto({
+  src,
+  alt = '',
+  className,
+  fallback,
+}: {
+  src?: string;
+  alt?: string;
+  className?: string;
+  fallback: ReactNode;
+}) {
+  const [failed, setFailed] = useState<string>();
+  if (!src || failed === src) return fallback;
+  return (
+    <img
+      src={src}
+      alt={alt}
+      loading="lazy"
+      decoding="async"
+      referrerPolicy="no-referrer"
+      onError={() => setFailed(src)}
+      className={cn(
+        'shrink-0 object-cover outline outline-ink/10 -outline-offset-1',
+        className,
+      )}
+    />
+  );
+}
+
+/** The photo, else initials in a rounded square; people stay easy to tell apart */
 export function Avatar({
   name,
+  photoUrl,
   muted = false,
 }: {
   name: string;
+  photoUrl?: string;
   muted?: boolean;
 }) {
   const initials = name
@@ -306,6 +342,16 @@ export function Avatar({
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase() ?? '')
     .join('');
+  return (
+    <ProfilePhoto
+      src={photoUrl}
+      className={cn('size-9 rounded-[10px]', muted && 'opacity-60')}
+      fallback={<Initials initials={initials} muted={muted} />}
+    />
+  );
+}
+
+function Initials({ initials, muted }: { initials: string; muted: boolean }) {
   return (
     <span
       aria-hidden

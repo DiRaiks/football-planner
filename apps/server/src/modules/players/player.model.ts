@@ -4,8 +4,11 @@ import type { PlayerRecord } from '../../db/index.js';
 
 export type { FriendEntity, PlayerRecord } from '../../db/index.js';
 
+/** A player row, with the photo of their account where the query joined it */
+export type PlayerWithPhoto = PlayerRecord & { photoUrl?: string | null };
+
 export const toPlayerDto = (
-  player: PlayerRecord,
+  player: PlayerWithPhoto,
   waitlisted = false,
 ): Player => ({
   _id: player._id,
@@ -17,4 +20,5 @@ export const toPlayerDto = (
   date: player.date,
   waitlisted,
   paid: player.paid,
+  ...(player.photoUrl && { photoUrl: player.photoUrl }),
 });
