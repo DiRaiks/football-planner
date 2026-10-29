@@ -4,7 +4,7 @@ import type {
   UpdateEventBody,
 } from '@football-planner/shared';
 
-import { and, asc, eq, lte, not, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, lte, not, sql } from 'drizzle-orm';
 
 import {
   events,
@@ -24,6 +24,11 @@ import { findEventById } from './event.model.js';
 const WEEK_MS = 7 * 86_400_000;
 /** Weeks a series may skip at once; beyond that it stops */
 const MAX_CATCH_UP_WEEKS = 520;
+
+/** How far back places count for suggestions, and how many are suggested */
+const PLACES_PERIOD_MS = 365 * 86_400_000;
+const PLACES_LIMIT = 10;
+const PLACES_MAX_EVENTS = 2000;
 
 const SCHEDULE_FIELDS = ['date', 'time', 'place'] as const;
 
@@ -77,6 +82,39 @@ export class EventsService {
         asc(events.date),
         asc(events.time),
       );
+  }
+
+  /**
+   * Places of the past year's matches for the match form, the most played first. The
+   * same place typed in another case is one place; the latest spelling and city win.
+   */
+  async places() {
+    const rows = await this.db
+      .select({ place: events.place, location: events.location })
+      .from(events)
+      .where(gte(events.startsAt, new Date(Date.now() - PLACES_PERIOD_MS)))
+      .orderBy(desc(events.startsAt))
+      .limit(PLACES_MAX_EVENTS);
+
+    const found = new Map<
+      string,
+      { place: string; location: EventRecord['location']; count: number }
+    >();
+    for (const { place, location } of rows) {
+      const key = place.trim().toLowerCase();
+      const seen = found.get(key);
+      if (seen) {
+        seen.count += 1;
+        seen.location ??= location;
+      } else {
+        found.set(key, { place: place.trim(), location, count: 1 });
+      }
+    }
+    // Map order is the latest match first: a stable sort keeps it among equal counts
+    return [...found.values()]
+      .sort((a, b) => b.count - a.count)
+      .slice(0, PLACES_LIMIT)
+      .map(({ place, location }) => ({ place, location }));
   }
 
   private startsAt(date: string, time: string) {

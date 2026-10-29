@@ -29,6 +29,7 @@ The Telegram bot keeps a live, pinned announcement in your team chat.
 - **One-tap sign-up.** "Иду" or "Возможно" right on the match page, change your mind later, bring friends and mark whether each of them is sure.
 - **Match scoreboard.** Sure players against the minimum, maybe players shown separately, and how many are still missing.
 - **Weather at the start of the match** from [Open-Meteo](https://open-meteo.com), no API key needed: the forecast for that hour, in the city picked in the match form (suggestions as you type), or the default city.
+- **Saved places.** The place field suggests the places of the past year's matches, the most played first; picking one brings its city for the weather too.
 - **Places and a waitlist.** Set how many fit on the pitch; later sure sign-ups wait in line in sign-up order and move up by themselves when someone drops out.
 - **Telegram bot** with a pinned announcement per match that is edited on every change, quiet notes for sign-ups, and a loud message only when the minimum is reached, the time or place changes, or the match is cancelled.
 - **Sign up from the chat.** Buttons under every announcement: "Иду", "Возможно", "Не иду", "+ Друг". The first press makes an account from the Telegram profile, no site needed; `/link` in the profile joins it with a site account.
