@@ -6,13 +6,14 @@ import { RouterProvider } from 'react-router';
 import { router } from '@/app/router';
 import { AuthProvider } from '@/features/auth/auth';
 import { shouldRetry } from '@/lib/api';
-import { registerServiceWorker } from '@/lib/pwa';
+import { listenForInstallPrompt, registerServiceWorker } from '@/lib/pwa';
 import { loadWebApp, startMatch } from '@/lib/telegram';
 import { applyHostTheme, applyTheme, useSystemThemeSync } from '@/lib/theme';
 import './styles.css';
 
 applyTheme();
 registerServiceWorker();
+listenForInstallPrompt();
 
 // Inside Telegram: Telegram's colours, and the match the link pointed to
 void loadWebApp().then((app) => {

@@ -88,7 +88,7 @@ declare global {
  * apps, an iframe in Telegram Web (only web.telegram.org may frame the site, see
  * deploy/Caddyfile). A link cannot fake these, unlike the fragment.
  */
-const inTelegramWebview = () =>
+export const inTelegramWebview = () =>
   window.TelegramWebviewProxy !== undefined ||
   (typeof window.external === 'object' &&
     window.external !== null &&
