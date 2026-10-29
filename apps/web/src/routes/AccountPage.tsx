@@ -83,6 +83,7 @@ export function AccountPage() {
       )}
 
       <NameForm initial={user.name} />
+      <PaymentForm initial={user.paymentDetails ?? ''} />
       <TelegramSection linked={user.telegramLinked} hasEmail={!!user.email} />
       {user.email && <PasswordForm />}
 
@@ -197,6 +198,43 @@ function NameForm({ initial }: { initial: string }) {
           maxLength={50}
           value={name}
           onChange={(event) => setName(event.target.value)}
+        />
+        {update.error && <ErrorNote>{errorMessage(update.error)}</ErrorNote>}
+        <Button
+          type="submit"
+          variant="secondary"
+          className="justify-self-start"
+          disabled={!changed}
+          loading={update.isPending}
+        >
+          {update.isSuccess && !changed ? 'Сохранено' : 'Сохранить'}
+        </Button>
+      </form>
+    </Section>
+  );
+}
+
+/** Shown on the pages of paid matches this user organises */
+function PaymentForm({ initial }: { initial: string }) {
+  const [details, setDetails] = useState(initial);
+  const update = useUpdateMe();
+  const changed = details.trim() !== initial;
+
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    if (changed) update.mutate({ paymentDetails: details.trim() });
+  };
+
+  return (
+    <Section title="Реквизиты для оплаты">
+      <form onSubmit={submit} className="grid gap-3">
+        <Field
+          label="Куда переводить за поле"
+          placeholder="Банк, номер телефона или карты"
+          maxLength={200}
+          value={details}
+          onChange={(event) => setDetails(event.target.value)}
+          hint="Игроки увидят их на странице ваших платных матчей. В чат они не попадают."
         />
         {update.error && <ErrorNote>{errorMessage(update.error)}</ErrorNote>}
         <Button

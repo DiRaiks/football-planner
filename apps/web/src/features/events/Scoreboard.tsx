@@ -1,4 +1,4 @@
-import type { Event } from '@football-planner/shared';
+import { shareOf, type Event } from '@football-planner/shared';
 import { ArrowsClockwise, MapPin, Wallet } from '@phosphor-icons/react';
 
 import { cn } from '@/components/ui';
@@ -6,6 +6,47 @@ import { formatDay, formatFullDay, plural, PLAYERS } from '@/lib/format';
 import { WeatherBadge } from '@/features/weather/WeatherBadge';
 
 type Count = { all: number; exactly: number; maybe: number; waiting?: number };
+
+const rub = new Intl.NumberFormat('ru-RU');
+
+/** "300 ₽ с человека", or the pitch shared by the squad so far */
+function PriceNote({ event, squad }: { event: Event; squad: number }) {
+  const price = event.price ?? 0;
+  const share = shareOf(price, event.priceMode, squad);
+  const pitch = event.priceMode === 'pitch';
+  return (
+    <span
+      className="flex items-center gap-1.5"
+      title={
+        pitch
+          ? 'Аренда поля делится поровну на всех, кто точно идёт'
+          : undefined
+      }
+    >
+      <Wallet className="size-4 shrink-0" aria-hidden />
+      {share === null ? (
+        <span>
+          поле <span className="tabular-nums">{rub.format(price)} ₽</span> на
+          всех
+        </span>
+      ) : (
+        <span>
+          <span className="tabular-nums">
+            {pitch && '~'}
+            {rub.format(share)} ₽
+          </span>{' '}
+          с человека
+          {pitch && (
+            <>
+              {' '}
+              · поле <span className="tabular-nums">{rub.format(price)} ₽</span>
+            </>
+          )}
+        </span>
+      )}
+    </span>
+  );
+}
 
 /**
  * Cells for sure and maybe players against the minimum. Sure players fill solid,
@@ -93,11 +134,7 @@ export function Scoreboard({ event, count }: { event: Event; count: Count }) {
             {((event.price ?? 0) > 0 || event.repeat === 'weekly') && (
               <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-pitch-muted">
                 {(event.price ?? 0) > 0 && (
-                  <span className="flex items-center gap-1.5">
-                    <Wallet className="size-4 shrink-0" aria-hidden />
-                    <span className="tabular-nums">{event.price} ₽</span> с
-                    человека
-                  </span>
+                  <PriceNote event={event} squad={count.exactly} />
                 )}
                 {event.repeat === 'weekly' && (
                   <span className="flex items-center gap-1.5">

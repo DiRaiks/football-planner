@@ -90,6 +90,7 @@ describe('weekly matches', () => {
       minimum: 8,
       maximum: 12,
       price: 300,
+      priceMode: 'pitch',
       repeat: 'weekly',
     });
     const startsAt = (await getEvent(ctx.app, event._id))!.startsAt!;
@@ -108,6 +109,7 @@ describe('weekly matches', () => {
       minimum: 8,
       maximum: 12,
       price: 300,
+      priceMode: 'pitch',
       repeat: 'weekly',
       creatorId: owner._id,
       playersAmount: 0,
@@ -331,7 +333,48 @@ describe('payments', () => {
       ).json(),
     ).toMatchObject({
       price: 400,
+      priceMode: 'person',
     });
+  });
+
+  it("shows the organiser's payment details to players", async () => {
+    const owner = await person('Owner');
+    const event = await createEvent(ctx.app, owner.auth, {
+      price: 5000,
+      priceMode: 'pitch',
+    });
+    const player = await person('Player');
+    const details = () =>
+      ctx.app
+        .inject({
+          url: `/v1/events/${event._id}/payment`,
+          headers: player.auth,
+        })
+        .then((res) => res.json());
+    const setDetails = (paymentDetails: string) =>
+      ctx.app.inject({
+        method: 'PATCH',
+        url: '/v1/users/me',
+        headers: owner.auth,
+        payload: { paymentDetails },
+      });
+
+    expect(await details()).toEqual({ details: null });
+    const saved = await setDetails('  Банк, по номеру телефона ');
+    expect(saved.json()).toMatchObject({
+      name: 'Owner',
+      paymentDetails: 'Банк, по номеру телефона',
+    });
+    expect(await details()).toEqual({ details: 'Банк, по номеру телефона' });
+
+    // An empty value removes them, and the name stays
+    expect((await setDetails('')).json()).not.toHaveProperty('paymentDetails');
+    expect(await details()).toEqual({ details: null });
+    const missing = await ctx.app.inject({
+      url: '/v1/events/0123456789abcdef01234567/payment',
+      headers: player.auth,
+    });
+    expect(missing.statusCode).toBe(404);
   });
 });
 

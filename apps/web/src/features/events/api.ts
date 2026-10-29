@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
   CreateEventBody,
   Event,
+  EventPayment,
   EventWeather,
   SavedPlace,
   UpdateEventBody,
@@ -33,6 +34,13 @@ export const useWeather = (id: string, enabled: boolean) =>
     enabled,
     staleTime: 30 * 60 * 1000,
     retry: false,
+  });
+
+/** Where to send the money: the organiser's payment details */
+export const usePayment = (id: string) =>
+  useQuery({
+    queryKey: ['events', id, 'payment'] as const,
+    queryFn: () => api<EventPayment>('GET', `/events/${id}/payment`),
   });
 
 /** Places of past matches for the match form */

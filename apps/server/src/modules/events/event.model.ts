@@ -16,6 +16,7 @@ export const toEventDto = (event: EventRecord): Event => ({
   maximum: event.maximum,
   repeat: event.repeat,
   price: event.price,
+  priceMode: event.priceMode,
   ...(event.teams?.length && { teams: event.teams.map((team) => [...team]) }),
   playersAmount: event.playersAmount,
   creatorId: event.creatorId,
