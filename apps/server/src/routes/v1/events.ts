@@ -3,8 +3,10 @@ import type { FastifyPluginAsyncTypebox } from '@fastify/type-provider-typebox';
 import {
   CreateEventBody,
   Event,
+  EventPayment,
   EventWeather,
   ObjectId,
+  SavedPlace,
   SplitTeamsBody,
   UpdateEventBody,
 } from '@football-planner/shared';
@@ -25,6 +27,12 @@ const eventsRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
     async () => (await events.list()).map(toEventDto),
   );
 
+  fastify.get(
+    '/places',
+    { schema: { response: { 200: Type.Array(SavedPlace) } } },
+    async () => events.places(),
+  );
+
   fastify.post(
     '/',
     { schema: { body: CreateEventBody, response: { 201: Event } } },
@@ -38,6 +46,12 @@ const eventsRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
     '/:id',
     { schema: { params: Params, response: { 200: Event } } },
     async (request) => toEventDto(await events.get(request.params.id)),
+  );
+
+  fastify.get(
+    '/:id/payment',
+    { schema: { params: Params, response: { 200: EventPayment } } },
+    async (request) => events.payment(request.params.id),
   );
 
   fastify.patch(

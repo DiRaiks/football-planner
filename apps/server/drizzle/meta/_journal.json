@@ -19,8 +19,15 @@
     {
       "idx": 2,
       "version": "7",
-      "when": 1793260952875,
-      "tag": "0002_sign_up_deadline",
+      "when": 1793260492072,
+      "tag": "0002_price_mode_payment_details",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1793262744970,
+      "tag": "0003_sign_up_deadline",
       "breakpoints": true
     }
   ]

@@ -58,6 +58,8 @@ export const users = pgTable(
     telegramUsername: text('telegram_username'),
     /** Profile photo from the last Telegram login (site or Mini App), on Telegram's servers */
     telegramPhotoUrl: text('telegram_photo_url'),
+    /** Where players send money for this user's matches, as the user wrote it */
+    paymentDetails: text('payment_details'),
     /** sha256 of a one-time code that links this account to a Telegram user */
     telegramLinkToken: text('telegram_link_token'),
     telegramLinkExpiresAt: timestamp('telegram_link_expires_at', {
@@ -85,7 +87,7 @@ export type EventTelegram = {
   announcements?: { chatId: number; messageId: number }[];
   /** Whether reaching the minimum was announced */
   minimumReached?: boolean;
-  /** Reminders already sent: the day before and shortly before the start */
+  /** Reminders already sent: before the start, at the sign-up deadline, rain, to pay */
   reminders?: {
     day?: boolean;
     soon?: boolean;
@@ -93,6 +95,8 @@ export type EventTelegram = {
     deadline?: boolean;
     /** Players were told it will likely rain */
     rain?: boolean;
+    /** Players were reminded to pay after the match */
+    paid?: boolean;
   };
   /** When the current start time was announced (ISO); the day-before reminder needs a day */
   scheduledAt?: string;
@@ -116,12 +120,16 @@ export const events = pgTable(
     repeat: text('repeat', { enum: ['none', 'weekly'] })
       .notNull()
       .default('none'),
-    /** What each person pays for the pitch, whole roubles; 0 means free */
+    /** Whole roubles, 0 means free: what each person pays, or the whole pitch */
     price: integer('price').notNull().default(0),
     /** Hours before the start when the minimum is checked; 0 means no check */
     deadlineHours: integer('deadline_hours').notNull().default(12),
     /** Cancel instead of warning when the minimum is not reached by then */
     autoCancel: boolean('auto_cancel').notNull().default(false),
+    /** pitch: the price is shared equally by the squad */
+    priceMode: text('price_mode', { enum: ['person', 'pitch'] })
+      .notNull()
+      .default('person'),
     /** Teams split by the organiser, names per team */
     teams: jsonb('teams').$type<string[][]>(),
     /** Set once the next match of a weekly series exists */
@@ -148,6 +156,10 @@ export const events = pgTable(
     check(
       'events_deadline_hours_check',
       sql`${table.deadlineHours} IN (0, 6, 12, 24)`,
+    ),
+    check(
+      'events_price_mode_check',
+      sql`${table.priceMode} IN ('person', 'pitch')`,
     ),
   ],
 );

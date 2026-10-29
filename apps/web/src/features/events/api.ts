@@ -2,7 +2,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
   CreateEventBody,
   Event,
+  EventPayment,
   EventWeather,
+  SavedPlace,
   UpdateEventBody,
 } from '@football-planner/shared';
 
@@ -10,6 +12,7 @@ import { api } from '@/lib/api';
 
 export const eventsKey = ['events'] as const;
 export const eventKey = (id: string) => ['events', id] as const;
+export const placesKey = ['events', 'places'] as const;
 export const weatherKey = (id: string) => ['events', id, 'weather'] as const;
 
 export const useEvents = () =>
@@ -33,6 +36,21 @@ export const useWeather = (id: string, enabled: boolean) =>
     retry: false,
   });
 
+/** Where to send the money: the organiser's payment details */
+export const usePayment = (id: string) =>
+  useQuery({
+    queryKey: ['events', id, 'payment'] as const,
+    queryFn: () => api<EventPayment>('GET', `/events/${id}/payment`),
+  });
+
+/** Places of past matches for the match form */
+export const usePlaces = () =>
+  useQuery({
+    queryKey: placesKey,
+    queryFn: () => api<SavedPlace[]>('GET', '/events/places'),
+    staleTime: 10 * 60 * 1000,
+  });
+
 export const useCreateEvent = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -40,6 +58,7 @@ export const useCreateEvent = () => {
     onSuccess: (event) => {
       queryClient.setQueryData(eventKey(event._id), event);
       void queryClient.invalidateQueries({ queryKey: eventsKey, exact: true });
+      void queryClient.invalidateQueries({ queryKey: placesKey });
     },
   });
 };

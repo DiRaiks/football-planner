@@ -1,5 +1,9 @@
 import { html, joinHtml, type Html } from '@dirai-kit/tg';
-import type { Forecast } from '@football-planner/shared';
+import {
+  shareOf,
+  type Forecast,
+  type PriceMode,
+} from '@football-planner/shared';
 
 import type { RosterPerson } from '../../modules/players/count.js';
 
@@ -20,6 +24,9 @@ export type NotifyEvent = {
   minimum: number;
   /** Places on the pitch; 0 or missing: no limit */
   maximum?: number;
+  /** Whole roubles, 0 or missing: free */
+  price?: number;
+  priceMode?: PriceMode;
 };
 
 export type PlayersCount = {
@@ -114,6 +121,20 @@ const forecastLine = (forecast: Forecast | null) => {
   return html`🌤 ${forecast.description}, ${temp}${rain}`;
 };
 
+const rub = new Intl.NumberFormat('ru-RU');
+
+/** "💰 ~460 ₽ с человека (поле 5 000 ₽ на 11)", recounted with the squad */
+const priceLine = (event: NotifyEvent, count: PlayersCount) => {
+  const price = event.price ?? 0;
+  if (price <= 0) return null;
+  if (event.priceMode !== 'pitch')
+    return html`💰 ${rub.format(price)} ₽ с человека`;
+  const share = shareOf(price, 'pitch', count.exactly);
+  return share === null
+    ? html`💰 Поле ${rub.format(price)} ₽, делим на всех, кто точно идёт`
+    : html`💰 ~${rub.format(share)} ₽ с человека (поле ${rub.format(price)} ₽ на ${count.exactly})`;
+};
+
 /**
  * The pinned message of a match, edited on every change of the players list; the
  * weather at the start once the match is within the forecast window
@@ -134,6 +155,7 @@ export const announcementMessage = (
       html`📅 ${formatWhen(event)}`,
       html`📍 ${event.place}`,
       forecastLine(forecast),
+      priceLine(event, count),
       '',
       progressLine(count, event),
       html`✅ Точно: ${sure.length ? nameList(sure, limit) : 'пока никого'}`,
@@ -257,6 +279,19 @@ export const rainMessage = (event: NotifyEvent, forecast: Forecast) =>
   joinHtml([
     html`☔ Прогноз испортился: <b>${event.eventName}</b>, ${formatWhen(event)}`,
     forecastLine(forecast),
+  ]);
+
+/** After the match: who has not been marked as paid yet */
+export const paymentReminderMessage = (
+  event: NotifyEvent,
+  count: PlayersCount,
+  unpaid: string[],
+) =>
+  joinHtml([
+    html`💰 Оплата за <b>${event.eventName}</b> (${formatWhen(event)})`,
+    html`Не отметили оплату: ${nameList(unpaid, 30)}`,
+    priceLine(event, count),
+    html`<i>Куда переводить — на странице матча</i>`,
   ]);
 
 export const minimumReachedMessage = (

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { ArrowLeft, PencilSimple, Trash } from '@phosphor-icons/react';
+import { shareOf } from '@football-planner/shared';
 
 import {
   ConfirmDialog,
@@ -10,6 +11,7 @@ import {
 } from '@/components/ui';
 import { useUser } from '@/features/auth/auth';
 import { EventUnavailable } from '@/features/events/EventUnavailable';
+import { PaymentDetails } from '@/features/events/PaymentDetails';
 import { Scoreboard } from '@/features/events/Scoreboard';
 import { Teams } from '@/features/events/Teams';
 import { useDeleteEvent, useEvent } from '@/features/events/api';
@@ -47,6 +49,7 @@ export function EventPage() {
   const canManage = event.data.creatorId === user._id || user.role === 'admin';
   const isPast = event.data.date < todayIso();
   const price = event.data.price ?? 0;
+  const pitch = event.data.priceMode === 'pitch';
 
   return (
     <div className="mx-auto grid max-w-4xl gap-6">
@@ -93,7 +96,9 @@ export function EventPage() {
             payments={
               price > 0
                 ? {
-                    price,
+                    price:
+                      shareOf(price, event.data.priceMode, count.exactly) ?? 0,
+                    ...(pitch && { total: price }),
                     ...(canManage && {
                       onToggle: (playerId, paid) =>
                         setPaid.mutate({ playerId, paid }),
@@ -104,6 +109,12 @@ export function EventPage() {
           />
           {setPaid.error && (
             <ErrorNote>{errorMessage(setPaid.error)}</ErrorNote>
+          )}
+          {price > 0 && (
+            <PaymentDetails
+              eventId={eventId}
+              isCreator={event.data.creatorId === user._id}
+            />
           )}
           <Teams key={eventId} event={event.data} canManage={canManage} />
         </section>

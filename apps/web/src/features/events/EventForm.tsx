@@ -16,6 +16,7 @@ import {
 } from '@/components/ui';
 import { todayIso } from '@/lib/format';
 import { CityField } from './CityField';
+import { PlaceField } from './PlaceField';
 import { randomMatchName } from './match-names';
 
 type Values = Omit<CreateEventBody, 'location'>;
@@ -144,6 +145,7 @@ export function EventForm({
     price: initial?.price ?? 0,
     deadlineHours: initial?.deadlineHours ?? 12,
     autoCancel: initial?.autoCancel ?? false,
+    priceMode: initial?.priceMode ?? 'person',
   }));
   // The city as typed; the location changes only when a city is picked
   const [location, setLocation] = useState<Location | null>(
@@ -191,13 +193,19 @@ export function EventForm({
         onChange={(event) => set('eventName')(event.target.value)}
         error={errors.eventName}
       />
-      <Field
-        label="Место"
-        placeholder="Стадион «Динамо», поле 2"
-        maxLength={200}
+      <PlaceField
         value={values.place}
-        onChange={(event) => set('place')(event.target.value)}
         error={errors.place}
+        onChange={set('place')}
+        onPick={(saved) => {
+          set('place')(saved.place);
+          // A place without a city keeps whatever city is in the form
+          if (saved.location) {
+            setLocation(saved.location);
+            setCityText(saved.location.name ?? 'Точка на карте');
+            setErrors((current) => ({ ...current, location: undefined }));
+          }
+        }}
       />
       <CityField
         text={cityText}
@@ -308,8 +316,23 @@ export function EventForm({
         </p>
       </div>
 
+      <div className="grid gap-1.5">
+        <span className="text-sm font-medium">Оплата</span>
+        <Segmented
+          label="Как считать оплату"
+          className="justify-self-start"
+          value={values.priceMode ?? 'person'}
+          onChange={set('priceMode')}
+          options={[
+            { value: 'person', label: 'С человека' },
+            { value: 'pitch', label: 'За поле' },
+          ]}
+        />
+      </div>
       <Field
-        label="Цена с человека, ₽"
+        label={
+          values.priceMode === 'pitch' ? 'Аренда поля, ₽' : 'Цена с человека, ₽'
+        }
         inputMode="numeric"
         placeholder="0 — бесплатно"
         className="max-w-60"
@@ -319,7 +342,11 @@ export function EventForm({
           setPriceText(text);
           set('price')(text ? Number(text) : 0);
         }}
-        hint="Организатор отмечает в составе, кто заплатил."
+        hint={
+          values.priceMode === 'pitch'
+            ? 'Делится поровну на всех, кто точно идёт, с округлением вверх до 10 ₽. Организатор отмечает в составе, кто заплатил.'
+            : 'Организатор отмечает в составе, кто заплатил.'
+        }
         error={errors.price}
       />
 

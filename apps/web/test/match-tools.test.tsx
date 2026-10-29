@@ -37,7 +37,9 @@ const renderSignedIn = (path: string, url: string, page: ReactNode) => {
 
 describe('EventForm', () => {
   it('sends a weekly match with a price', async () => {
-    mockApi(() => ({ body: { location: null } }));
+    mockApi(({ path }) => ({
+      body: path === '/events/places' ? [] : { location: null },
+    }));
     const onSubmit = vi.fn();
     renderWithQuery(
       <EventForm
@@ -64,7 +66,9 @@ describe('EventForm', () => {
 
 describe('sign-up deadline', () => {
   it('checks 12 hours before by default and can cancel instead', async () => {
-    mockApi(() => ({ body: { location: null } }));
+    mockApi(({ path }) => ({
+      body: path === '/events/places' ? [] : { location: null },
+    }));
     const onSubmit = vi.fn();
     renderWithQuery(
       <EventForm
@@ -262,6 +266,88 @@ describe('StatsPage', () => {
       expect(calls.map((call) => call.path)).toContain(
         '/stats/attendance?days=365',
       ),
+    );
+  });
+});
+
+describe('pitch rent', () => {
+  const renderMatch = (match: Event, details: string | null) => {
+    const players: Player[] = [
+      player({
+        _id: 'p1',
+        name: 'Аня',
+        paid: true,
+        friends: [{ name: 'Гость', status: true }],
+      }),
+      player({ _id: 'p2', name: 'Боря', userId: 'u3' }),
+    ];
+    mockApi(({ path }) => {
+      if (path === '/auth/me') return { body: user };
+      if (path.endsWith('/weather')) return { status: 404, body: {} };
+      if (path.endsWith('/players')) return { body: players };
+      if (path.endsWith('/payment')) return { body: { details } };
+      return { body: match };
+    });
+    renderSignedIn('/events/:eventId', '/events/e1', <EventPage />);
+  };
+
+  it('shares the pitch among the squad and shows where to pay', async () => {
+    renderMatch(
+      event({ date: '2099-01-01', price: 1000, priceMode: 'pitch' }),
+      'Банк, по номеру телефона',
+    );
+
+    // Three in the squad: 1000 / 3, rounded up to 10
+    expect(await screen.findByText(/с человека/)).toHaveTextContent(
+      '~340 ₽ с человека · поле 1 000 ₽',
+    );
+    // Two shares paid; the total is the pitch, not the shares added up
+    expect(screen.getByText(/Собрано/)).toHaveTextContent(
+      'Собрано 680 ₽ из 1 000 ₽',
+    );
+    expect(
+      await screen.findByText('Банк, по номеру телефона'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Скопировать' }),
+    ).toBeInTheDocument();
+  });
+
+  it('points the organiser without payment details to the profile', async () => {
+    renderMatch(
+      event({ date: '2099-01-01', price: 300, creatorId: user._id }),
+      null,
+    );
+
+    expect(
+      await screen.findByRole('link', { name: 'добавьте реквизиты в профиле' }),
+    ).toHaveAttribute('href', '/account');
+    expect(screen.getByText(/с человека/)).toHaveTextContent(
+      '300 ₽ с человека',
+    );
+  });
+
+  it('sends the pitch price mode from the form', async () => {
+    mockApi(({ path }) => ({
+      body: path === '/events/places' ? [] : { location: null },
+    }));
+    const onSubmit = vi.fn();
+    renderWithQuery(
+      <EventForm
+        submitLabel="Создать матч"
+        pending={false}
+        onSubmit={onSubmit}
+        onCancel={() => undefined}
+      />,
+    );
+
+    await userEvent.type(screen.getByLabelText('Место'), 'Манеж');
+    await userEvent.click(screen.getByRole('radio', { name: 'За поле' }));
+    await userEvent.type(screen.getByLabelText('Аренда поля, ₽'), '5000');
+    await userEvent.click(screen.getByRole('button', { name: 'Создать матч' }));
+
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ price: 5000, priceMode: 'pitch' }),
     );
   });
 });

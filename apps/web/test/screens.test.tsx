@@ -183,23 +183,25 @@ describe('JoinPanel', () => {
 describe('EventForm', () => {
   it('picks a city for the weather, and names the default one', async () => {
     mockApi(({ path }) =>
-      path.startsWith('/weather/cities')
-        ? {
-            body: [
-              { name: 'Москва', region: 'Россия', lat: 55.75, lon: 37.62 },
-              {
-                name: 'Мостовской',
-                region: 'Краснодарский край, Россия',
-                lat: 44.41,
-                lon: 40.79,
+      path === '/events/places'
+        ? { body: [] }
+        : path.startsWith('/weather/cities')
+          ? {
+              body: [
+                { name: 'Москва', region: 'Россия', lat: 55.75, lon: 37.62 },
+                {
+                  name: 'Мостовской',
+                  region: 'Краснодарский край, Россия',
+                  lat: 44.41,
+                  lon: 40.79,
+                },
+              ],
+            }
+          : {
+              body: {
+                location: { lat: 59.94, lon: 30.31, name: 'Санкт-Петербург' },
               },
-            ],
-          }
-        : {
-            body: {
-              location: { lat: 59.94, lon: 30.31, name: 'Санкт-Петербург' },
             },
-          },
     );
     const onSubmit = vi.fn();
     renderWithQuery(
@@ -238,8 +240,56 @@ describe('EventForm', () => {
     );
   });
 
+  it('suggests places of past matches, with their city', async () => {
+    mockApi(({ path }) =>
+      path === '/events/places'
+        ? {
+            body: [
+              {
+                place: 'Манеж',
+                location: { lat: 55.75, lon: 37.62, name: 'Москва' },
+              },
+              { place: 'Школьное поле', location: null },
+            ],
+          }
+        : { body: { location: null } },
+    );
+    const onSubmit = vi.fn();
+    renderWithQuery(
+      <EventForm
+        submitLabel="Создать матч"
+        pending={false}
+        onSubmit={onSubmit}
+        onCancel={() => undefined}
+      />,
+    );
+
+    const place = screen.getByRole('combobox', { name: 'Место' });
+    await userEvent.click(place);
+    expect(await screen.findAllByRole('option')).toHaveLength(2);
+
+    await userEvent.type(place, 'ман');
+    expect(screen.getAllByRole('option')).toHaveLength(1);
+    await userEvent.keyboard('{Enter}');
+
+    expect(place).toHaveValue('Манеж');
+    expect(screen.getByRole('combobox', { name: 'Город' })).toHaveValue(
+      'Москва',
+    );
+    expect(screen.queryByRole('option')).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Создать матч' }));
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        place: 'Манеж',
+        location: { lat: 55.75, lon: 37.62, name: 'Москва' },
+      }),
+    );
+  });
+
   it('validates required fields and trims the values', async () => {
-    mockApi(() => ({ body: { location: null } }));
+    mockApi(({ path }) => ({
+      body: path === '/events/places' ? [] : { location: null },
+    }));
     const onSubmit = vi.fn();
     renderWithQuery(
       <EventForm
@@ -394,7 +444,9 @@ describe('missing match', () => {
 
 describe('places on the pitch', () => {
   it('refuses fewer places than the minimum', async () => {
-    mockApi(() => ({ body: { location: null } }));
+    mockApi(({ path }) => ({
+      body: path === '/events/places' ? [] : { location: null },
+    }));
     const onSubmit = vi.fn();
     renderWithQuery(
       <EventForm

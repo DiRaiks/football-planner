@@ -4,10 +4,11 @@ import type {
   UpdateEventBody,
 } from '@football-planner/shared';
 
-import { and, asc, eq, lte, not, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, lte, not, sql } from 'drizzle-orm';
 
 import {
   events,
+  users,
   type Db,
   type EventRecord,
   type Executor,
@@ -24,6 +25,11 @@ import { findEventById } from './event.model.js';
 const WEEK_MS = 7 * 86_400_000;
 /** Weeks a series may skip at once; beyond that it stops */
 const MAX_CATCH_UP_WEEKS = 520;
+
+/** How far back places count for suggestions, and how many are suggested */
+const PLACES_PERIOD_MS = 365 * 86_400_000;
+const PLACES_LIMIT = 10;
+const PLACES_MAX_EVENTS = 2000;
 
 const SCHEDULE_FIELDS = ['date', 'time', 'place'] as const;
 
@@ -79,6 +85,50 @@ export class EventsService {
       );
   }
 
+  /** Where to pay for a match: its organiser's payment details */
+  async payment(id: string) {
+    const [row] = await this.db
+      .select({ details: users.paymentDetails })
+      .from(events)
+      .innerJoin(users, eq(users._id, events.creatorId))
+      .where(eq(events._id, id));
+    if (!row) throw notFoundError('event');
+    return { details: row.details };
+  }
+
+  /**
+   * Places of the past year's matches for the match form, the most played first. The
+   * same place typed in another case is one place; the latest spelling and city win.
+   */
+  async places() {
+    const rows = await this.db
+      .select({ place: events.place, location: events.location })
+      .from(events)
+      .where(gte(events.startsAt, new Date(Date.now() - PLACES_PERIOD_MS)))
+      .orderBy(desc(events.startsAt))
+      .limit(PLACES_MAX_EVENTS);
+
+    const found = new Map<
+      string,
+      { place: string; location: EventRecord['location']; count: number }
+    >();
+    for (const { place, location } of rows) {
+      const key = place.trim().toLowerCase();
+      const seen = found.get(key);
+      if (seen) {
+        seen.count += 1;
+        seen.location ??= location;
+      } else {
+        found.set(key, { place: place.trim(), location, count: 1 });
+      }
+    }
+    // Map order is the latest match first: a stable sort keeps it among equal counts
+    return [...found.values()]
+      .sort((a, b) => b.count - a.count)
+      .slice(0, PLACES_LIMIT)
+      .map(({ place, location }) => ({ place, location }));
+  }
+
   private startsAt(date: string, time: string) {
     const instant = zonedToInstant(date, time, this.timeZone);
     if (!instant) {
@@ -109,6 +159,7 @@ export class EventsService {
         price: input.price ?? 0,
         deadlineHours: input.deadlineHours ?? 12,
         autoCancel: input.autoCancel ?? false,
+        priceMode: input.priceMode ?? 'person',
         location: input.location ?? null,
         playersAmount: 0,
         creatorId: user._id,
@@ -230,6 +281,7 @@ export class EventsService {
                 price: event.price,
                 deadlineHours: event.deadlineHours,
                 autoCancel: event.autoCancel,
+                priceMode: event.priceMode,
                 repeat: 'weekly',
                 repeatOf: event._id,
                 location: event.location,

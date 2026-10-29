@@ -426,4 +426,32 @@ describe('message helpers', () => {
     // Beyond the forecast window: no line
     expect(announcementMessage(event, [], count).value).not.toContain('🌤');
   });
+
+  it('shows the price, and shares the pitch among the squad', () => {
+    const event = {
+      _id: '1',
+      eventName: 'E',
+      date: '2026-11-03',
+      time: '20:00',
+      place: 'Манеж',
+      minimum: 10,
+    };
+    const line = (extra: object, exactly: number) =>
+      announcementMessage({ ...event, ...extra }, [], {
+        all: exactly,
+        exactly,
+        maybe: 0,
+      })
+        .value.split('\n')
+        .find((text) => text.startsWith('💰'));
+
+    expect(line({}, 3)).toBeUndefined();
+    expect(line({ price: 300 }, 3)).toBe('💰 300 ₽ с человека');
+    expect(line({ price: 5000, priceMode: 'pitch' }, 11)).toMatch(
+      /^💰 ~460 ₽ с человека \(поле 5\s000 ₽ на 11\)$/,
+    );
+    expect(line({ price: 5000, priceMode: 'pitch' }, 0)).toMatch(
+      /^💰 Поле 5\s000 ₽, делим на всех, кто точно идёт$/,
+    );
+  });
 });

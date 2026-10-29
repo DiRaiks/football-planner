@@ -32,6 +32,7 @@ import {
   eventChangedMessage,
   formatWhen,
   minimumReachedMessage,
+  paymentReminderMessage,
   playersChangeMessage,
   squadChangedMessage,
   teamsMessage,
@@ -92,6 +93,10 @@ declare module 'fastify' {
 const TOPIC = 'events';
 
 const HOUR = 3_600_000;
+/** How long after the start players are reminded to pay, and until when */
+const PAYMENT_AFTER = 3 * HOUR;
+const PAYMENT_UNTIL = 3 * 24 * HOUR;
+
 /** How long before the start each reminder goes out */
 const REMINDER_LEAD: Record<ReminderKind, number> = {
   day: 24 * HOUR,
@@ -118,6 +123,7 @@ const toNotifyEvent = (event: EventRecord | CancelledEvent): NotifyEvent => ({
   place: event.place,
   minimum: event.minimum,
   maximum: event.maximum ?? 0,
+  ...('price' in event && { price: event.price, priceMode: event.priceMode }),
 });
 
 const telegramPlugin: FastifyPluginAsync<TelegramPluginOptions> = async (
@@ -367,7 +373,12 @@ const telegramPlugin: FastifyPluginAsync<TelegramPluginOptions> = async (
         }
       }
     }
-    return sent + (await checkDeadlines(now)) + (await sendRainNotes(now));
+    return (
+      sent +
+      (await checkDeadlines(now)) +
+      (await sendRainNotes(now)) +
+      (await sendPaymentReminders(now))
+    );
   };
 
   /** SQL: the match's reminder flag `name` is not set */
@@ -489,6 +500,72 @@ const telegramPlugin: FastifyPluginAsync<TelegramPluginOptions> = async (
       } catch (err) {
         log.error({ err, eventId: candidate._id }, 'rain note failed');
         await releaseReminder(candidate._id, 'rain');
+      }
+    }
+    return sent;
+  };
+
+  /**
+   * A few hours after a paid match, one quiet message with the players not marked as
+   * paid. Claimed before it is sent like the other reminders; matches where everyone
+   * paid get no message.
+   */
+  const sendPaymentReminders = async (now: Date) => {
+    const notSent = sql`coalesce((${events.telegram} -> 'reminders' ->> 'paid')::boolean, false) = false`;
+    const due = await db
+      .select({ _id: events._id })
+      .from(events)
+      .where(
+        and(
+          gt(events.price, 0),
+          gt(events.startsAt, new Date(now.getTime() - PAYMENT_UNTIL)),
+          lte(events.startsAt, new Date(now.getTime() - PAYMENT_AFTER)),
+          notSent,
+        ),
+      );
+    let sent = 0;
+    for (const { _id } of due) {
+      const claimed = await db
+        .update(events)
+        .set({
+          telegram: sql`jsonb_set(coalesce(${events.telegram}, '{}'::jsonb), '{reminders}', coalesce(${events.telegram} -> 'reminders', '{}'::jsonb) || '{"paid":true}'::jsonb)`,
+        })
+        .where(and(eq(events._id, _id), notSent))
+        .returning({ _id: events._id });
+      if (!claimed.length) continue;
+
+      try {
+        const state = await load(_id);
+        if (!state) continue;
+        // Players pay for themselves and the friends they bring into the squad
+        const payers = new Set(
+          state.people
+            .filter((person) => person.place === 'squad')
+            .map((person) => person.key.split(':')[0]),
+        );
+        const unpaid = state.players
+          .filter((player) => payers.has(player._id) && !player.paid)
+          .map((player) => player.name);
+        if (unpaid.length === 0) continue;
+        await notifier.notify(
+          TOPIC,
+          paymentReminderMessage(
+            toNotifyEvent(state.event),
+            state.count,
+            unpaid,
+          ),
+          { silent: true },
+        );
+        sent++;
+      } catch (err) {
+        log.error({ err, eventId: _id }, 'telegram payment reminder failed');
+        await db
+          .update(events)
+          .set({
+            telegram: sql`${events.telegram} #- '{reminders,paid}'::text[]`,
+          })
+          .where(eq(events._id, _id))
+          .catch(() => undefined);
       }
     }
     return sent;
