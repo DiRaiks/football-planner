@@ -15,6 +15,13 @@
       "when": 1793219261898,
       "tag": "0001_telegram_photo_url",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793260492072,
+      "tag": "0002_price_mode_payment_details",
+      "breakpoints": true
     }
   ]
 }

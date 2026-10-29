@@ -72,13 +72,23 @@ export class UsersService {
     }
   }
 
-  async updateMe(user: UserRecord, { name }: UpdateMeBody) {
+  async updateMe(user: UserRecord, { name, paymentDetails }: UpdateMeBody) {
+    const fields = {
+      ...(name !== undefined && { name: name.trim() }),
+      ...(paymentDetails !== undefined && {
+        paymentDetails: paymentDetails.trim() || null,
+      }),
+    };
+    if (fields.name === '') {
+      throw new AppError(400, 'VALIDATION_ERROR', 'name must not be blank');
+    }
+    if (Object.keys(fields).length === 0) return user;
     const [updated] = await this.db
       .update(users)
-      .set({ name: name.trim() })
+      .set(fields)
       .where(eq(users._id, user._id))
       .returning();
-    return updated ?? { ...user, name: name.trim() };
+    return updated ?? { ...user, ...fields };
   }
 
   async changePassword(user: UserRecord, input: ChangePasswordBody) {

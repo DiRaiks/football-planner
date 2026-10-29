@@ -8,6 +8,7 @@ import { and, asc, eq, lte, not, sql } from 'drizzle-orm';
 
 import {
   events,
+  users,
   type Db,
   type EventRecord,
   type Executor,
@@ -79,6 +80,17 @@ export class EventsService {
       );
   }
 
+  /** Where to pay for a match: its organiser's payment details */
+  async payment(id: string) {
+    const [row] = await this.db
+      .select({ details: users.paymentDetails })
+      .from(events)
+      .innerJoin(users, eq(users._id, events.creatorId))
+      .where(eq(events._id, id));
+    if (!row) throw notFoundError('event');
+    return { details: row.details };
+  }
+
   private startsAt(date: string, time: string) {
     const instant = zonedToInstant(date, time, this.timeZone);
     if (!instant) {
@@ -107,6 +119,7 @@ export class EventsService {
         maximum: input.maximum ?? 0,
         repeat: input.repeat ?? 'none',
         price: input.price ?? 0,
+        priceMode: input.priceMode ?? 'person',
         location: input.location ?? null,
         playersAmount: 0,
         creatorId: user._id,
@@ -226,6 +239,7 @@ export class EventsService {
                 minimum: event.minimum,
                 maximum: event.maximum,
                 price: event.price,
+                priceMode: event.priceMode,
                 repeat: 'weekly',
                 repeatOf: event._id,
                 location: event.location,

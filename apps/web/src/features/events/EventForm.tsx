@@ -134,6 +134,7 @@ export function EventForm({
     maximum: initial?.maximum ?? 0,
     repeat: initial?.repeat ?? 'none',
     price: initial?.price ?? 0,
+    priceMode: initial?.priceMode ?? 'person',
   }));
   // The city as typed; the location changes only when a city is picked
   const [location, setLocation] = useState<Location | null>(
@@ -266,8 +267,23 @@ export function EventForm({
         </p>
       </div>
 
+      <div className="grid gap-1.5">
+        <span className="text-sm font-medium">Оплата</span>
+        <Segmented
+          label="Как считать оплату"
+          className="justify-self-start"
+          value={values.priceMode ?? 'person'}
+          onChange={set('priceMode')}
+          options={[
+            { value: 'person', label: 'С человека' },
+            { value: 'pitch', label: 'За поле' },
+          ]}
+        />
+      </div>
       <Field
-        label="Цена с человека, ₽"
+        label={
+          values.priceMode === 'pitch' ? 'Аренда поля, ₽' : 'Цена с человека, ₽'
+        }
         inputMode="numeric"
         placeholder="0 — бесплатно"
         className="max-w-60"
@@ -277,7 +293,11 @@ export function EventForm({
           setPriceText(text);
           set('price')(text ? Number(text) : 0);
         }}
-        hint="Организатор отмечает в составе, кто заплатил."
+        hint={
+          values.priceMode === 'pitch'
+            ? 'Делится поровну на всех, кто точно идёт, с округлением вверх до 10 ₽. Организатор отмечает в составе, кто заплатил.'
+            : 'Организатор отмечает в составе, кто заплатил.'
+        }
         error={errors.price}
       />
 

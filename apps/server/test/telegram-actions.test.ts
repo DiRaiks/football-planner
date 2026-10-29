@@ -455,6 +455,59 @@ describe('reminders', () => {
   });
 });
 
+describe('payment reminder', () => {
+  it('names who has not paid a few hours after the match, once', async () => {
+    const { event, auth } = await futureMatch({
+      eventName: 'Аренда',
+      price: 5000,
+      priceMode: 'pitch',
+    });
+    await press(`rsvp:${event._id}:yes`);
+    await press(`rsvp:${event._id}:yes`, BORIS);
+    const players = (
+      await ctx.app.inject({
+        url: `/v1/events/${event._id}/players`,
+        headers: auth,
+      })
+    ).json() as { _id: string; name: string }[];
+    const boris = players.find((player) => player.name === 'Борис')!;
+    await ctx.app.inject({
+      method: 'PATCH',
+      url: `/v1/events/${event._id}/players/${boris._id}/paid`,
+      headers: auth,
+      payload: { paid: true },
+    });
+    const startsAt = (await getEvent(ctx.app, event._id))!.startsAt!.getTime();
+    const after = (hours: number) => new Date(startsAt + hours * 3_600_000);
+    calls.length = 0;
+
+    expect(await ctx.app.telegramBot.sendDueReminders(after(2))).toBe(0);
+    expect(await ctx.app.telegramBot.sendDueReminders(after(3.5))).toBe(1);
+    const message = calls.filter((c) => c.method === 'sendMessage').at(-1)!;
+    const text = String(message.payload.text);
+    expect(text).toContain('💰 Оплата за <b>Аренда</b>');
+    expect(text).toContain('Не отметили оплату: Аня Котова\n');
+    expect(text).toMatch(/~2\s500 ₽ с человека \(поле 5\s000 ₽ на 2\)/);
+    expect(message.payload.disable_notification).toBe(true);
+    expect(await ctx.app.telegramBot.sendDueReminders(after(4))).toBe(0);
+  });
+
+  it('stays quiet when everyone paid, for free matches and long after', async () => {
+    const free = await futureMatch();
+    await press(`rsvp:${free.event._id}:yes`);
+    const startsAt = (await getEvent(ctx.app, free.event._id))!.startsAt!;
+    const after = (hours: number) =>
+      new Date(startsAt.getTime() + hours * 3_600_000);
+    const paid = await futureMatch({ price: 300 });
+    await press(`rsvp:${paid.event._id}:yes`);
+    calls.length = 0;
+
+    expect(await ctx.app.telegramBot.sendDueReminders(after(24 * 4))).toBe(0);
+    expect(await ctx.app.telegramBot.sendDueReminders(after(4))).toBe(1);
+    expect(replies(CHAT).at(-1)).toContain('300 ₽ с человека');
+  });
+});
+
 describe('users without email', () => {
   it('keeps any number of accounts without email, but one per Telegram user', async () => {
     await ctx.app.db.insert(users).values({ name: 'A', telegramId: 1 });

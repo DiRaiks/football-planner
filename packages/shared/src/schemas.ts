@@ -23,6 +23,8 @@ export const User = Type.Object({
   telegramLinked: Type.Boolean(),
   // Telegram profile photo, once the user logged in with Telegram
   photoUrl: Type.Optional(Type.String()),
+  // Where players send money for matches this user organises
+  paymentDetails: Type.Optional(Type.String()),
 });
 
 /** A one-time code to send to the bot as `/link CODE`, valid for 15 minutes */
@@ -84,7 +86,11 @@ export const RegisterBody = Type.Object(
 );
 
 export const UpdateMeBody = Type.Object(
-  { name: Type.String({ minLength: 1, maxLength: 50 }) },
+  {
+    name: Type.Optional(Type.String({ minLength: 1, maxLength: 50 })),
+    // An empty string removes them
+    paymentDetails: Type.Optional(Type.String({ maxLength: 200 })),
+  },
   { additionalProperties: false },
 );
 
@@ -129,6 +135,16 @@ export const CitySearchQuery = Type.Object(
   { additionalProperties: false },
 );
 
+export const PriceMode = Type.Union([
+  Type.Literal('person'),
+  Type.Literal('pitch'),
+]);
+
+/** Where to send the money for a match: its organiser's details, if any */
+export const EventPayment = Type.Object({
+  details: Type.Union([Type.String(), Type.Null()]),
+});
+
 const EventFields = {
   eventName: Type.String({ minLength: 1, maxLength: 100 }),
   place: Type.String({ minLength: 1, maxLength: 200 }),
@@ -143,8 +159,10 @@ const EventFields = {
   repeat: Type.Optional(
     Type.Union([Type.Literal('none'), Type.Literal('weekly')]),
   ),
-  // What each person pays for the pitch, in whole roubles. 0: free
+  // Whole roubles, 0: free. Per person, or for the whole pitch (priceMode)
   price: Type.Optional(Type.Integer({ minimum: 0, maximum: 100_000 })),
+  // pitch: the price is shared equally by everyone in the squad
+  priceMode: Type.Optional(PriceMode),
   // Coordinates of the venue, used for the weather forecast
   location: Type.Optional(Location),
 };
@@ -311,6 +329,8 @@ export type AttendanceQuery = Static<typeof AttendanceQuery>;
 export type AttendanceRow = Static<typeof AttendanceRow>;
 export type Forecast = Static<typeof Forecast>;
 export type City = Static<typeof City>;
+export type PriceMode = Static<typeof PriceMode>;
+export type EventPayment = Static<typeof EventPayment>;
 export type CitySearchQuery = Static<typeof CitySearchQuery>;
 export type DefaultLocation = Static<typeof DefaultLocation>;
 export type EventWeather = Static<typeof EventWeather>;

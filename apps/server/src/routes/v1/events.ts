@@ -3,6 +3,7 @@ import type { FastifyPluginAsyncTypebox } from '@fastify/type-provider-typebox';
 import {
   CreateEventBody,
   Event,
+  EventPayment,
   EventWeather,
   ObjectId,
   SplitTeamsBody,
@@ -38,6 +39,12 @@ const eventsRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
     '/:id',
     { schema: { params: Params, response: { 200: Event } } },
     async (request) => toEventDto(await events.get(request.params.id)),
+  );
+
+  fastify.get(
+    '/:id/payment',
+    { schema: { params: Params, response: { 200: EventPayment } } },
+    async (request) => events.payment(request.params.id),
   );
 
   fastify.patch(

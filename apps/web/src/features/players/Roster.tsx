@@ -17,7 +17,10 @@ type Person = {
 
 /** Paying for the pitch: shown when the match has a price */
 export type Payments = {
+  /** What one person pays */
   price: number;
+  /** What the whole squad pays, when it is not the price times the squad (a pitch) */
+  total?: number;
   /** Set for the organiser: marks a player as paid or not */
   onToggle?: (playerId: string, paid: boolean) => void;
 };
@@ -195,8 +198,13 @@ export function Roster({
     ...payments,
     payers: new Set(sure.map((person) => person.payerId)),
   };
+  const total = payments ? (payments.total ?? sure.length * payments.price) : 0;
+  // Rounded shares can add up to a bit more than the pitch
   const collected = payments
-    ? sure.filter((person) => person.paid).length * payments.price
+    ? Math.min(
+        total,
+        sure.filter((person) => person.paid).length * payments.price,
+      )
     : 0;
 
   return (
@@ -207,10 +215,7 @@ export function Roster({
           <span className="font-medium text-ink tabular-nums">
             {rub.format(collected)} ₽
           </span>{' '}
-          из{' '}
-          <span className="tabular-nums">
-            {rub.format(sure.length * payments.price)} ₽
-          </span>
+          из <span className="tabular-nums">{rub.format(total)} ₽</span>
         </p>
       )}
       <Group title="Точно идут" people={sure} payments={view} />

@@ -35,7 +35,7 @@ The Telegram bot keeps a live, pinned announcement in your team chat.
 - **Reminders** the day before and two hours before the start, with the score, who is missing and the weather.
 - **Weekly matches.** Mark a match as weekly, and once it starts the same match a week later is created and announced in the chat.
 - **Teams.** The organiser splits the squad into 2–4 random teams in one tap, guests included; the bot posts them to the chat. Pressing again reshuffles.
-- **Payments.** Set a price per person, and the organiser ticks who paid; a player pays for the sure friends they bring. The roster shows what is collected out of the total.
+- **Payments.** Set a price per person, or the rent of the whole pitch, which is shared equally by the squad and recounted with every sign-up. The organiser ticks who paid; a player pays for the sure friends they bring. The roster shows what is collected out of the total, players see where to send the money (the organiser's payment details from the profile, never posted to the chat), and a few hours after the match the bot names in the chat who has not been marked as paid.
 - **Attendance.** Who played how often over the last month, three months or year, with "maybe" sign-ups and the last match played.
 - **Log in with Telegram**, on the site or inside Telegram as a Mini App, with no password: the same account as the bot's buttons.
 - **Installs on the phone** as an app (PWA), and the match list opens offline.
