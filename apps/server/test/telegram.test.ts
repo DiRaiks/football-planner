@@ -421,7 +421,7 @@ describe('message helpers', () => {
     );
     expect(lines.slice(2, 4)).toEqual([
       '📍 Манеж',
-      '🌤 Небольшой дождь, 8°, осадки 80%',
+      '☔ <b>Небольшой дождь, осадки 80%</b>, 8°',
     ]);
     // Beyond the forecast window: no line
     expect(announcementMessage(event, [], count).value).not.toContain('🌤');

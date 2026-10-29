@@ -87,8 +87,17 @@ export type EventTelegram = {
   announcements?: { chatId: number; messageId: number }[];
   /** Whether reaching the minimum was announced */
   minimumReached?: boolean;
-  /** Reminders already sent: the day before, shortly before the start, and to pay */
-  reminders?: { day?: boolean; soon?: boolean; paid?: boolean };
+  /** Reminders already sent: before the start, at the sign-up deadline, rain, to pay */
+  reminders?: {
+    day?: boolean;
+    soon?: boolean;
+    /** The minimum was checked at the sign-up deadline */
+    deadline?: boolean;
+    /** Players were told it will likely rain */
+    rain?: boolean;
+    /** Players were reminded to pay after the match */
+    paid?: boolean;
+  };
   /** When the current start time was announced (ISO); the day-before reminder needs a day */
   scheduledAt?: string;
 };
@@ -113,6 +122,10 @@ export const events = pgTable(
       .default('none'),
     /** Whole roubles, 0 means free: what each person pays, or the whole pitch */
     price: integer('price').notNull().default(0),
+    /** Hours before the start when the minimum is checked; 0 means no check */
+    deadlineHours: integer('deadline_hours').notNull().default(12),
+    /** Cancel instead of warning when the minimum is not reached by then */
+    autoCancel: boolean('auto_cancel').notNull().default(false),
     /** pitch: the price is shared equally by the squad */
     priceMode: text('price_mode', { enum: ['person', 'pitch'] })
       .notNull()
@@ -140,6 +153,10 @@ export const events = pgTable(
       .on(table.startsAt)
       .where(sql`${table.repeat} = 'weekly' AND NOT ${table.nextCreated}`),
     check('events_repeat_check', sql`${table.repeat} IN ('none', 'weekly')`),
+    check(
+      'events_deadline_hours_check',
+      sql`${table.deadlineHours} IN (0, 6, 12, 24)`,
+    ),
     check(
       'events_price_mode_check',
       sql`${table.priceMode} IN ('person', 'pitch')`,

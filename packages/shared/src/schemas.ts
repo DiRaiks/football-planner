@@ -141,6 +141,13 @@ export const CitySearchQuery = Type.Object(
   { additionalProperties: false },
 );
 
+export const DeadlineHours = Type.Union([
+  Type.Literal(0),
+  Type.Literal(6),
+  Type.Literal(12),
+  Type.Literal(24),
+]);
+
 export const PriceMode = Type.Union([
   Type.Literal('person'),
   Type.Literal('pitch'),
@@ -171,6 +178,10 @@ const EventFields = {
   priceMode: Type.Optional(PriceMode),
   // Coordinates of the venue, used for the weather forecast
   location: Type.Optional(Location),
+  // Hours before the start when the bot checks the minimum is reached. 0: no check
+  deadlineHours: Type.Optional(DeadlineHours),
+  // Cancel the match when the minimum is not reached by then, instead of a warning
+  autoCancel: Type.Optional(Type.Boolean()),
 };
 
 export const CreateEventBody = Type.Object(EventFields, {
@@ -335,6 +346,7 @@ export type AttendanceQuery = Static<typeof AttendanceQuery>;
 export type AttendanceRow = Static<typeof AttendanceRow>;
 export type Forecast = Static<typeof Forecast>;
 export type City = Static<typeof City>;
+export type DeadlineHours = Static<typeof DeadlineHours>;
 export type PriceMode = Static<typeof PriceMode>;
 export type EventPayment = Static<typeof EventPayment>;
 export type SavedPlace = Static<typeof SavedPlace>;

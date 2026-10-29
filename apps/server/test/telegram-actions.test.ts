@@ -122,7 +122,12 @@ const futureMatch = async (payload: Record<string, unknown> = {}) => {
     email: `owner-${++owners}@example.com`,
   });
   const day = new Date(Date.now() + 7 * 86_400_000).toISOString().slice(0, 10);
-  const event = await createEvent(ctx.app, auth, { date: day, ...payload });
+  // No sign-up deadline check: its warnings are tested in deadline-rain.test.ts
+  const event = await createEvent(ctx.app, auth, {
+    date: day,
+    deadlineHours: 0,
+    ...payload,
+  });
   return { event, auth };
 };
 

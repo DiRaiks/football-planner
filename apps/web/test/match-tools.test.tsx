@@ -64,6 +64,50 @@ describe('EventForm', () => {
   });
 });
 
+describe('sign-up deadline', () => {
+  it('checks 12 hours before by default and can cancel instead', async () => {
+    mockApi(({ path }) => ({
+      body: path === '/events/places' ? [] : { location: null },
+    }));
+    const onSubmit = vi.fn();
+    renderWithQuery(
+      <EventForm
+        submitLabel="Создать матч"
+        pending={false}
+        onSubmit={onSubmit}
+        onCancel={() => undefined}
+      />,
+    );
+    await userEvent.type(screen.getByLabelText('Место'), 'Манеж');
+    expect(
+      screen.getByText(/за 12 ч до начала .* бот предупредит чат/),
+    ).toBeInTheDocument();
+
+    const deadline = screen.getByRole('radiogroup', {
+      name: 'Проверить набор',
+    });
+    await userEvent.click(
+      within(deadline).getByRole('radio', { name: 'За 24 ч' }),
+    );
+    await userEvent.click(screen.getByRole('radio', { name: 'Отменить матч' }));
+    expect(screen.getByText(/бот отменит матч/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Создать матч' }));
+    expect(onSubmit).toHaveBeenLastCalledWith(
+      expect.objectContaining({ deadlineHours: 24, autoCancel: true }),
+    );
+
+    // No check: nothing to cancel
+    await userEvent.click(within(deadline).getByRole('radio', { name: 'Нет' }));
+    expect(
+      screen.queryByRole('radiogroup', { name: 'Если минимум не набран' }),
+    ).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Создать матч' }));
+    expect(onSubmit).toHaveBeenLastCalledWith(
+      expect.objectContaining({ deadlineHours: 0 }),
+    );
+  });
+});
+
 describe('payments', () => {
   const roster = [
     player({

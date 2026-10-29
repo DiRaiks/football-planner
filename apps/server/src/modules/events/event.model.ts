@@ -1,4 +1,4 @@
-import type { Event } from '@football-planner/shared';
+import type { DeadlineHours, Event } from '@football-planner/shared';
 import { eq } from 'drizzle-orm';
 
 import { events, type EventRecord, type Executor } from '../../db/index.js';
@@ -16,6 +16,8 @@ export const toEventDto = (event: EventRecord): Event => ({
   maximum: event.maximum,
   repeat: event.repeat,
   price: event.price,
+  deadlineHours: event.deadlineHours as DeadlineHours,
+  autoCancel: event.autoCancel,
   priceMode: event.priceMode,
   ...(event.teams?.length && { teams: event.teams.map((team) => [...team]) }),
   playersAmount: event.playersAmount,
