@@ -107,6 +107,8 @@ export class EventsService {
         maximum: input.maximum ?? 0,
         repeat: input.repeat ?? 'none',
         price: input.price ?? 0,
+        deadlineHours: input.deadlineHours ?? 12,
+        autoCancel: input.autoCancel ?? false,
         location: input.location ?? null,
         playersAmount: 0,
         creatorId: user._id,
@@ -226,6 +228,8 @@ export class EventsService {
                 minimum: event.minimum,
                 maximum: event.maximum,
                 price: event.price,
+                deadlineHours: event.deadlineHours,
+                autoCancel: event.autoCancel,
                 repeat: 'weekly',
                 repeatOf: event._id,
                 location: event.location,
@@ -294,6 +298,24 @@ export class EventsService {
 
     if (deleted) this.notifier.eventCancelled(deleted);
     return deleted ?? event;
+  }
+
+  /**
+   * Cancels a match that did not reach its minimum by the sign-up deadline. A weekly
+   * series goes on: its next match is created first, a week after this one.
+   */
+  async cancelUnderfilled(id: string, reason: string) {
+    const event = await findEventById(this.db, id);
+    if (!event) return null;
+    if (event.repeat === 'weekly' && !event.nextCreated && event.startsAt) {
+      await this.createNext(event, event.startsAt);
+    }
+    const [deleted] = await this.db
+      .delete(events)
+      .where(eq(events._id, id))
+      .returning();
+    if (deleted) this.notifier.eventCancelled(deleted, reason);
+    return deleted ?? null;
   }
 
   private async getManageable(

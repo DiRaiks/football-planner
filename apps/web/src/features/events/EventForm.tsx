@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import type {
   CreateEventBody,
+  DeadlineHours,
   Event,
   Location,
 } from '@football-planner/shared';
@@ -18,6 +19,13 @@ import { CityField } from './CityField';
 import { randomMatchName } from './match-names';
 
 type Values = Omit<CreateEventBody, 'location'>;
+
+const DEADLINE_OPTIONS = [
+  { value: '24', label: 'За 24 ч' },
+  { value: '12', label: 'За 12 ч' },
+  { value: '6', label: 'За 6 ч' },
+  { value: '0', label: 'Нет' },
+];
 type Errors = Partial<Record<keyof Values | 'location', string>>;
 /** What the form submits: no city (null) means the default one */
 export type EventFormValues = Values & { location: Location | null };
@@ -134,6 +142,8 @@ export function EventForm({
     maximum: initial?.maximum ?? 0,
     repeat: initial?.repeat ?? 'none',
     price: initial?.price ?? 0,
+    deadlineHours: initial?.deadlineHours ?? 12,
+    autoCancel: initial?.autoCancel ?? false,
   }));
   // The city as typed; the location changes only when a city is picked
   const [location, setLocation] = useState<Location | null>(
@@ -263,6 +273,38 @@ export function EventForm({
           {values.repeat === 'weekly'
             ? 'Когда матч начнётся, такой же появится через неделю, и бот объявит его в чате.'
             : 'Матч пройдёт один раз.'}
+        </p>
+      </div>
+
+      <div className="grid gap-1.5">
+        <span className="text-sm font-medium">Проверить набор</span>
+        <Segmented
+          label="Проверить набор"
+          className="justify-self-start"
+          value={String(values.deadlineHours ?? 12)}
+          onChange={(value) =>
+            set('deadlineHours')(Number(value) as DeadlineHours)
+          }
+          options={DEADLINE_OPTIONS}
+        />
+        {(values.deadlineHours ?? 12) > 0 && (
+          <Segmented
+            label="Если минимум не набран"
+            className="justify-self-start"
+            value={values.autoCancel ? 'cancel' : 'warn'}
+            onChange={(value) => set('autoCancel')(value === 'cancel')}
+            options={[
+              { value: 'warn', label: 'Предупредить' },
+              { value: 'cancel', label: 'Отменить матч' },
+            ]}
+          />
+        )}
+        <p className="text-sm text-pretty text-muted">
+          {(values.deadlineHours ?? 12) === 0
+            ? 'Бот не будет проверять, набрался ли минимум.'
+            : values.autoCancel
+              ? `Если за ${values.deadlineHours} ч до начала точно идущих меньше минимума, бот отменит матч и напишет в чат.${values.repeat === 'weekly' ? ' Следующий матч серии останется.' : ''}`
+              : `Если за ${values.deadlineHours} ч до начала точно идущих меньше минимума, бот предупредит чат.`}
         </p>
       </div>
 

@@ -86,7 +86,14 @@ export type EventTelegram = {
   /** Whether reaching the minimum was announced */
   minimumReached?: boolean;
   /** Reminders already sent: the day before and shortly before the start */
-  reminders?: { day?: boolean; soon?: boolean };
+  reminders?: {
+    day?: boolean;
+    soon?: boolean;
+    /** The minimum was checked at the sign-up deadline */
+    deadline?: boolean;
+    /** Players were told it will likely rain */
+    rain?: boolean;
+  };
   /** When the current start time was announced (ISO); the day-before reminder needs a day */
   scheduledAt?: string;
 };
@@ -111,6 +118,10 @@ export const events = pgTable(
       .default('none'),
     /** What each person pays for the pitch, whole roubles; 0 means free */
     price: integer('price').notNull().default(0),
+    /** Hours before the start when the minimum is checked; 0 means no check */
+    deadlineHours: integer('deadline_hours').notNull().default(12),
+    /** Cancel instead of warning when the minimum is not reached by then */
+    autoCancel: boolean('auto_cancel').notNull().default(false),
     /** Teams split by the organiser, names per team */
     teams: jsonb('teams').$type<string[][]>(),
     /** Set once the next match of a weekly series exists */
@@ -134,6 +145,10 @@ export const events = pgTable(
       .on(table.startsAt)
       .where(sql`${table.repeat} = 'weekly' AND NOT ${table.nextCreated}`),
     check('events_repeat_check', sql`${table.repeat} IN ('none', 'weekly')`),
+    check(
+      'events_deadline_hours_check',
+      sql`${table.deadlineHours} IN (0, 6, 12, 24)`,
+    ),
   ],
 );
 

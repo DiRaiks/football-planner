@@ -26,6 +26,9 @@ import {
   announcementMessage,
   cancelledAnnouncementMessage,
   cancelledMessage,
+  deadlineMessage,
+  isRainy,
+  rainMessage,
   eventChangedMessage,
   formatWhen,
   minimumReachedMessage,
@@ -51,7 +54,8 @@ export type TelegramNotifier = {
   eventCreated: (eventId: string) => void;
   /** `scheduleChanged`: date, time or place changed, which is worth a loud message */
   eventUpdated: (eventId: string, scheduleChanged: boolean) => void;
-  eventCancelled: (event: CancelledEvent) => void;
+  /** `reason`: why the match was cancelled automatically, for the chat */
+  eventCancelled: (event: CancelledEvent, reason?: string) => void;
   playersChanged: (
     kind: PlayersChangeKind,
     player: NotifyPlayer & { _id?: string },
@@ -210,17 +214,19 @@ const telegramPlugin: FastifyPluginAsync<TelegramPluginOptions> = async (
   type State = NonNullable<Awaited<ReturnType<typeof load>>>;
 
   /** The weather at the start of the match; null when unknown or the provider fails */
-  const forecastFor = async (state: State) => {
+  const forecastAt = async (event: EventRecord) => {
     const { weather } = fastify.services;
-    const location = weather.resolveLocation(state.event.location);
+    const location = weather.resolveLocation(event.location);
     if (!location) return null;
     return weather
-      .getForecastAt(location, state.event.startsAt)
+      .getForecastAt(location, event.startsAt)
       .catch((err: unknown) => {
         log.warn({ err }, 'weather for a Telegram message failed');
         return null;
       });
   };
+
+  const forecastFor = (state: State) => forecastAt(state.event);
 
   /** Rewrites the pinned announcements with the current players */
   const refreshAnnouncements = async (state: State) => {
@@ -331,6 +337,7 @@ const telegramPlugin: FastifyPluginAsync<TelegramPluginOptions> = async (
           const state = await load(candidate._id);
           if (!state) continue;
           const event = toNotifyEvent(state.event);
+          const forecast = await forecastFor(state);
           const day =
             zonedDay(candidate.startsAt!, TIME_ZONE) ===
             zonedDay(now, TIME_ZONE)
@@ -338,16 +345,12 @@ const telegramPlugin: FastifyPluginAsync<TelegramPluginOptions> = async (
               : 'tomorrow';
           await notifier.notify(
             TOPIC,
-            reminderMessage(
-              kind,
-              event,
-              state.count,
-              await forecastFor(state),
-              day,
-            ),
+            reminderMessage(kind, event, state.count, forecast, day),
             { replyMarkup: keyboard(event) },
           );
           sent++;
+          // The rain is news already: no separate note about it later
+          if (isRainy(forecast)) await claimReminder(candidate._id, 'rain');
         } catch (err) {
           // Give the reminder back for the next run, and go on with the others
           log.error(
@@ -362,6 +365,130 @@ const telegramPlugin: FastifyPluginAsync<TelegramPluginOptions> = async (
             .where(eq(events._id, candidate._id))
             .catch(() => undefined);
         }
+      }
+    }
+    return sent + (await checkDeadlines(now)) + (await sendRainNotes(now));
+  };
+
+  /** SQL: the match's reminder flag `name` is not set */
+  const reminderNotSent = (name: string) =>
+    sql`coalesce((${events.telegram} -> 'reminders' ->> ${name})::boolean, false) = false`;
+
+  /** Sets a reminder flag; resolves with whether this call set it, so it runs once */
+  const claimReminder = async (eventId: string, name: string) => {
+    const flag = JSON.stringify({ [name]: true });
+    const claimed = await db
+      .update(events)
+      .set({
+        telegram: sql`jsonb_set(coalesce(${events.telegram}, '{}'::jsonb), '{reminders}', coalesce(${events.telegram} -> 'reminders', '{}'::jsonb) || ${flag}::jsonb)`,
+      })
+      .where(and(eq(events._id, eventId), reminderNotSent(name)))
+      .returning({ _id: events._id });
+    return claimed.length > 0;
+  };
+
+  /** Gives a claimed reminder back after a failure, for the next run */
+  const releaseReminder = (eventId: string, name: string) =>
+    db
+      .update(events)
+      .set({
+        telegram: sql`${events.telegram} #- ${`{reminders,${name}}`}::text[]`,
+      })
+      .where(eq(events._id, eventId))
+      .catch(() => undefined);
+
+  /**
+   * At the sign-up deadline (`deadlineHours` before the start) a match short of its
+   * minimum gets a loud warning, or is cancelled when the organiser chose that. Only
+   * matches announced before their deadline: a later one is fresh news, not late.
+   */
+  const checkDeadlines = async (now: Date) => {
+    const due = await db
+      .select()
+      .from(events)
+      .where(
+        and(
+          gt(events.deadlineHours, 0),
+          gt(events.minimum, 0),
+          gt(events.startsAt, now),
+          lte(
+            events.startsAt,
+            sql`${now.toISOString()}::timestamptz + ${events.deadlineHours} * interval '1 hour'`,
+          ),
+          reminderNotSent('deadline'),
+        ),
+      );
+    let sent = 0;
+    for (const candidate of due) {
+      const startsAt = candidate.startsAt!.getTime();
+      const scheduledAt = candidate.telegram?.scheduledAt;
+      const announced = scheduledAt
+        ? new Date(scheduledAt)
+        : candidate.createdAt;
+      if (announced.getTime() > startsAt - candidate.deadlineHours * HOUR) {
+        continue;
+      }
+      if (!(await claimReminder(candidate._id, 'deadline'))) continue;
+
+      try {
+        const state = await load(candidate._id);
+        if (!state || state.count.exactly >= state.event.minimum) continue;
+        const event = toNotifyEvent(state.event);
+        if (state.event.autoCancel) {
+          await fastify.services.events.cancelUnderfilled(
+            candidate._id,
+            `к сроку набралось ${state.count.exactly} из ${event.minimum}`,
+          );
+        } else {
+          const hoursLeft = Math.max(
+            1,
+            Math.round((startsAt - now.getTime()) / HOUR),
+          );
+          await notifier.notify(
+            TOPIC,
+            deadlineMessage(event, state.count, hoursLeft),
+            { replyMarkup: keyboard(event) },
+          );
+        }
+        sent++;
+      } catch (err) {
+        log.error({ err, eventId: candidate._id }, 'sign-up deadline failed');
+        await releaseReminder(candidate._id, 'deadline');
+      }
+    }
+    return sent;
+  };
+
+  /**
+   * Between the day-before reminder and the last one: a single note when the forecast
+   * at the start turns rainy. Not when the day-before reminder already showed rain.
+   */
+  const sendRainNotes = async (now: Date) => {
+    const due = await db
+      .select()
+      .from(events)
+      .where(
+        and(
+          gt(events.startsAt, new Date(now.getTime() + REMINDER_LEAD.soon)),
+          lte(events.startsAt, new Date(now.getTime() + REMINDER_LEAD.day)),
+          sql`coalesce((${events.telegram} -> 'reminders' ->> 'day')::boolean, false)`,
+          reminderNotSent('rain'),
+        ),
+      );
+    let sent = 0;
+    for (const candidate of due) {
+      const forecast = await forecastAt(candidate);
+      if (!forecast || !isRainy(forecast)) continue;
+      if (!(await claimReminder(candidate._id, 'rain'))) continue;
+      try {
+        await notifier.notify(
+          TOPIC,
+          rainMessage(toNotifyEvent(candidate), forecast),
+        );
+        sent++;
+      } catch (err) {
+        log.error({ err, eventId: candidate._id }, 'rain note failed');
+        await releaseReminder(candidate._id, 'rain');
       }
     }
     return sent;
@@ -452,7 +579,7 @@ const telegramPlugin: FastifyPluginAsync<TelegramPluginOptions> = async (
         }
       }),
 
-    eventCancelled: (snapshot) =>
+    eventCancelled: (snapshot, reason) =>
       void serial(snapshot._id, async () => {
         const event = toNotifyEvent(snapshot);
         const announcements = snapshot.telegram?.announcements ?? [];
@@ -463,7 +590,7 @@ const telegramPlugin: FastifyPluginAsync<TelegramPluginOptions> = async (
             await notifier.unpin(target);
           }),
         );
-        await notifier.notify(TOPIC, cancelledMessage(event));
+        await notifier.notify(TOPIC, cancelledMessage(event, reason));
       }),
 
     playersChanged: (kind, player, eventId) =>

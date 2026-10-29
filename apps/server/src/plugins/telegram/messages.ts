@@ -94,15 +94,23 @@ const nameList = (names: string[], limit: number) =>
     ? `${names.slice(0, limit).join(', ')} и ещё ${names.length - limit}`
     : names.join(', ');
 
-/** The weather at the start: "🌤 Пасмурно, 12°, осадки 40%" */
+/** Weather worth a warning: a likely rain or snow, or a thunderstorm (WMO 95–99) */
+export const isRainy = (forecast: Forecast | null) =>
+  !!forecast &&
+  ((forecast.precipitationProbability ?? 0) >= 60 ||
+    forecast.weatherCode >= 95);
+
+/** The weather at the start: "🌤 Пасмурно, 12°, осадки 40%", stressed when rainy */
 const forecastLine = (forecast: Forecast | null) => {
   if (!forecast) return null;
   const temp = `${Math.round(forecast.temperature)}°`;
-  const rain =
-    forecast.precipitationProbability !== null &&
-    forecast.precipitationProbability >= 30
-      ? `, осадки ${forecast.precipitationProbability}%`
-      : '';
+  const chance = forecast.precipitationProbability;
+  if (isRainy(forecast)) {
+    const icon = forecast.weatherCode >= 95 ? '⛈' : '☔';
+    const rain = chance !== null && chance > 0 ? `, осадки ${chance}%` : '';
+    return html`${icon} <b>${forecast.description}${rain}</b>, ${temp}`;
+  }
+  const rain = chance !== null && chance >= 30 ? `, осадки ${chance}%` : '';
   return html`🌤 ${forecast.description}, ${temp}${rain}`;
 };
 
@@ -151,8 +159,10 @@ export const cancelledAnnouncementMessage = (event: NotifyEvent) =>
     html`<b>Матч отменён</b>`,
   ]);
 
-export const cancelledMessage = (event: NotifyEvent) =>
-  html`❌ Матч <b>${event.eventName}</b> (${formatWhen(event)}) отменён`;
+export const cancelledMessage = (event: NotifyEvent, reason?: string) =>
+  reason
+    ? html`❌ Матч <b>${event.eventName}</b> (${formatWhen(event)}) отменён: ${reason}`
+    : html`❌ Матч <b>${event.eventName}</b> (${formatWhen(event)}) отменён`;
 
 const friendsSuffix = (player: NotifyPlayer) =>
   player.friends.length > 0
@@ -227,6 +237,25 @@ export const reminderMessage = (
     html`📅 ${formatWhen(event)} · 📍 ${event.place}`,
     progressLine(count, event),
     missingLine(count, event.minimum),
+    forecastLine(forecast),
+  ]);
+
+/** At the sign-up deadline, when the minimum is not reached */
+export const deadlineMessage = (
+  event: NotifyEvent,
+  count: PlayersCount,
+  hoursLeft: number,
+) =>
+  joinHtml([
+    html`⚠️ <b>Не набираемся</b> на <b>${event.eventName}</b>: ${count.exactly} из ${event.minimum}, до начала ${hoursLeft} ч`,
+    html`📅 ${formatWhen(event)} · 📍 ${event.place}`,
+    missingLine(count, event.minimum),
+  ]);
+
+/** The forecast turned rainy after the day-before reminder */
+export const rainMessage = (event: NotifyEvent, forecast: Forecast) =>
+  joinHtml([
+    html`☔ Прогноз испортился: <b>${event.eventName}</b>, ${formatWhen(event)}`,
     forecastLine(forecast),
   ]);
 
