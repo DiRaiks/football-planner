@@ -38,7 +38,7 @@ The Telegram bot keeps a live, pinned announcement in your team chat.
 - **Payments.** Set a price per person, and the organiser ticks who paid; a player pays for the sure friends they bring. The roster shows what is collected out of the total.
 - **Attendance.** Who played how often over the last month, three months or year, with "maybe" sign-ups and the last match played.
 - **Log in with Telegram**, on the site or inside Telegram as a Mini App, with no password: the same account as the bot's buttons.
-- **Installs on the phone** as an app (PWA), and the match list opens offline.
+- **Installs on the phone** as an app (PWA), and the match list opens offline. On phones the match list offers to install it: the browser's own dialog on Android, a hint about the share menu on iPhone; not inside Telegram or once installed.
 - **Phone first**, with light and dark themes, keyboard navigation and screen reader labels.
 
 ### What the bot posts

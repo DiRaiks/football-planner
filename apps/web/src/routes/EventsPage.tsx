@@ -11,6 +11,7 @@ import {
 } from '@/components/ui';
 import { EventCard } from '@/features/events/EventCard';
 import { useEvents } from '@/features/events/api';
+import { InstallBanner } from '@/features/install/InstallBanner';
 import { errorMessage } from '@/lib/api';
 import { todayIso } from '@/lib/format';
 
@@ -40,6 +41,8 @@ export function EventsPage() {
           </ButtonLink>
         </div>
       </div>
+
+      <InstallBanner />
 
       {isPending && (
         <div className="grid gap-3" role="status" aria-label="Загрузка матчей">
