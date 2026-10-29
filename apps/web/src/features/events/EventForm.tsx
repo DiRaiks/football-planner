@@ -15,6 +15,7 @@ import {
 } from '@/components/ui';
 import { todayIso } from '@/lib/format';
 import { CityField } from './CityField';
+import { PlaceField } from './PlaceField';
 import { randomMatchName } from './match-names';
 
 type Values = Omit<CreateEventBody, 'location'>;
@@ -182,13 +183,19 @@ export function EventForm({
         onChange={(event) => set('eventName')(event.target.value)}
         error={errors.eventName}
       />
-      <Field
-        label="Место"
-        placeholder="Стадион «Динамо», поле 2"
-        maxLength={200}
+      <PlaceField
         value={values.place}
-        onChange={(event) => set('place')(event.target.value)}
         error={errors.place}
+        onChange={set('place')}
+        onPick={(saved) => {
+          set('place')(saved.place);
+          // A place without a city keeps whatever city is in the form
+          if (saved.location) {
+            setLocation(saved.location);
+            setCityText(saved.location.name ?? 'Точка на карте');
+            setErrors((current) => ({ ...current, location: undefined }));
+          }
+        }}
       />
       <CityField
         text={cityText}

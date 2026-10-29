@@ -6,6 +6,7 @@ import {
   EventPayment,
   EventWeather,
   ObjectId,
+  SavedPlace,
   SplitTeamsBody,
   UpdateEventBody,
 } from '@football-planner/shared';
@@ -24,6 +25,12 @@ const eventsRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
     '/',
     { schema: { response: { 200: Type.Array(Event) } } },
     async () => (await events.list()).map(toEventDto),
+  );
+
+  fastify.get(
+    '/places',
+    { schema: { response: { 200: Type.Array(SavedPlace) } } },
+    async () => events.places(),
   );
 
   fastify.post(

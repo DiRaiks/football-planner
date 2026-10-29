@@ -130,6 +130,12 @@ export const DefaultLocation = Type.Object({
   location: Type.Union([Location, Type.Null()]),
 });
 
+/** A place matches were played at, with the city of the latest of them */
+export const SavedPlace = Type.Object({
+  place: Type.String(),
+  location: Type.Union([Location, Type.Null()]),
+});
+
 export const CitySearchQuery = Type.Object(
   { q: Type.String({ minLength: 2, maxLength: 100 }) },
   { additionalProperties: false },
@@ -331,6 +337,7 @@ export type Forecast = Static<typeof Forecast>;
 export type City = Static<typeof City>;
 export type PriceMode = Static<typeof PriceMode>;
 export type EventPayment = Static<typeof EventPayment>;
+export type SavedPlace = Static<typeof SavedPlace>;
 export type CitySearchQuery = Static<typeof CitySearchQuery>;
 export type DefaultLocation = Static<typeof DefaultLocation>;
 export type EventWeather = Static<typeof EventWeather>;
