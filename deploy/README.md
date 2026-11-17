@@ -91,6 +91,25 @@ $compose exec -T postgres pg_restore -U football -d football --clean --if-exists
 $compose start server
 ```
 
+## Other sites on this server
+
+`web` holds ports 80 and 443, so another stack on the same server is published through it instead of running a proxy of its own:
+
+- `web` imports every `*.caddy` file from `./sites` (`CADDY_SITES` in `.env` to use another folder; create it as the deploy user before the first deploy with this change, `mkdir -p /opt/football-planner/sites`, or Docker creates it owned by root) and joins the `edge` network, created by this stack (`EDGE_NETWORK` to rename it). `server` stays off it.
+- The other stack joins `edge` as an external network. Its service must not be called `server`, or `web` could reach it for this app's API; name it after the project.
+- Its site file names its host and proxies to that service, e.g. `app.example.com { reverse_proxy myapp:3000 }`. Caddy issues the certificate on reload.
+
+After adding or changing a site file, check the whole config and only then reload, without a restart:
+
+```bash
+cd /opt/football-planner
+$compose exec web sh -c 'caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile && caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile'
+```
+
+A site file that does not parse keeps the running config, but `web` will not start with it: the next deploy of this repository would leave ports 80 and 443 down. Never leave a file that fails `caddy validate` in `sites`; a host name there must not repeat one of `DOMAIN`.
+
+Never create `edge` by hand (`docker network create`): Compose then refuses a network it did not create, and every deploy of this stack fails. Deploy this stack first, and the other stacks after it. `$compose down` cannot remove `edge` while another stack uses it; stop that stack first, or ignore the warning.
+
 ## Moving from MongoDB
 
 Versions before Postgres kept their data in MongoDB (`MONGO_URI`). `apps/server/scripts/migrate-from-mongo.mjs` copies users, matches, sign-ups and the bot's chats into Postgres:

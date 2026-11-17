@@ -14,7 +14,13 @@ jobs:
   # The deploy step is skipped until DEPLOY_PATH is set (see deploy/README.md); it must
   # be a repository variable: variables of the environment are not visible here.
   deploy:
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    # Only CI runs of a push to this repository's main: a pull request from a fork
+    # whose branch is also called main passes the branches filter above
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
     # The shared workflow pushes the images to GHCR
     permissions:
       contents: read
