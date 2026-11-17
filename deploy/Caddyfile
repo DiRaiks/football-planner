@@ -40,3 +40,7 @@
 :8080 {
 	respond /healthz 200
 }
+
+# Sites of other stacks on this server, one *.caddy file each, mounted from the
+# host (deploy/README.md: Other sites on this server). An empty folder is fine.
+import /etc/caddy/sites/*.caddy

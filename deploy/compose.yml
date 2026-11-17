@@ -45,6 +45,10 @@ services:
     volumes:
       - caddy_data:/data
       - caddy_config:/config
+      # Site files of other stacks on this server, imported by the Caddyfile
+      - ${CADDY_SITES:-./sites}:/etc/caddy/sites:ro
+    # edge: shared with the backends of those sites (deploy/README.md)
+    networks: [default, edge]
     depends_on:
       - server
     logging: *logging
@@ -92,6 +96,11 @@ services:
           sleep 86400
         done
     logging: *logging
+
+networks:
+  # Created by this stack under a fixed name; other stacks join it as external
+  edge:
+    name: ${EDGE_NETWORK:-edge}
 
 volumes:
   caddy_data:
